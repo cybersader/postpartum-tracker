@@ -1,9 +1,44 @@
 ---
 title: Custom trackers
-description: Build a custom TrackerModule class for trackers that need specialized UI or complex logic.
+description: Create custom trackers from settings or build advanced TrackerModule classes in code.
 ---
 
-Most new trackers should use the [Simple Tracker API](/postpartum-tracker/advanced/simple-tracker-api/) -- it requires zero custom code. Only create a custom `TrackerModule` when you need:
+## Creating custom trackers from settings
+
+The easiest way to add a tracker is directly from the plugin settings -- no code required.
+
+1. Open Settings > Postpartum Tracker > **Trackers** tab.
+2. Scroll to the bottom of the tracker library and click **Create custom tracker**.
+3. Fill in the form:
+   - **Name** -- the display name (e.g., "Vitamin D drops")
+   - **Icon** -- pick from curated emojis or search ~200 emojis by keyword
+   - **Description** -- one-line explanation
+   - **Category** -- where it appears in the library (baby care, baby development, mother's recovery, general)
+   - **Duration** -- enable if it should have a start/stop timer
+4. **Add fields** -- define custom data fields for each entry:
+   - **Text** -- free-form input (e.g., notes, descriptions)
+   - **Number** -- numeric value with optional unit (e.g., temperature in F)
+   - **Select** -- dropdown with predefined options (e.g., mild/moderate/severe)
+   - **Boolean** -- yes/no toggle (e.g., "With food?")
+   - **Rating** -- numeric scale (e.g., 1-5 or 1-10)
+5. Click **Save**.
+
+Your custom tracker immediately appears in the library with a `[custom]` badge. Enable it and it works just like any built-in library tracker -- with quick-action buttons, entry list, daily summary, and Todoist integration.
+
+Custom trackers are stored in your plugin settings (`data.json`) and persist across sessions.
+
+### Editing and deleting
+
+- Click the **pencil icon** to edit a custom tracker's settings.
+- Click the **trash icon** to delete it (and remove it from the registry).
+
+---
+
+## Building a custom TrackerModule class (advanced)
+
+For trackers that need specialized UI or complex logic beyond what the settings builder can do, you can create a custom `TrackerModule` class in code.
+
+Only create a custom `TrackerModule` when you need:
 
 - Custom UI beyond dynamic form fields
 - Complex state management (e.g., the feeding tracker's active timer with side tracking)
