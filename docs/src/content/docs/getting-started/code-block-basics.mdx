@@ -1,0 +1,86 @@
+---
+title: Code block basics
+description: How Postpartum Tracker stores data inside your markdown notes.
+---
+
+## Markdown-native storage
+
+Every tracker widget is a fenced code block with the language tag `postpartum-tracker`. The JSON inside the code block **is** the data. There is no external database, no hidden files, no cloud sync -- just markdown.
+
+````markdown
+```postpartum-tracker
+{"version":1,"meta":{"babyName":"Luna"},"layout":["feeding","diaper","medication"],"trackers":{...}}
+```
+````
+
+When you tap a button in the widget, the plugin updates the JSON and writes it back to the code block. Obsidian detects the file change and re-renders the widget.
+
+## What lives where
+
+Understanding the split between per-code-block data and global settings is important:
+
+### Per code block (inside the JSON)
+
+- All tracker entries (feedings, diapers, medications, library tracker data)
+- Baby metadata (name, birth date, weight)
+- Layout order (which sections appear in what order)
+- Medication configurations (copied from settings on first creation)
+
+### Global settings (Settings > Postpartum Tracker)
+
+- Which modules are enabled (the tracker library toggles)
+- Notification preferences and webhook URLs
+- Todoist configuration and API token
+- Display preferences (time format, haptic feedback)
+- Default medication list
+
+### Key implication
+
+Each code block has **independent data**. If you create two tracker code blocks in different notes, they have separate feeding logs, separate diaper counts, and separate entries.
+
+:::tip[Recommendation]
+Use a single code block in one dedicated note (e.g., "Baby Tracker.md"). Multiple code blocks work but can cause confusion with notification aggregation.
+:::
+
+## Notification aggregation
+
+While each code block stores its own data, the notification system scans **all** code blocks in the vault when checking alert conditions. This means:
+
+- If you have feeding entries in two code blocks, both are considered for the "time since last feeding" alert.
+- Todoist two-way sync writes entries back to the **first** matching code block found in the vault.
+
+## Layout and reordering
+
+Each code block stores a `layout` array that controls the order of sections. You can reorder sections within a widget using:
+
+- Drag handles (on desktop)
+- Up/down arrow buttons in each section header
+
+The order is saved per code block, so different notes can have different layouts.
+
+## Data format
+
+The code block JSON follows this schema:
+
+```json
+{
+  "version": 1,
+  "meta": {
+    "babyName": "Luna",
+    "birthDate": "2026-02-15",
+    "birthWeight": 3200,
+    "unitSystem": "metric"
+  },
+  "layout": ["feeding", "diaper", "medication", "sleep", "mood"],
+  "trackers": {
+    "feeding": [{ "id": "...", "type": "breast", "side": "left", ... }],
+    "diaper": [{ "id": "...", "wet": true, "dirty": false, ... }],
+    "medication": [{ "id": "...", "name": "Tylenol", ... }],
+    "sleep": [{ "id": "...", "fields": { "type": "nap", ... }, ... }],
+    "medicationConfig": [{ "name": "Tylenol", "dosage": "500mg", ... }],
+    "logNotes": []
+  }
+}
+```
+
+See [Data schema](/postpartum-tracker/advanced/data-schema/) for the complete type reference.

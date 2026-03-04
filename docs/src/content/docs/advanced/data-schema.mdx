@@ -1,0 +1,183 @@
+---
+title: Data schema
+description: Complete reference for the JSON data stored inside postpartum-tracker code blocks.
+---
+
+All tracker data is stored as JSON inside a `postpartum-tracker` fenced code block. This page documents the complete schema.
+
+## PostpartumData (top level)
+
+```typescript
+interface PostpartumData {
+  /** Schema version for future migrations (currently 1) */
+  version: number;
+
+  /** Baby metadata */
+  meta: {
+    babyName?: string;
+    birthDate?: string;       // ISO 8601 date
+    birthWeight?: number;     // Grams
+    unitSystem?: 'metric' | 'imperial';
+  };
+
+  /** Ordered list of module IDs for section layout */
+  layout: string[];
+
+  /** Entry arrays keyed by module ID */
+  trackers: {
+    feeding?: FeedingEntry[];
+    diaper?: DiaperEntry[];
+    medication?: MedicationEntry[];
+    medicationConfig?: MedicationConfig[];
+    logNotes?: LogNoteEntry[];
+    [key: string]: unknown;   // Library tracker entries
+  };
+
+  /** Optional per-code-block settings overrides */
+  settingsOverrides?: Partial<PostpartumTrackerSettings>;
+}
+```
+
+The `[key: string]: unknown` index signature means any library tracker can store its entries without schema changes.
+
+## FeedingEntry
+
+```typescript
+interface FeedingEntry {
+  id: string;
+  type: 'breast' | 'bottle' | 'solid';
+  side?: 'left' | 'right' | 'both';
+  start: string;              // ISO 8601
+  end: string | null;         // null = actively feeding
+  durationSec?: number;       // Cached for completed entries
+  volumeMl?: number;          // For bottle feeding
+  notes: string;
+}
+```
+
+## DiaperEntry
+
+```typescript
+interface DiaperEntry {
+  id: string;
+  timestamp: string;          // ISO 8601
+  wet: boolean;
+  dirty: boolean;
+  color?: DiaperColor;
+  description: string;
+  notes: string;
+}
+
+type DiaperColor =
+  | 'meconium'          // Black/dark green (days 1-2)
+  | 'transitional'      // Dark green to brown (days 3-4)
+  | 'yellow-seedy'      // Normal breastfed (day 4+)
+  | 'green'             // Foremilk/hindmilk imbalance
+  | 'brown'             // Normal formula-fed
+  | 'other';
+```
+
+## MedicationEntry
+
+```typescript
+interface MedicationEntry {
+  id: string;
+  name: string;               // 'Tylenol', 'Ibuprofen', or custom
+  dosage?: string;            // '500mg', '200mg'
+  timestamp: string;          // ISO 8601
+  notes: string;
+}
+```
+
+## MedicationConfig
+
+Stored per code block in `trackers.medicationConfig` (copied from plugin settings on creation):
+
+```typescript
+interface MedicationConfig {
+  name: string;
+  technicalName?: string;     // Generic name (e.g., 'Acetaminophen')
+  dosage: string;
+  minIntervalHours: number;   // Min hours between doses
+  maxDailyDoses: number;      // Max per 24h (0 = unlimited)
+  enabled: boolean;
+  icon: string;
+  category?: 'medication' | 'remedy';
+}
+```
+
+## SimpleTrackerEntry
+
+Used by all library tracker modules:
+
+```typescript
+interface SimpleTrackerEntry {
+  id: string;
+  timestamp: string;          // ISO 8601
+  end?: string | null;        // For duration trackers
+  durationSec?: number;       // Calculated on stop
+  fields: Record<string, string | number | boolean>;
+  notes: string;
+}
+```
+
+The `fields` object contains key-value pairs matching the field definitions in the tracker's `SimpleTrackerDef`.
+
+## LogNoteEntry
+
+General-purpose notes:
+
+```typescript
+interface LogNoteEntry {
+  id: string;
+  timestamp: string;          // ISO 8601
+  category: string;
+  text: string;
+}
+```
+
+## Layout
+
+The `layout` array controls the order of sections in the widget:
+
+```json
+["feeding", "diaper", "medication", "sleep", "mood"]
+```
+
+Module IDs not in the layout array appear after the listed ones, sorted by `defaultOrder`. Module IDs in the layout that aren't enabled are silently skipped.
+
+## Version
+
+Currently `1`. The version field exists for future schema migrations. The parser applies backward-compatible defaults for any missing fields.
+
+## Example
+
+A minimal code block with one feeding entry:
+
+```json
+{
+  "version": 1,
+  "meta": {
+    "babyName": "Luna",
+    "birthDate": "2026-02-15"
+  },
+  "layout": ["feeding", "diaper", "medication"],
+  "trackers": {
+    "feeding": [
+      {
+        "id": "f1a2b3c4",
+        "type": "breast",
+        "side": "left",
+        "start": "2026-03-04T08:30:00.000Z",
+        "end": "2026-03-04T08:45:00.000Z",
+        "durationSec": 900,
+        "notes": ""
+      }
+    ],
+    "diaper": [],
+    "medication": [],
+    "medicationConfig": [],
+    "logNotes": []
+  }
+}
+```

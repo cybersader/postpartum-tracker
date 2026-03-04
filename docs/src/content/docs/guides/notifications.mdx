@@ -1,0 +1,110 @@
+---
+title: Notifications
+description: Set up feeding reminders, medication dose alerts, and custom interval reminders.
+---
+
+The notification system runs at the plugin level and periodically scans your vault for tracker data. When alert conditions are met, it sends notifications through your configured channels.
+
+## Enable notifications
+
+1. Open Settings > Postpartum Tracker > **Notifications**.
+2. Toggle **Enable notifications** on.
+3. Set the **Check interval** (how often to scan, in minutes; default: 1).
+4. Choose the **Notification type**: in-app, system, or both.
+
+## Alert types
+
+### Feeding reminders
+
+Fires when the time since the last completed feeding exceeds the configured threshold (default: 3 hours). No alert fires if a feeding is actively in progress.
+
+Toggle: **Feeding reminder enabled**
+Setting: **Feeding reminder hours**
+
+### Medication dose ready
+
+For each enabled medication in your configuration, checks the time since the last dose. Fires within a 5-minute window after the minimum interval elapses.
+
+Toggle: **Medication dose ready alerts**
+
+### Alternating medication schedule
+
+Tracks the Tylenol + Ibuprofen alternating pattern. Fires 3 hours after the most recent pain medication, suggesting you take the other one.
+
+Toggle: **Alternating medication alerts**
+
+### Library tracker reminders
+
+Smart modules from the tracker library (sleep, pumping, bowel movements, mood, temperature) have their own reminder intervals. These fire automatically when enabled.
+
+| Module | Default interval |
+|--------|-----------------|
+| Sleep | 3 hours |
+| Pumping | 3 hours |
+| Bowel movements | 24 hours |
+| Mood check-in | 8 hours |
+| Temperature | Configurable |
+
+## Notification channels
+
+### In-app toast
+
+A fixed-position notification appears in the bottom-right corner of the Obsidian window. Each toast includes:
+
+- Title and message
+- **Dismiss** button
+- **Snooze** menu with options: 15 minutes, 30 minutes, 1 hour, 2 hours
+
+Snooze state is stored in `localStorage` and persists across sessions.
+
+### System notifications
+
+Uses the Web Notification API to show desktop notifications. The plugin requests permission on first use.
+
+:::caution
+System notifications do not work on Obsidian mobile. The Capacitor runtime blocks the Web Notification API. Use in-app toasts or webhooks for mobile.
+:::
+
+### Webhooks
+
+POST a JSON payload to any URL when an alert fires. Compatible with [Gotify](https://gotify.net/), [ntfy.sh](https://ntfy.sh/), or any REST endpoint.
+
+**Payload format:**
+
+```json
+{
+  "title": "Feeding reminder",
+  "message": "Last feeding was 3.5 hours ago",
+  "priority": 5,
+  "extras": {
+    "category": "feeding",
+    "plugin": "postpartum-tracker"
+  }
+}
+```
+
+To configure:
+1. Enable **Webhook notifications**.
+2. Enter your webhook URL.
+3. Click **Test webhook** to verify connectivity.
+
+:::tip
+For mobile push notifications, set up [ntfy.sh](https://ntfy.sh/) (free, self-hostable) and point the webhook URL to your topic. Install the ntfy app on your phone for instant push alerts.
+:::
+
+## Suppressing notifications
+
+When Todoist integration is active and creating tasks for alerts, you may want to suppress in-app toasts to avoid duplicate reminders. Enable **Suppress toasts when Todoist handles reminders** in the Todoist settings section.
+
+## How scanning works
+
+The notification check loop:
+
+1. Runs on the configured interval (default: every minute).
+2. Scans all markdown files in the vault for `postpartum-tracker` code blocks.
+3. Aggregates tracker data across all code blocks.
+4. Evaluates each alert condition against the aggregated data.
+5. Fires new notifications and clears resolved ones.
+6. Triggers Todoist sync if enabled.
+
+This means alerts work even if you have multiple tracker code blocks across different notes -- all data is considered.

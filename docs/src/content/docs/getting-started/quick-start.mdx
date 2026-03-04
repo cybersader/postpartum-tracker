@@ -1,0 +1,55 @@
+---
+title: Quick start
+description: Log your first feeding, diaper change, and medication dose in under two minutes.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+This guide walks you through logging your first entries. The plugin is designed for one-handed, one-tap operation -- perfect for holding a baby.
+
+## Insert a tracker
+
+<Steps>
+
+1. Open a note (or create a new one, e.g., "Baby Tracker").
+
+2. Run the command **Insert postpartum tracker** from the command palette, or tap the ribbon icon.
+
+3. A code block appears with the tracker widget rendered inside it.
+
+</Steps>
+
+The widget shows several sections: a baby info bar at the top, quick action buttons, and collapsible sections for each tracker module.
+
+## Log a feeding
+
+Tap the **Breast L**, **Breast R**, or **Bottle** quick action button. A feeding entry is created with a live timer that counts up. Tap the stop button when the feeding ends.
+
+The daily summary at the top updates immediately with the feeding count and time since last feeding.
+
+## Log a diaper change
+
+Tap **Wet**, **Dirty**, or **Both** in the quick actions. If you enabled the color picker in settings, you can select the stool color for dirty diapers.
+
+The daily summary shows today's diaper counts. A health alert appears if the wet diaper count drops below the configured threshold (default: 6).
+
+## Log a medication dose
+
+Tap a medication button (e.g., **Tylenol**). The dose is recorded with a timestamp and a timer bar shows how long until the next safe dose.
+
+If alternating medication alerts are enabled, the plugin tracks the Tylenol/Ibuprofen pattern and suggests which to take next.
+
+## Set up baby info
+
+Open Settings > Postpartum Tracker. At the top, you can set:
+
+- **Baby name** -- displayed in the info bar
+- **Birth date** -- used to calculate day of life and weeks
+- **Birth weight** -- for reference
+
+## What's next
+
+- [Code block basics](/postpartum-tracker/getting-started/code-block-basics/) -- understand how data is stored
+- [Tracker library](/postpartum-tracker/guides/tracker-library/) -- enable additional modules (sleep, pumping, mood, etc.)
+- [Notifications](/postpartum-tracker/guides/notifications/) -- set up reminders
+- [Todoist integration](/postpartum-tracker/guides/todoist-integration/) -- sync tasks to Todoist

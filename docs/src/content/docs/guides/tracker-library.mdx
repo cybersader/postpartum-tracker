@@ -1,0 +1,84 @@
+---
+title: Tracker library
+description: Browse and enable additional tracking modules for sleep, pumping, pain, mood, and more.
+---
+
+The tracker library lets you enable additional tracking modules beyond the three core trackers (feeding, diapers, medication). Each module adds a new section to your widget with its own quick-action buttons, entry list, and daily summary.
+
+## Enabling modules
+
+1. Open Settings > Postpartum Tracker > **Tracker library**.
+2. Toggle on the modules you want.
+3. Reload Obsidian (the plugin needs to re-register modules).
+
+Enabled modules appear in your tracker widget with quick-action buttons and collapsible sections.
+
+## Module categories
+
+### Baby care (core)
+
+These are the built-in modules with dedicated UIs, deep notification integration, and full Todoist lifecycle support.
+
+| Module | Description |
+|--------|-------------|
+| **Feeding** | Breast (left/right/both) with live timer, bottle feeding, side tracking, time-since-last display |
+| **Diapers** | Wet/dirty/both quick buttons, stool color picker, daily count alerts |
+| **Medication** | Configurable medication list, dose timers, risk bars, daily limits, alternating schedule alerts |
+
+### Baby development
+
+| Module | Smart | Duration | Fields |
+|--------|-------|----------|--------|
+| **Sleep** | Yes (3h awake reminder) | Yes | Type (nap/night), quality (1-5), location (crib/bassinet/cosleep/swing/arms) |
+| **Tummy time** | No | Yes | Milestone notes |
+| **Weight** | No | No | Value in grams |
+| **Height/length** | No | No | Value in cm |
+| **Head circumference** | No | No | Value in cm |
+| **Temperature** | Yes (optional check reminder) | No | Value in F, method (rectal/axillary/temporal/oral) |
+
+### Mother's recovery
+
+| Module | Smart | Duration | Fields |
+|--------|-------|----------|--------|
+| **Pain tracking** | No | No | Level (1-10), location (perineum/abdomen/back/breast/head/other), type (sharp/dull/throbbing/burning/pressure) |
+| **Bowel movements** | Yes (24h reminder) | No | Difficulty (1-5) |
+| **Restroom visits** | No | No | Type (urination/other) |
+| **Walking/activity** | No | Yes | Distance notes |
+| **Pumping sessions** | Yes (3h reminder) | Yes | Side (left/right/both), amount in mL |
+| **Feeding position** | No | No | Position (cradle/cross-cradle/football/side-lying/laid-back/other) |
+
+### General
+
+| Module | Smart | Duration | Fields |
+|--------|-------|----------|--------|
+| **Mood check-in** | Yes (8h reminder) | No | Mood (1-5), feeling (happy/calm/tired/anxious/sad/frustrated/overwhelmed/grateful) |
+| **Hiccups** | No | Yes | (no additional fields) |
+
+## Smart modules
+
+Modules marked as **smart** have built-in notification logic. When enabled:
+
+- The notification system checks the time since the last entry.
+- If the configured interval has passed (e.g., 3 hours for sleep), a reminder fires through your configured notification channels.
+- If Todoist integration is active, proactive tasks are created after logging.
+
+See [Notifications](/postpartum-tracker/guides/notifications/) for configuration details.
+
+## Duration trackers
+
+Modules with the **duration** flag show a start/stop timer. Tap the quick-action button to start timing, and tap the stop button to end. The duration is calculated and stored automatically.
+
+Duration trackers include: sleep, tummy time, walking, pumping, and hiccups.
+
+## Quick-select buttons
+
+Some modules with a `select` field that has 4 or fewer options show individual quick-action buttons for each option instead of a single button. For example:
+
+- **Sleep** shows separate buttons for **Nap** and **Night**
+- **Bowel movements** shows numbered difficulty buttons
+
+This reduces the number of taps needed to log common entries.
+
+## Data storage
+
+Each enabled module stores its entries in the code block JSON under `trackers.<module-id>`. For example, sleep entries are at `trackers.sleep`. See [Data schema](/postpartum-tracker/advanced/data-schema/) for the entry format.

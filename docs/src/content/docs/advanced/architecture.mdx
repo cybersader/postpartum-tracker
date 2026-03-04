@@ -1,0 +1,174 @@
+---
+title: Architecture
+description: Technical overview of the plugin's component architecture, data flow, and module system.
+---
+
+This page covers the internal architecture for developers who want to understand how the plugin works or contribute to it.
+
+## Component overview
+
+```
+Plugin (main.ts)
+  ├── TrackerRegistry          Map<string, TrackerModule>
+  ├── NotificationService      Periodic vault scanner + multi-channel dispatch
+  ├── TodoistService           Todoist API v1 integration
+  └── Code block processor
+        └── TrackerWidget      MarkdownRenderChild
+              ├── BabyInfoBar
+              ├── DailySummary
+              ├── QuickActions
+              ├── AlertsPanel
+              └── CollapsibleSection[] (one per module)
+                    └── module.buildUI()
+```
+
+## Plugin lifecycle
+
+1. **`onload()`** -- Registers the `postpartum-tracker` code block processor, creates the `TrackerRegistry`, registers all enabled modules (3 core + library modules from `settings.enabledModules`), starts `NotificationService` and `TodoistService`.
+
+2. **Code block processing** -- When Obsidian encounters a `postpartum-tracker` code block, the processor creates a new `TrackerWidget` instance, passing the raw JSON source.
+
+3. **Widget rendering** -- `TrackerWidget` extends `MarkdownRenderChild`. It parses the JSON via `CodeBlockStore.parse()`, iterates the registry to initialize each module with its data, and builds the UI.
+
+4. **Tick loop** -- A 200ms `setInterval` calls `module.tick()` on each module for live timer updates.
+
+5. **Save cycle** -- When any module calls `save()`, the widget serializes all module data, writes the updated JSON back to the code block via `CodeBlockStore.save()`, which triggers Obsidian to re-render the entire code block (creating a new `TrackerWidget`).
+
+## TrackerModule interface
+
+Every tracker implements this interface (defined in `src/trackers/BaseTracker.ts`):
+
+```typescript
+interface TrackerModule<E, S> {
+  readonly id: string;
+  readonly displayName: string;
+  readonly defaultExpanded: boolean;
+  readonly defaultOrder: number;
+
+  // Data marshaling
+  parseEntries(raw: unknown): E[];
+  serializeEntries(): E[];
+  emptyEntries(): E[];
+  update(entries: E[]): void;
+
+  // UI
+  buildUI(bodyEl: HTMLElement, save: () => Promise<void>,
+          settings: PostpartumTrackerSettings,
+          emitEvent: (event: TrackerEvent) => void): void;
+
+  // Dashboard
+  getQuickActions(): QuickAction[];
+  computeStats(entries: E[], dayStart: Date, dayEnd: Date): S;
+  renderSummary(el: HTMLElement, stats: S): void;
+
+  // Optional
+  tick?(): void;
+  getAlerts?(): HealthAlert[];
+
+  // Library metadata (optional)
+  category?: TrackerCategory;
+  icon?: string;
+  description?: string;
+  isSmart?: boolean;
+}
+```
+
+## Module categories
+
+1. **Core modules** (feeding, diaper, medication) -- Dedicated `TrackerModule` classes with custom UI, complex state management, deep notification integration, and full Todoist task lifecycle.
+
+2. **Library modules** (sleep, pumping, pain, mood, etc.) -- All instantiated from a single `SimpleTrackerModule` class using data-driven `SimpleTrackerDef` definitions. No custom code per tracker.
+
+## Data flow
+
+```
+User taps button
+  -> module.logEntry()
+  -> entries.push(entry)
+  -> emitEvent('feeding-logged', entry)
+  -> save()
+    -> for each module: data.trackers[id] = module.serializeEntries()
+    -> CodeBlockStore.save(ctx, containerEl, data)
+      -> app.vault.process(file, content => ...)
+        -> Obsidian detects change, re-renders code block
+          -> new TrackerWidget created with updated JSON
+```
+
+The save is **atomic** -- it uses `ctx.getSectionInfo()` to locate the code block boundaries within the file, then `app.vault.process()` to rewrite just that section.
+
+## Event system
+
+A simple `Map`-based event bus on the plugin instance:
+
+- `emitTrackerEvent(event)` -- Fires to all listeners for `event.type`
+- `onTrackerEvent(type, listener)` -- Registers a listener
+
+Event types: `feeding-logged`, `medication-logged`, `diaper-logged`, `simple-logged`, `todoist-entry-created`
+
+Events are used by:
+- **TodoistService** -- Creates proactive tasks after logging
+- **NotificationService** -- Triggers immediate checks
+
+## CodeBlockStore
+
+`src/data/CodeBlockStore.ts` handles persistence:
+
+- **`parse(source)`** -- JSON string to `PostpartumData`. Applies defaults, backward compatibility, and preserves arbitrary tracker keys (so library module data is never silently dropped).
+- **`save(ctx, containerEl, data)`** -- Serializes to JSON and writes back to the code block using `ctx.getSectionInfo()` + `app.vault.process()`.
+
+## Key patterns
+
+### Event handling in code blocks
+
+CodeMirror 6 (Live Preview mode) intercepts standard `click` events on elements inside code blocks. The plugin uses `pointerdown`/`pointerup` with `preventDefault()` + `stopImmediatePropagation()` to ensure buttons work reliably.
+
+### Save triggers full re-render
+
+Every save rewrites the code block JSON, which causes Obsidian to destroy the current widget and create a new one. Modules must not hold references to DOM elements across saves.
+
+### Entry sorting
+
+Entries are always sorted by timestamp after adding or editing, so they display chronologically.
+
+## File structure
+
+```
+src/
+  main.ts                           Plugin entry, code block processor
+  types.ts                          All interfaces and defaults
+  settings.ts                       Settings tab
+  data/
+    CodeBlockStore.ts               JSON persistence
+    TrackerRegistry.ts              Module registration
+    dateUtils.ts                    Day boundary helpers
+  trackers/
+    BaseTracker.ts                  TrackerModule interface
+    library.ts                      SimpleTrackerDef catalog
+    feeding/FeedingTracker.ts       Core: feeding
+    feeding/feedingStats.ts
+    diaper/DiaperTracker.ts         Core: diapers
+    diaper/diaperStats.ts
+    medication/MedicationTracker.ts Core: medication
+    medication/medicationStats.ts
+    simple/SimpleTrackerModule.ts   Library: generic module class
+    simple/simpleTrackerStats.ts
+  widget/
+    TrackerWidget.ts                Main widget (MarkdownRenderChild)
+    CollapsibleSection.ts           Reorderable sections
+    QuickActions.ts                 Button grid
+    DailySummary.ts                 Summary strip
+    AlertsPanel.ts                  Health alerts
+    shared/
+      BigButton.ts                  Touch-friendly buttons
+      TimerDisplay.ts               Live timer component
+      EntryList.ts                  Scrollable entry list
+  integrations/
+    TodoistService.ts               Todoist API v1
+  notifications/
+    NotificationService.ts          Periodic scanner
+    ToastNotification.ts            In-app toast UI
+  utils/
+    dom.ts                          DOM helpers
+    formatters.ts                   Time/date formatting
+    deepMerge.ts                    Settings merge utility
+```

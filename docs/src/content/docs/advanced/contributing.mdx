@@ -1,0 +1,126 @@
+---
+title: Contributing
+description: Set up a development environment, build the plugin, and submit changes.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+## Development setup
+
+<Steps>
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/cybersader/postpartum-tracker.git
+   cd postpartum-tracker
+   ```
+
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+3. Build the plugin:
+   ```bash
+   bun run build
+   ```
+
+4. For development with auto-rebuild:
+   ```bash
+   bun run dev
+   ```
+
+</Steps>
+
+## Project structure
+
+The plugin source lives in `src/`. Build output (`main.js`) is generated in the project root alongside `manifest.json` and `styles.css`.
+
+```
+src/
+  main.ts              Plugin entry point
+  types.ts             All interfaces and defaults
+  settings.ts          Settings tab
+  data/                Data persistence
+  trackers/            Core + library tracker modules
+  widget/              UI components
+  integrations/        Todoist service
+  notifications/       Notification service + toast UI
+  utils/               Helpers
+```
+
+See [Architecture](/postpartum-tracker/advanced/architecture/) for a detailed breakdown.
+
+## Build commands
+
+| Command | Description |
+|---------|-------------|
+| `bun run build` | TypeScript type-check + esbuild bundle |
+| `bun run dev` | Watch mode (rebuilds on file changes) |
+| `bun test` | Run tests |
+| `npm run lint` | ESLint with Obsidian plugin rules |
+
+## Testing
+
+The plugin directory is itself an Obsidian vault plugin folder. To test:
+
+1. Build with `bun run build`.
+2. Open the parent vault in Obsidian (the one containing `.obsidian/plugins/obsidian-postpartum-tracker/`).
+3. Enable the plugin in Settings > Community Plugins.
+4. Open `Baby Tracker.md` (or insert a new tracker code block).
+
+The [Hot Reload](https://github.com/pjeby/hot-reload) community plugin is recommended for automatic reloading during development.
+
+## Adding a new library tracker
+
+The easiest way to contribute a new tracker is through the simple tracker system:
+
+1. Add a `SimpleTrackerDef` to `src/trackers/library.ts`.
+2. That's it -- rebuild and the tracker appears in the library.
+
+See [Simple tracker API](/postpartum-tracker/advanced/simple-tracker-api/) for the full field reference.
+
+## Releasing
+
+Releases are created via a shell script that bumps the version, creates a git tag, and pushes. GitHub Actions builds and publishes the release.
+
+```bash
+bash scripts/release.sh 0.4.0
+```
+
+This script:
+1. Validates the version argument.
+2. Updates `manifest.json` and `versions.json` via `version-bump.mjs`.
+3. Runs `bun run build`.
+4. Commits, tags, and pushes.
+5. GitHub Actions creates a release with `main.js`, `manifest.json`, and `styles.css`.
+
+## Documentation site
+
+The docs site (what you're reading now) uses [Astro Starlight](https://starlight.astro.build/) and lives in the `docs/` directory.
+
+```bash
+cd docs
+bun install
+bun run dev        # Local preview at localhost:4321
+bun run build      # Production build
+```
+
+Documentation is deployed automatically to GitHub Pages when changes to `docs/` are pushed to the main branch.
+
+## Code style
+
+- Vanilla TypeScript + DOM (no framework)
+- CSS class prefix: `pt-`
+- Use `pointerdown`/`pointerup` for interactive elements in code blocks
+- Sort entries by timestamp after mutations
+- Keep modules self-contained -- each module manages its own UI and state
+
+## Pull requests
+
+1. Fork the repository.
+2. Create a feature branch.
+3. Make your changes.
+4. Run `bun run build` to verify the build succeeds.
+5. Run `npm run lint` to check code quality.
+6. Submit a pull request with a clear description of what changed and why.

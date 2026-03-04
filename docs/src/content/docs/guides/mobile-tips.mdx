@@ -1,0 +1,62 @@
+---
+title: Mobile tips
+description: Get the best experience using Postpartum Tracker on Obsidian mobile.
+---
+
+Postpartum Tracker is designed mobile-first. Most interactions require a single tap, and touch targets are sized for one-handed use while holding a baby.
+
+## Recommended setup
+
+1. **Create a dedicated note** (e.g., "Baby Tracker") with just the tracker code block.
+2. **Star/pin** the note for quick access.
+3. **Use Reading view** for the most reliable button interactions. Live Preview works but requires the plugin's special event handling for CodeMirror compatibility.
+4. **Enable haptic feedback** in Settings > Postpartum Tracker > Display for tactile confirmation on each tap.
+
+## Live Preview vs Reading view
+
+The plugin works in both modes, but there are differences:
+
+| Feature | Reading view | Live Preview |
+|---------|-------------|-------------|
+| Button taps | Standard click events | Uses pointerdown/pointerup to prevent CodeMirror interference |
+| Reliability | Most reliable | Occasionally requires a firm tap |
+| Inline editing | Works | Works (special handling for datetime pickers) |
+| Drag reordering | Works | Works |
+
+If buttons feel unresponsive in Live Preview, switch to Reading view (tap the book icon in the top-right).
+
+## Quick actions
+
+The quick action buttons at the top of the widget are designed for rapid logging:
+
+- **Feeding**: Tap Breast L, Breast R, or Bottle to start a timer. Tap stop when done.
+- **Diapers**: Tap Wet, Dirty, or Both for a one-tap log.
+- **Medications**: Each enabled medication has its own button.
+- **Library trackers**: Each enabled module adds buttons. Modules with select fields (like sleep type) show per-option buttons.
+
+## Past-time logging
+
+Missed logging something in the moment? Tap the clock icon in the quick actions bar to set a past timestamp. All subsequent entries will use that time until you clear it.
+
+## Notification limitations on mobile
+
+:::caution
+System notifications (Web Notification API) do not work on Obsidian mobile. The Capacitor runtime blocks them.
+:::
+
+For mobile notifications, use one of these alternatives:
+
+- **In-app toasts** -- Work on mobile, but only visible when Obsidian is open.
+- **Webhooks to ntfy.sh** -- Set up a [ntfy.sh](https://ntfy.sh/) topic and install the ntfy app on your phone. The plugin sends webhook alerts that become push notifications.
+- **Todoist tasks** -- If you have the Todoist app installed, task notifications serve as feeding reminders.
+
+## Performance
+
+The plugin is lightweight by design:
+
+- No framework (vanilla TypeScript + DOM)
+- 200ms tick loop for timers (minimal CPU)
+- Atomic saves via Obsidian's vault API
+- Library trackers share a single `SimpleTrackerModule` class -- no per-tracker code bloat
+
+Even with all 14+ modules enabled, the widget renders quickly on mobile devices.

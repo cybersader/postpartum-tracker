@@ -1,0 +1,89 @@
+---
+title: Todoist integration
+description: Sync tracker events to Todoist for shared task management and external reminders.
+---
+
+The Todoist integration creates tasks in a dedicated Todoist project when you log entries or when notification alerts fire. It also supports two-way sync -- completing a task in Todoist creates a corresponding tracker entry.
+
+## Setup
+
+1. Open Settings > Postpartum Tracker > **Todoist**.
+2. Toggle **Enable Todoist integration**.
+3. Enter your [Todoist API token](https://todoist.com/help/articles/find-your-api-token-Jpzx9IIlB) (found in Todoist Settings > Integrations > Developer).
+4. Click **Test connection** to verify the token works.
+5. Click **Setup project** to create (or find) a Todoist project with sections.
+
+The plugin creates a project called "Postpartum tasks" with sections for feeding, diapers, and medication.
+
+### Team workspaces
+
+If you use Todoist with a team (Business/Team plan), you can create the project under a shared workspace so all team members see the tasks:
+
+1. In the **Team workspace** dropdown, select your team.
+2. Then click **Setup project**.
+
+The project is created under the selected workspace and visible to all team members.
+
+## Task types
+
+### Proactive tasks (after logging)
+
+When **Create on log** is enabled, the plugin creates a "next action" task after you log an entry:
+
+| Event | Task created |
+|-------|-------------|
+| Feeding logged | "Check if baby is hungry (try [opposite side])" with estimated time |
+| Medication logged | "Take [med] [dosage]" with safe-after time |
+| Library tracker logged | Reminder task using the module's notification message (if defined) |
+
+When you log a new entry, the previous proactive task for that category is automatically completed and a new one is created with updated timing.
+
+### Alert tasks (from notifications)
+
+When **Create on alert** is enabled, the plugin creates a Todoist task whenever a notification alert fires. When the alert condition clears (e.g., you log a feeding), the task is automatically completed.
+
+## Due dates
+
+Control how due dates are set on tasks:
+
+| Style | Behavior |
+|-------|----------|
+| **None** | No due date. Timing info appears in the task description only. |
+| **Date** | Date-only due date. Task shows up in Todoist's Today view. |
+| **Datetime** | Exact due time. Triggers a Todoist reminder if you have a Pro subscription. |
+
+## Two-way sync
+
+When enabled, the plugin periodically checks your Todoist project for tasks that were completed externally (i.e., by you or a team member in Todoist, not by the plugin). For each externally completed task, it creates a corresponding entry in the tracker.
+
+This is useful for caregivers who share the Todoist project -- when one person completes a feeding task in Todoist, the entry appears in the tracker automatically.
+
+Two-way sync runs during each notification check cycle.
+
+## Configuration options
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Project name | "Postpartum tasks" | Name of the Todoist project |
+| Alert priority | 4 (urgent) | Priority for alert-driven tasks |
+| Proactive priority | 2 (medium) | Priority for proactive tasks |
+| Labels | (empty) | Labels applied to all created tasks |
+| Task prefix | (empty) | Custom prefix for task content |
+| Suppress toasts | Yes | Hide in-app toasts when Todoist handles reminders |
+| Feeding interval | 3 hours | Estimated feeding interval for proactive task timing |
+
+## Cleanup
+
+If you need to start fresh:
+
+- **Clear local task cache** -- Removes the plugin's local record of tracked tasks. Useful if tasks get out of sync.
+- **Remove project from Todoist** -- Deletes the entire Todoist project and all its tasks. Use with caution.
+
+Both options are in the Todoist settings section under **Cleanup**.
+
+## Technical details
+
+- Uses **Todoist API v1** (`https://api.todoist.com/api/v1`)
+- API calls go through Obsidian's `requestUrl` (CORS-friendly, no external fetch needed)
+- Task map stored in `localStorage` under `pt-todoist-tasks`
+- Stale entries (completed, older than 48 hours) are cleaned automatically

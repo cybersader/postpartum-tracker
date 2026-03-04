@@ -1,0 +1,196 @@
+---
+title: Simple tracker API
+description: Add new trackers to the library with a single data definition -- no custom code required.
+---
+
+The simple tracker system lets you add new tracking modules by defining a `SimpleTrackerDef` object in the library catalog. The shared `SimpleTrackerModule` class handles everything: UI generation, data persistence, stats, notifications, and Todoist integration.
+
+## Add a definition
+
+Open `src/trackers/library.ts` and add an entry to the `TRACKER_LIBRARY` array:
+
+```typescript
+{
+  id: 'my-tracker',
+  displayName: 'My tracker',
+  category: 'general',
+  icon: '📋',
+  description: 'Track something useful',
+  isSmart: false,
+  fields: [
+    {
+      key: 'value',
+      label: 'Value',
+      type: 'number',
+      unit: 'kg',
+      required: true,
+    },
+    {
+      key: 'method',
+      label: 'Method',
+      type: 'select',
+      options: ['Option A', 'Option B', 'Option C'],
+    },
+  ],
+  defaultOrder: 50,
+  hasDuration: false,
+},
+```
+
+That's it. Rebuild and your tracker appears in the library settings.
+
+## Field types
+
+| Type | Input control | Stored as |
+|------|--------------|-----------|
+| `text` | Text input | `string` |
+| `number` | Number input with optional unit label | `number` |
+| `select` | Dropdown from `options[]` | `string` |
+| `boolean` | Yes/No dropdown | `boolean` |
+| `rating` | Clickable number row (min to max) | `number` |
+| `datetime` | Datetime picker | `string` (ISO 8601) |
+
+## SimpleTrackerDef reference
+
+```typescript
+interface SimpleTrackerDef {
+  /** Unique ID, used as key in code block JSON */
+  id: string;
+
+  /** Display name shown in UI and settings */
+  displayName: string;
+
+  /** Category for grouping in settings browser */
+  category: 'baby-care' | 'baby-development' | 'mother-recovery' | 'general';
+
+  /** Emoji icon */
+  icon: string;
+
+  /** Short description shown in settings */
+  description: string;
+
+  /** Whether this tracker has notification logic */
+  isSmart: boolean;
+
+  /** Form field definitions */
+  fields: SimpleTrackerField[];
+
+  /** Sort order (lower = higher in list) */
+  defaultOrder: number;
+
+  /** Show start/stop timer */
+  hasDuration?: boolean;
+
+  /** Notification configuration (only relevant if isSmart: true) */
+  notificationConfig?: {
+    reminderEnabled: boolean;
+    reminderIntervalHours: number;
+    reminderMessage: string;
+  };
+}
+```
+
+## SimpleTrackerField reference
+
+```typescript
+interface SimpleTrackerField {
+  /** Unique key within this tracker's fields */
+  key: string;
+
+  /** Label shown in form */
+  label: string;
+
+  /** Input type */
+  type: 'text' | 'number' | 'select' | 'boolean' | 'datetime' | 'rating';
+
+  /** Options for 'select' type */
+  options?: string[];
+
+  /** Whether the field must be filled */
+  required?: boolean;
+
+  /** Placeholder text */
+  placeholder?: string;
+
+  /** Display unit (e.g., 'cm', 'kg', 'F') */
+  unit?: string;
+
+  /** Min value for 'number' and 'rating' */
+  min?: number;
+
+  /** Max value for 'number' and 'rating' */
+  max?: number;
+}
+```
+
+## Entry format
+
+All simple tracker entries are stored as `SimpleTrackerEntry`:
+
+```typescript
+interface SimpleTrackerEntry {
+  id: string;
+  timestamp: string;        // ISO 8601
+  end?: string | null;      // For duration trackers
+  durationSec?: number;     // Calculated on stop
+  fields: Record<string, string | number | boolean>;
+  notes: string;
+}
+```
+
+## Smart trackers
+
+To make a tracker "smart" (with automatic reminders):
+
+1. Set `isSmart: true`.
+2. Add a `notificationConfig`:
+
+```typescript
+{
+  id: 'my-tracker',
+  isSmart: true,
+  notificationConfig: {
+    reminderEnabled: true,
+    reminderIntervalHours: 4,
+    reminderMessage: 'Time to track again',
+  },
+  // ... rest of definition
+}
+```
+
+The notification system checks the time since the last entry and fires a reminder when the interval has passed. If Todoist is enabled, a proactive task is also created using the reminder message.
+
+## Duration trackers
+
+Set `hasDuration: true` to add a start/stop timer:
+
+```typescript
+{
+  id: 'my-timer',
+  hasDuration: true,
+  // ... rest of definition
+}
+```
+
+The quick-action button starts a timer. A stop button appears in the section UI. Duration is calculated and stored in `durationSec`.
+
+## Quick-select behavior
+
+If the first field in a definition is a `select` type with 4 or fewer options, the module generates per-option quick-action buttons instead of a single button. This reduces taps for common entries.
+
+For example, a sleep tracker with `options: ['nap', 'night']` generates separate "Nap" and "Night" quick-action buttons.
+
+## Categories
+
+Trackers are grouped in the settings browser by category:
+
+| Category | Description |
+|----------|-------------|
+| `baby-care` | Core baby tracking (reserved for built-in modules) |
+| `baby-development` | Growth, sleep, milestones |
+| `mother-recovery` | Postpartum recovery tracking |
+| `general` | Everything else |
+
+## Enabling
+
+Users enable trackers in Settings > Tracker Library. The module ID is added to `settings.enabledModules[]`. A plugin reload is required for the change to take effect.

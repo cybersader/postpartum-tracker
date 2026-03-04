@@ -4,155 +4,103 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 ![Mobile Ready](https://img.shields.io/badge/mobile-ready-green?style=flat-square)
 ![BRAT Compatible](https://img.shields.io/badge/BRAT-compatible-purple?style=flat-square)
+[![Docs](https://img.shields.io/badge/docs-starlight-c2649a?style=flat-square)](https://cybersader.github.io/postpartum-tracker/)
 
-A mobile-first postpartum tracker that lives inside your Obsidian notes. Track feedings, diapers, medications, sleep, pumping, pain, mood, and more -- all stored as markdown-native JSON. Includes smart notifications, Todoist integration, and an extensible tracker library.
+A mobile-first postpartum tracker that lives inside your Obsidian notes. Track feedings, diapers, medications, sleep, pumping, pain, mood, and more -- all stored as markdown-native JSON.
+
+<!-- TODO: Add screenshot here -->
+<!-- ![Screenshot](docs/src/assets/screenshot.png) -->
 
 ## Features
 
-### Core Modules (Baby Care)
+### Core tracking
 
-- **Feeding tracker** -- Breast (left/right/both) with live timer, side tracking, and time-since-last display
-- **Diaper tracker** -- Wet/dirty/both quick buttons, stool color picker with visual swatches, daily count monitoring
-- **Medication tracker** -- Configurable medication list with dose timers, risk bars, daily limits, alternating schedule alerts (Tylenol/Ibuprofen), and recovery care items (Dermoplast, Lidocaine, Proctofoam, etc.)
+| Module | Highlights |
+|--------|-----------|
+| **Feeding** | Breast (L/R/both) with live timer, bottle feeding, side tracking, time-since-last |
+| **Diapers** | Wet/dirty/both quick buttons, stool color picker, daily count alerts |
+| **Medication** | Configurable med list, dose timers, risk bars, daily limits, Tylenol/Ibuprofen alternating alerts, recovery care items |
 
-### Tracker Library
+### 14+ library trackers
 
-Enable additional tracking modules from the library in settings:
+Enable additional modules in settings -- no custom code needed.
 
-| Module | Category | Smart | Description |
-|--------|----------|-------|-------------|
-| Sleep | Baby development | Yes | Naps and nighttime sleep with start/end timer, location, quality rating |
-| Tummy time | Baby development | No | Tummy time sessions with milestone notes |
-| Weight | Baby development | No | Periodic weight measurements |
-| Height/length | Baby development | No | Length measurements |
-| Head circumference | Baby development | No | Head circumference measurements |
-| Temperature | Baby development | Yes | Temperature readings with method (rectal, axillary, temporal, oral) |
-| Pain tracking | Mother's recovery | No | Pain level (1-10), location, type |
-| Bowel movements | Mother's recovery | Yes | Postpartum bowel movement tracking (24h reminder) |
-| Restroom visits | Mother's recovery | No | Urination frequency tracking |
-| Walking/activity | Mother's recovery | No | Walks with duration timer |
-| Pumping sessions | Mother's recovery | Yes | Pump tracking with side, amount, and timer |
-| Feeding position | Mother's recovery | No | Breastfeeding position logging |
-| Mood check-in | General | Yes | Mood rating and emotional state tracking |
+| Module | Category | Smart | Duration |
+|--------|----------|:-----:|:--------:|
+| Sleep | Baby development | Yes | Yes |
+| Tummy time | Baby development | | Yes |
+| Weight | Baby development | | |
+| Height/length | Baby development | | |
+| Head circumference | Baby development | | |
+| Temperature | Baby development | Yes | |
+| Pain tracking | Mother's recovery | | |
+| Bowel movements | Mother's recovery | Yes | |
+| Restroom visits | Mother's recovery | | |
+| Walking/activity | Mother's recovery | | Yes |
+| Pumping sessions | Mother's recovery | Yes | Yes |
+| Feeding position | Mother's recovery | | |
+| Mood check-in | General | Yes | |
+| Hiccups | General | | Yes |
 
-**Smart** modules support automatic interval-based reminders via the notification system.
-
-### Notifications
-
-- **In-app toast** notifications with snooze and dismiss
-- **System notifications** (desktop, Web Notification API)
-- **Webhooks** for external services (Gotify, ntfy.sh, etc.)
-- Configurable check interval, feeding reminders, medication dose alerts, alternating med schedule alerts
-- Library tracker reminders (sleep, pumping, bowel movements, mood, etc.)
-
-### Todoist Integration
-
-- **Proactive tasks** -- After logging a feeding, creates "Check if baby is hungry" with estimated time
-- **Alert tasks** -- Creates tasks when notifications fire
-- **Two-way sync** -- Completing tasks in Todoist creates entries in the tracker
-- Configurable project, sections, priorities, labels, due date style
-
-### Widget Features
-
-- **Baby info bar** -- Name, day of life, weeks display
-- **Daily summary dashboard** -- At-a-glance cards for all enabled modules
-- **Quick action buttons** -- One-tap logging for everything
-- **Past-time clock** -- Log entries for earlier times
-- **Collapsible, reorderable sections** -- Drag or arrow buttons to reorganize
-- **Health alerts panel** -- Feeding overdue, low diaper count, custom alerts
-- **Inline editing** -- Edit any entry's time, fields, and notes
-
-## Quick Start
-
-1. Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat) using `cybersader/postpartum-tracker`
-2. Open any note and run the command **Insert postpartum tracker** (or click the ribbon icon)
-3. Start tracking!
-
-The plugin creates a `postpartum-tracker` code block:
-
-````markdown
-```postpartum-tracker
-{"version":1,"meta":{},"layout":["feeding","diaper","medication"],"trackers":{"feeding":[],"diaper":[],"medication":[],"medicationConfig":[...],"logNotes":[]}}
-```
-````
-
-## Settings
-
-### Display
-- Time format (12h/24h)
-- Haptic feedback (mobile)
-
-### Tracker Library
-- Enable/disable any tracking module
-- Core modules marked with `[core]` badge
-- Smart modules marked with `[smart]` badge
-
-### Feeding
-- Show live timer
-- Track breast side
-
-### Diapers
-- Show color picker for dirty diapers
-- Wet diaper alert threshold
-
-### Medication & Recovery Care
-- Pre-configured medications (Tylenol, Ibuprofen, Norco, supplements)
-- Pre-configured remedies (Dermoplast, Lidocaine, EMLA, Proctofoam, Witch hazel)
-- Add custom medications and remedies
-- Edit dosage, intervals, daily limits, icons
+**Smart** = automatic interval-based reminders. **Duration** = start/stop timer.
 
 ### Notifications
-- Enable/disable, notification type (in-app, system, both)
-- Check interval, feeding reminder threshold
-- Medication dose ready alerts
-- Alternating medication schedule alerts
-- Webhook URL and test button
 
-### Todoist
-- API token, project setup
-- Create on alert / create on log toggles
-- Due date style, priorities, labels, task prefix
-- Suppress toasts, two-way sync
+In-app toasts, system notifications, and webhooks (Gotify, ntfy.sh). Feeding reminders, medication dose alerts, alternating schedule alerts, and library tracker reminders.
+
+### Todoist integration
+
+Proactive tasks after logging, alert tasks when reminders fire, two-way sync (completing Todoist tasks creates tracker entries), team workspace support.
+
+### Widget
+
+Baby info bar, daily summary dashboard, quick-action buttons, past-time clock, collapsible reorderable sections, health alerts, inline editing.
+
+## Quick start
+
+1. Install via [BRAT](https://github.com/TfTHacker/obsidian42-brat) -- add `cybersader/postpartum-tracker`
+2. Run the command **Insert postpartum tracker** in any note
+3. Start tracking
+
+## Documentation
+
+Full documentation at **[cybersader.github.io/postpartum-tracker](https://cybersader.github.io/postpartum-tracker/)**
+
+- [Installation](https://cybersader.github.io/postpartum-tracker/getting-started/installation/) -- BRAT and manual install
+- [Quick start](https://cybersader.github.io/postpartum-tracker/getting-started/quick-start/) -- First entries walkthrough
+- [Tracker library](https://cybersader.github.io/postpartum-tracker/guides/tracker-library/) -- All available modules
+- [Notifications](https://cybersader.github.io/postpartum-tracker/guides/notifications/) -- Reminders and webhooks
+- [Todoist integration](https://cybersader.github.io/postpartum-tracker/guides/todoist-integration/) -- Task sync setup
+- [Architecture](https://cybersader.github.io/postpartum-tracker/advanced/architecture/) -- Technical deep dive
+- [Contributing](https://cybersader.github.io/postpartum-tracker/advanced/contributing/) -- Development setup
 
 ## Installation
 
-### BRAT (Recommended)
+### BRAT (recommended)
+
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
 2. BRAT Settings > Add Beta Plugin > `cybersader/postpartum-tracker`
 3. Enable "Postpartum tracker" in Community Plugins
 
 ### Manual
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cybersader/postpartum-tracker/releases)
+
+1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://github.com/cybersader/postpartum-tracker/releases)
 2. Create `<vault>/.obsidian/plugins/obsidian-postpartum-tracker/`
-3. Copy the three files into that folder
-4. Enable the plugin in Settings > Community Plugins
+3. Copy the files into that folder and enable the plugin
 
 ## Development
 
 ```bash
-bun install          # Install dependencies
-bun run dev          # Watch mode
-bun run build        # Production build (type check + bundle)
+bun install        # Install dependencies
+bun run dev        # Watch mode
+bun run build      # Production build
 ```
 
-### Architecture
+See the [Contributing](https://cybersader.github.io/postpartum-tracker/advanced/contributing/) guide for full dev setup, architecture overview, and release process.
 
-- **TrackerModule interface** -- Each module implements `buildUI()`, `computeStats()`, `getQuickActions()`, `tick()`, `getAlerts()`
-- **SimpleTrackerModule** -- Generic module class instantiated from data-driven definitions (no custom code per tracker)
-- **TrackerRegistry** -- Central module registry, iterated by the widget
-- **CodeBlockStore** -- JSON persistence in markdown code blocks via `ctx.getSectionInfo()` + `app.vault.process()`
-- **NotificationService** -- Plugin-level periodic scanner with multi-channel dispatch
-- **TodoistService** -- Todoist API v1 integration with task lifecycle management
+## Inspired by
 
-### Releasing
-
-```bash
-scripts/release.sh 0.2.0    # Bumps version, tags, pushes -> GitHub Actions creates release
-```
-
-## Inspired By
-
-- [Baby Buddy](https://github.com/babybuddy/babybuddy) -- Open-source baby tracking (sleep, tummy time, pumping, measurements, temperature)
+- [Baby Buddy](https://github.com/babybuddy/babybuddy) -- Open-source baby tracking
 - [Obsidian Contractions Timer](https://github.com/cybersader/obsidian-contractions-timer) -- Same architecture pattern
 
 ## License

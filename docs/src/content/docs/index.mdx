@@ -1,0 +1,47 @@
+---
+title: Postpartum Tracker
+description: Mobile-first postpartum tracking for Obsidian — feedings, diapers, medications, sleep, mood, and more.
+template: splash
+hero:
+  title: Postpartum Tracker
+  tagline: Mobile-first baby and postpartum tracking that lives inside your Obsidian notes.
+  actions:
+    - text: Get started
+      link: /postpartum-tracker/getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/cybersader/postpartum-tracker
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why Postpartum Tracker?
+
+Tracking feedings, diapers, medications, and recovery during the postpartum period is critical but overwhelming. Most tracking apps lock your data in proprietary formats and require constant connectivity.
+
+Postpartum Tracker stores everything as JSON inside your Obsidian markdown notes. Your data is yours, always accessible, and never leaves your vault.
+
+## Features
+
+<CardGrid stagger>
+  <Card title="Core tracking" icon="pencil">
+    Feeding (breast/bottle with live timer), diaper changes (wet/dirty with stool color), and medication schedules (dose timers, risk bars, alternating alerts).
+  </Card>
+  <Card title="Tracker library" icon="list-format">
+    14+ additional modules: sleep, pumping, pain, mood, temperature, walking, tummy time, measurements, and more. Enable what you need in settings.
+  </Card>
+  <Card title="Smart notifications" icon="warning">
+    In-app toasts, system notifications, and webhooks for external services. Feeding reminders, medication dose alerts, and interval-based reminders for library trackers.
+  </Card>
+  <Card title="Todoist integration" icon="external">
+    Proactive tasks after logging, alert tasks when reminders fire, and two-way sync that creates tracker entries when you complete Todoist tasks.
+  </Card>
+  <Card title="Markdown native" icon="document">
+    All data stored as JSON inside a markdown code block. No external database, no cloud dependency. Your data stays in your vault.
+  </Card>
+  <Card title="Mobile first" icon="laptop">
+    Designed for one-handed operation with large touch targets, haptic feedback, and quick-action buttons. Works on desktop too.
+  </Card>
+</CardGrid>

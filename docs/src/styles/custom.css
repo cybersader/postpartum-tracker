@@ -1,0 +1,65 @@
+/* Rose/mauve accent — warm, caring, postpartum-appropriate */
+:root {
+  --sl-color-accent-low: #3d1f30;
+  --sl-color-accent: #c2649a;
+  --sl-color-accent-high: #f0d0e2;
+  --sl-font: 'system-ui', -apple-system, sans-serif;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f0d0e2;
+  --sl-color-accent: #a84d7e;
+  --sl-color-accent-high: #3d1f30;
+}
+
+/* Feature cards for landing page */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--sl-color-gray-5);
+  background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+/* Tracker library table styling */
+.tracker-table td:first-child {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Badges for smart/core trackers */
+.badge {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-smart {
+  background: var(--sl-color-accent-low);
+  color: var(--sl-color-accent-high);
+}
+
+.badge-core {
+  background: #1a3a2a;
+  color: #7ee8a8;
+}
+
+:root[data-theme='light'] .badge-core {
+  background: #d4f0e0;
+  color: #1a5c36;
+}

@@ -1,0 +1,57 @@
+---
+title: Installation
+description: Install the Postpartum Tracker plugin via BRAT or manually.
+---
+
+import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+## Requirements
+
+- Obsidian 0.15.0 or later
+- Works on desktop (Windows, macOS, Linux) and mobile (iOS, Android)
+
+## Install via BRAT (recommended)
+
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) is a community plugin that lets you install beta plugins directly from GitHub.
+
+<Steps>
+
+1. Install **BRAT** from Settings > Community Plugins > Browse.
+
+2. Open BRAT settings and click **Add beta plugin**.
+
+3. Enter `cybersader/postpartum-tracker` and click **Add plugin**.
+
+4. Go to Settings > Community Plugins, find **Postpartum tracker**, and enable it.
+
+</Steps>
+
+BRAT will automatically check for updates when you open Obsidian.
+
+## Manual installation
+
+<Steps>
+
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/cybersader/postpartum-tracker/releases).
+
+2. Create the folder `<your vault>/.obsidian/plugins/obsidian-postpartum-tracker/`.
+
+3. Copy the three downloaded files into that folder.
+
+4. Open Obsidian, go to Settings > Community Plugins, and enable **Postpartum tracker**.
+
+</Steps>
+
+## Verify it works
+
+After enabling the plugin:
+
+1. Open any note.
+2. Run the command **Insert postpartum tracker** from the command palette (Ctrl/Cmd+P), or click the baby bottle icon in the ribbon.
+3. A tracker widget should appear in your note.
+
+If nothing appears, check the developer console (Ctrl+Shift+I on desktop) for errors.
+
+## Next steps
+
+Continue to [Quick start](/postpartum-tracker/getting-started/quick-start/) to log your first entries.

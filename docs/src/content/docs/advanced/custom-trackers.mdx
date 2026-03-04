@@ -1,0 +1,180 @@
+---
+title: Custom trackers
+description: Build a custom TrackerModule class for trackers that need specialized UI or complex logic.
+---
+
+Most new trackers should use the [Simple Tracker API](/postpartum-tracker/advanced/simple-tracker-api/) -- it requires zero custom code. Only create a custom `TrackerModule` when you need:
+
+- Custom UI beyond dynamic form fields
+- Complex state management (e.g., the feeding tracker's active timer with side tracking)
+- Custom stats computation or visualization
+- Special alert logic that doesn't fit the interval-based pattern
+- Interaction with other modules' data
+
+## Create the module
+
+Create a new directory under `src/trackers/`:
+
+```
+src/trackers/my-module/
+  MyModule.ts
+  myModuleStats.ts  (optional)
+```
+
+## Implement TrackerModule
+
+```typescript
+import type { TrackerModule, QuickAction, HealthAlert } from '../BaseTracker';
+import type { PostpartumTrackerSettings, TrackerEvent } from '../../types';
+
+interface MyEntry {
+  id: string;
+  timestamp: string;
+  // your fields here
+}
+
+interface MyStats {
+  todayCount: number;
+  // your stats here
+}
+
+export class MyModule implements TrackerModule<MyEntry, MyStats> {
+  readonly id = 'my-module';
+  readonly displayName = 'My module';
+  readonly defaultExpanded = false;
+  readonly defaultOrder = 50;
+
+  private entries: MyEntry[] = [];
+  private save: (() => Promise<void>) | null = null;
+
+  parseEntries(raw: unknown): MyEntry[] {
+    if (!Array.isArray(raw)) return [];
+    return raw as MyEntry[];
+  }
+
+  serializeEntries(): MyEntry[] {
+    return this.entries;
+  }
+
+  emptyEntries(): MyEntry[] {
+    return [];
+  }
+
+  update(entries: MyEntry[]): void {
+    this.entries = entries;
+  }
+
+  buildUI(
+    bodyEl: HTMLElement,
+    save: () => Promise<void>,
+    settings: PostpartumTrackerSettings,
+    emitEvent: (event: TrackerEvent) => void,
+  ): void {
+    this.save = save;
+    // Build your UI here using bodyEl
+  }
+
+  getQuickActions(): QuickAction[] {
+    return [{
+      id: 'my-module-log',
+      label: 'Log',
+      icon: '📋',
+      cls: 'pt-quick-action',
+      onClick: (timestamp?: string) => {
+        // create entry, push to this.entries, call this.save()
+      },
+    }];
+  }
+
+  computeStats(entries: MyEntry[], dayStart: Date, dayEnd: Date): MyStats {
+    const today = entries.filter(e => {
+      const t = new Date(e.timestamp);
+      return t >= dayStart && t < dayEnd;
+    });
+    return { todayCount: today.length };
+  }
+
+  renderSummary(el: HTMLElement, stats: MyStats): void {
+    el.createSpan({ text: `${stats.todayCount} today` });
+  }
+
+  // Optional: live timer updates (called every 200ms)
+  tick(): void {}
+
+  // Optional: health alerts
+  getAlerts(): HealthAlert[] {
+    return [];
+  }
+}
+```
+
+## Register in main.ts
+
+```typescript
+import { MyModule } from './trackers/my-module/MyModule';
+
+// In onload(), after the built-in module registrations:
+this.registry.register(new MyModule());
+```
+
+## Add to enabled modules
+
+In `src/types.ts`, add your module ID to `DEFAULT_SETTINGS.enabledModules`:
+
+```typescript
+enabledModules: ['feeding', 'diaper', 'medication', 'my-module'],
+```
+
+Or let users enable it via the tracker library in settings.
+
+## Important patterns
+
+### Event handling in code blocks
+
+Use `pointerdown`/`pointerup` with `preventDefault()` + `stopImmediatePropagation()` for all interactive elements. Regular `click` events are eaten by CodeMirror 6 in Live Preview mode.
+
+```typescript
+button.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+});
+button.addEventListener('pointerup', (e) => {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  this.handleClick();
+});
+// Fallback for reading mode:
+button.addEventListener('click', () => this.handleClick());
+```
+
+### Save triggers full re-render
+
+Calling `save()` rewrites the code block JSON, which causes Obsidian to destroy the current widget and create a new one. Do not hold references to DOM elements across saves.
+
+### Entry sorting
+
+Always sort entries by timestamp after adding or editing:
+
+```typescript
+this.entries.sort((a, b) =>
+  new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+);
+```
+
+### Inline editing
+
+Use the shared `InlineEditPanel` component for editing entries. It handles datetime-local pickers, CodeMirror event prevention, and mobile-friendly layout.
+
+## Emitting events
+
+If your module should trigger Todoist tasks or other integrations, emit events:
+
+```typescript
+emitEvent({
+  type: 'simple-logged',  // or define a new event type
+  entry: newEntry,
+  module: this.id,
+});
+```
+
+Add your event type to the `TrackerEvent.type` union in `src/types.ts` if it doesn't fit the existing types.
