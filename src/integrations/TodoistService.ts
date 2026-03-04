@@ -29,9 +29,15 @@ import { TRACKER_LIBRARY } from '../trackers/library';
 
 // ── Todoist API Types ───────────────────────────────────────
 
+interface TodoistWorkspace {
+	id: string;
+	name: string;
+}
+
 interface TodoistProject {
 	id: string;
 	name: string;
+	workspace_id?: string | null;
 }
 
 interface TodoistSection {
@@ -215,7 +221,18 @@ export class TodoistService {
 	}
 
 	/**
-	 * Find or create the Baby care project and its three sections.
+	 * Fetch available workspaces (teams) for the connected account.
+	 * Returns empty array if user has no teams.
+	 */
+	async fetchWorkspaces(): Promise<TodoistWorkspace[]> {
+		if (!this.settings.apiToken) return [];
+		const workspaces = await this.apiList<TodoistWorkspace>('/workspaces');
+		return workspaces || [];
+	}
+
+	/**
+	 * Find or create the Baby care project and its sections.
+	 * If workspaceId is set, creates the project under that team workspace.
 	 */
 	async setup(): Promise<boolean> {
 		if (!this.settings.apiToken) return false;
@@ -231,10 +248,12 @@ export class TodoistService {
 
 			let project: TodoistProject | undefined = projects.find(p => p.name === this.settings.projectName);
 			if (!project) {
-				await this.log('setup: creating project', { name: this.settings.projectName });
-				const created = await this.api<TodoistProject>('POST', '/projects', {
-					name: this.settings.projectName,
-				});
+				const createBody: Record<string, unknown> = { name: this.settings.projectName };
+				if (this.settings.workspaceId) {
+					createBody.workspace_id = this.settings.workspaceId;
+				}
+				await this.log('setup: creating project', createBody);
+				const created = await this.api<TodoistProject>('POST', '/projects', createBody);
 				if (!created) {
 					await this.log('setup: failed to create project');
 					return false;

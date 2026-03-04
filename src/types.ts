@@ -184,6 +184,8 @@ export interface TodoistSettings {
 	apiToken: string;
 	projectId: string;
 	projectName: string;
+	/** Optional workspace/team ID — project is created under this team so all members see it */
+	workspaceId: string;
 	sectionIds: { feeding: string; diaper: string; medication: string; [key: string]: string };
 	/** Create Todoist tasks when notification alerts fire */
 	createOnAlert: boolean;
@@ -220,6 +222,7 @@ export const DEFAULT_TODOIST_SETTINGS: TodoistSettings = {
 	apiToken: '',
 	projectId: '',
 	projectName: 'Postpartum tasks',
+	workspaceId: '',
 	sectionIds: { feeding: '', diaper: '', medication: '' },
 	createOnAlert: true,
 	createOnLog: true,

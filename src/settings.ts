@@ -530,6 +530,41 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		// Team workspace selector
+		const workspaceSetting = new Setting(containerEl)
+			.setName('Team workspace')
+			.setDesc('Create the project under a shared team so all members can see tasks. Leave as "Personal" for private use.');
+
+		const workspaceDropdown = workspaceSetting.controlEl.createEl('select', { cls: 'dropdown' });
+		workspaceDropdown.createEl('option', { text: 'Personal (no team)', attr: { value: '' } });
+		if (todoist.workspaceId) {
+			workspaceDropdown.createEl('option', { text: `Team ${todoist.workspaceId}`, attr: { value: todoist.workspaceId } });
+			workspaceDropdown.value = todoist.workspaceId;
+		}
+
+		// Load workspaces from API when token is available
+		if (todoist.apiToken) {
+			this.plugin.todoistService.fetchWorkspaces().then(workspaces => {
+				workspaceDropdown.empty();
+				workspaceDropdown.createEl('option', { text: 'Personal (no team)', attr: { value: '' } });
+				for (const ws of workspaces) {
+					workspaceDropdown.createEl('option', { text: ws.name, attr: { value: ws.id } });
+				}
+				workspaceDropdown.value = todoist.workspaceId || '';
+				if (workspaces.length === 0) {
+					workspaceSetting.setDesc('No team workspaces found on this account. Tasks will be personal.');
+				}
+			});
+		}
+
+		workspaceDropdown.addEventListener('change', async () => {
+			todoist.workspaceId = workspaceDropdown.value;
+			await this.plugin.saveSettings();
+			if (todoist.setupComplete) {
+				new Notice('Re-run "Setup project" to move it to the selected team.');
+			}
+		});
+
 		if (!todoist.setupComplete) return;
 
 		// --- Task creation settings ---
