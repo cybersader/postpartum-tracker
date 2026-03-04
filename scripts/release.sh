@@ -26,7 +26,7 @@ npm version "$VERSION" --no-git-tag-version
 
 # Run version bump script (updates manifest.json and versions.json)
 echo -e "${BLUE}Bumping manifest and versions...${NC}"
-npm_package_version="$VERSION" bun run version-bump.mjs
+bun run version-bump.mjs "$VERSION"
 
 # Build to verify
 echo -e "${BLUE}Building plugin...${NC}"
