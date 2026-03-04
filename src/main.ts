@@ -109,6 +109,94 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			},
 		});
 
+		// ── Developer / debug commands (visible when enableDebugLog is on) ──
+
+		this.addCommand({
+			id: 'debug-fetch-workspaces',
+			name: '[Dev] Fetch Todoist workspaces',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				(async () => {
+					new Notice('Fetching workspaces... check todoist-debug.log');
+					const ws = await this.todoistService.fetchWorkspaces();
+					new Notice(ws.length ? `Found ${ws.length} workspace(s): ${ws.map(w => w.name).join(', ')}` : 'No workspaces found.');
+				})();
+			},
+		});
+
+		this.addCommand({
+			id: 'debug-list-projects',
+			name: '[Dev] List Todoist projects',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				(async () => {
+					new Notice('Fetching projects... check todoist-debug.log');
+					const projects = await this.todoistService.debugListProjects();
+					if (!projects) { new Notice('Failed to fetch projects'); return; }
+					new Notice(`Found ${projects.length} project(s): ${projects.map((p: {name: string}) => p.name).join(', ')}`);
+				})();
+			},
+		});
+
+		this.addCommand({
+			id: 'debug-notification-check',
+			name: '[Dev] Force notification check',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				(async () => {
+					new Notice('Running notification check...');
+					await this.notificationService.check();
+					const active = this.notificationService.getActive();
+					new Notice(`Check complete. ${active.length} active alert(s).`);
+				})();
+			},
+		});
+
+		this.addCommand({
+			id: 'debug-rebuild-registry',
+			name: '[Dev] Rebuild tracker registry',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				(async () => {
+					new Notice('Rebuilding registry...');
+					await this.rebuildRegistry();
+					const ids = this.registry.getIds();
+					new Notice(`Registry rebuilt: ${ids.length} modules (${ids.join(', ')})`);
+				})();
+			},
+		});
+
+		this.addCommand({
+			id: 'debug-dump-settings',
+			name: '[Dev] Dump settings to console',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				console.log('Postpartum Tracker settings:', JSON.parse(JSON.stringify(this.settings)));
+				new Notice('Settings dumped to developer console (Ctrl+Shift+I)');
+			},
+		});
+
+		this.addCommand({
+			id: 'debug-clear-todoist-log',
+			name: '[Dev] Clear Todoist debug log',
+			checkCallback: (checking) => {
+				if (!this.settings.enableDebugLog) return false;
+				if (checking) return true;
+				(async () => {
+					const file = this.app.vault.getAbstractFileByPath('todoist-debug.log');
+					if (file) {
+						await this.app.vault.modify(file as TFile, '# Todoist Debug Log\nCleared: ' + new Date().toISOString() + '\n\n');
+					}
+					new Notice('Debug log cleared');
+				})();
+			},
+		});
+
 		// Status bar item for notifications
 		const statusBarEl = this.addStatusBarItem();
 		statusBarEl.addClass('pt-status-bar');

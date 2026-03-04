@@ -222,14 +222,45 @@ export class TodoistService {
 
 	/**
 	 * Fetch available workspaces (teams) for the connected account.
+	 * Uses the Sync API since the REST API has no /workspaces list endpoint.
 	 * Returns empty array if user has no teams.
 	 */
 	async fetchWorkspaces(): Promise<TodoistWorkspace[]> {
 		if (!this.settings.apiToken) return [];
-		await this.log('fetchWorkspaces: fetching team workspaces');
-		const workspaces = await this.apiList<TodoistWorkspace>('/workspaces');
-		await this.log(`fetchWorkspaces: found ${workspaces?.length ?? 0} workspaces`, workspaces);
-		return workspaces || [];
+		await this.log('fetchWorkspaces: fetching team workspaces via Sync API');
+		try {
+			const res = await requestUrl({
+				url: `${API_BASE}/sync`,
+				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${this.settings.apiToken}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					sync_token: '*',
+					resource_types: ['workspaces'],
+				}),
+				throw: false,
+			});
+			await this.log(`fetchWorkspaces: sync response ${res.status}`, {
+				bodyPreview: typeof res.text === 'string' ? res.text.substring(0, 500) : '(no text)',
+			});
+			if (res.status < 200 || res.status >= 300) return [];
+			const data = res.json as Record<string, unknown>;
+			// Sync API returns { workspaces: [...] } among other keys
+			const workspaces = (Array.isArray(data.workspaces) ? data.workspaces : []) as TodoistWorkspace[];
+			await this.log(`fetchWorkspaces: found ${workspaces.length} workspaces`, workspaces);
+			return workspaces;
+		} catch (e) {
+			await this.log('fetchWorkspaces: exception', String(e));
+			return [];
+		}
+	}
+
+	/** Debug helper: list all projects visible to the API token. */
+	async debugListProjects(): Promise<TodoistProject[] | null> {
+		await this.log('debugListProjects: fetching all projects');
+		return this.apiList<TodoistProject>('/projects');
 	}
 
 	/**

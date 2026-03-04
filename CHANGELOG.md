@@ -7,6 +7,26 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-04
+
+### Fixed
+
+- Todoist workspace (team) detection now uses the Sync API instead of a non-existent REST endpoint. The "Raders" team and other workspaces should now appear in the dropdown.
+
+### Added
+
+- 6 developer commands (visible when "Enable debug log" is on in settings):
+  - `[Dev] Fetch Todoist workspaces` -- test workspace/team detection
+  - `[Dev] List Todoist projects` -- show all visible projects
+  - `[Dev] Force notification check` -- trigger an immediate alert scan
+  - `[Dev] Rebuild tracker registry` -- re-register modules and refresh widgets
+  - `[Dev] Dump settings to console` -- inspect current settings in dev console
+  - `[Dev] Clear Todoist debug log` -- reset the debug log file
+
+### Changed
+
+- `NotificationService.check()` made public for debug command access.
+
 ## [0.4.1] - 2026-03-04
 
 ### Changed
@@ -89,7 +109,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.4.1...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/cybersader/postpartum-tracker/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/cybersader/postpartum-tracker/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/cybersader/postpartum-tracker/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/cybersader/postpartum-tracker/compare/0.2.1...0.3.0

@@ -110,7 +110,7 @@ export class NotificationService {
 	// ── Core Check Logic ──
 
 	/** Main check: scan vault data, evaluate conditions, fire notifications. */
-	private async check(): Promise<void> {
+	async check(): Promise<void> {
 		const settings = this.getSettings();
 		if (!settings.enabled) return;
 
