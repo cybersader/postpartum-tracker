@@ -22,8 +22,10 @@ import type {
 	FeedingEntry,
 	MedicationEntry,
 	MedicationConfig,
+	SimpleTrackerEntry,
 } from '../types';
 import { DEFAULT_MEDICATIONS } from '../types';
+import { TRACKER_LIBRARY } from '../trackers/library';
 
 // ── Todoist API Types ───────────────────────────────────────
 
@@ -60,7 +62,7 @@ interface PaginatedResponse<T> {
 interface TrackedTask {
 	taskId: string;
 	eventKey: string;
-	category: 'feeding' | 'medication' | 'diaper';
+	category: string;
 	createdAt: number;
 	completedByUs: boolean;
 	metadata?: Record<string, string>;
@@ -384,6 +386,11 @@ export class TodoistService {
 				break;
 			case 'diaper-logged':
 				break;
+			case 'simple-logged':
+				if (event.module) {
+					await this.handleSimpleLogged(event.entry as SimpleTrackerEntry, event.module);
+				}
+				break;
 		}
 	}
 
@@ -468,6 +475,51 @@ export class TodoistService {
 				taskId, eventKey, category: 'medication',
 				createdAt: Date.now(), completedByUs: false,
 				metadata: { medName: config.name, dosage: config.dosage },
+			});
+			this.saveTaskMap();
+		}
+	}
+
+	private async handleSimpleLogged(
+		entry: SimpleTrackerEntry,
+		moduleId: string
+	): Promise<void> {
+		const def = TRACKER_LIBRARY.find(d => d.id === moduleId);
+		if (!def?.notificationConfig) return;
+
+		const eventKey = `simple-${moduleId}-next`;
+		const existing = this.taskMap.get(eventKey);
+		if (existing) {
+			existing.completedByUs = true;
+			this.saveTaskMap();
+			await this.completeTask(existing.taskId);
+			this.taskMap.delete(eventKey);
+		}
+
+		const cfg = def.notificationConfig;
+		const logTime = new Date(entry.timestamp);
+		const nextTime = new Date(logTime.getTime() + cfg.reminderIntervalHours * 3_600_000);
+		const nextStr = nextTime.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+		const desc = [
+			`Last ${def.displayName.toLowerCase()}: ${logTime.toLocaleTimeString()}`,
+			`Reminder in ~${cfg.reminderIntervalHours}h`,
+		].join('\n');
+
+		const sectionId = this.settings.sectionIds[moduleId] || undefined;
+		const taskId = await this.createTask({
+			content: cfg.reminderMessage,
+			description: desc,
+			suggestedTime: nextStr,
+			priority: this.settings.proactivePriority,
+			sectionId,
+			labels: this.settings.labels,
+		});
+
+		if (taskId) {
+			this.taskMap.set(eventKey, {
+				taskId, eventKey, category: moduleId,
+				createdAt: Date.now(), completedByUs: false,
 			});
 			this.saveTaskMap();
 		}

@@ -16,8 +16,10 @@ import type {
 	MedicationConfig,
 	NotificationItem,
 	NotificationSettings,
+	SimpleTrackerEntry,
 } from '../types';
 import { EMPTY_DATA, DEFAULT_MEDICATIONS } from '../types';
+import { TRACKER_LIBRARY } from '../trackers/library';
 import { ToastNotification } from './ToastNotification';
 
 /** Snoozed notification IDs + when the snooze expires */
@@ -137,6 +139,15 @@ export class NotificationService {
 		if (settings.medAlternatingEnabled) {
 			const altAlert = this.checkAlternatingMeds(data, now);
 			if (altAlert) notifications.push(altAlert);
+		}
+
+		// Simple tracker reminders (library trackers with notificationConfig)
+		for (const def of TRACKER_LIBRARY) {
+			if (!def.notificationConfig?.reminderEnabled) continue;
+			if (!this.plugin.settings.enabledModules.includes(def.id)) continue;
+			const entries = (data.trackers[def.id] || []) as SimpleTrackerEntry[];
+			const alert = this.checkSimpleTrackerReminder(def.id, def.notificationConfig, entries, now);
+			if (alert) notifications.push(alert);
 		}
 
 		// Process notifications
@@ -296,6 +307,34 @@ export class NotificationService {
 				level: 'info',
 				title: 'Alternating medication',
 				message: `Time to take ${otherMed.name} (alternating with ${mostRecent.name})`,
+				firedAt: now,
+			};
+		}
+
+		return null;
+	}
+
+	private checkSimpleTrackerReminder(
+		moduleId: string,
+		config: { reminderIntervalHours: number; reminderMessage: string },
+		entries: SimpleTrackerEntry[],
+		now: number
+	): NotificationItem | null {
+		if (entries.length === 0) return null;
+
+		const sorted = [...entries].sort(
+			(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+		);
+		const last = sorted[sorted.length - 1];
+		const hoursSince = (now - new Date(last.timestamp).getTime()) / 3_600_000;
+
+		if (hoursSince >= config.reminderIntervalHours) {
+			return {
+				id: `simple-reminder-${moduleId}`,
+				category: moduleId,
+				level: 'info',
+				title: config.reminderMessage,
+				message: `Last logged ${Math.floor(hoursSince)}h ago`,
 				firedAt: now,
 			};
 		}

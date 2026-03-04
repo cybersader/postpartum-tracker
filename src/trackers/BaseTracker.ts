@@ -1,4 +1,4 @@
-import type { PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent } from '../types';
+import type { PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent, TrackerCategory } from '../types';
 
 /**
  * Every tracker module must implement this interface.
@@ -16,6 +16,16 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 
 	/** Order weight for default layout (lower = higher) */
 	readonly defaultOrder: number;
+
+	// ── Library metadata (optional) ──
+	/** Category for library grouping */
+	readonly category?: TrackerCategory;
+	/** Icon emoji for library display */
+	readonly icon?: string;
+	/** Short description for library display */
+	readonly description?: string;
+	/** Whether this tracker has notification/alert logic */
+	readonly isSmart?: boolean;
 
 	/**
 	 * Parse this module's entries from the raw data.

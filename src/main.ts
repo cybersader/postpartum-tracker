@@ -9,6 +9,8 @@ import { deepMerge } from './utils/deepMerge';
 import { FeedingTracker } from './trackers/feeding/FeedingTracker';
 import { DiaperTracker } from './trackers/diaper/DiaperTracker';
 import { MedicationTracker } from './trackers/medication/MedicationTracker';
+import { SimpleTrackerModule } from './trackers/simple/SimpleTrackerModule';
+import { TRACKER_LIBRARY } from './trackers/library';
 import { NotificationService } from './notifications/NotificationService';
 import { TodoistService } from './integrations/TodoistService';
 
@@ -42,10 +44,17 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		await this.loadSettings();
 		this.store = new CodeBlockStore(this.app);
 
-		// Register tracker modules
+		// Register core tracker modules
 		this.registry.register(new FeedingTracker());
 		this.registry.register(new DiaperTracker());
 		this.registry.register(new MedicationTracker());
+
+		// Register simple (library) tracker modules for enabled IDs
+		for (const def of TRACKER_LIBRARY) {
+			if (this.settings.enabledModules.includes(def.id)) {
+				this.registry.register(new SimpleTrackerModule(def));
+			}
+		}
 
 		// Register the code block processor
 		this.registerMarkdownCodeBlockProcessor(
@@ -116,6 +125,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.onTrackerEvent('feeding-logged', (e) => this.todoistService.onTrackerEvent(e));
 		this.onTrackerEvent('medication-logged', (e) => this.todoistService.onTrackerEvent(e));
 		this.onTrackerEvent('diaper-logged', (e) => this.todoistService.onTrackerEvent(e));
+		this.onTrackerEvent('simple-logged', (e) => this.todoistService.onTrackerEvent(e));
 
 		// Wire Todoist → tracker (two-way sync: entries created from Todoist completions)
 		this.onTrackerEvent('todoist-entry-created', (e) => this.writeEntryToVault(e));

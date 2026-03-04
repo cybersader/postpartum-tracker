@@ -1043,3 +1043,29 @@
 .pt-todoist-dot--connected {
 	background: #4caf50;
 }
+
+/* --- Simple Tracker Sections --- */
+.pt-simple-timer-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.pt-simple-stats {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	padding: 4px 0;
+}
+
+.pt-simple-stat {
+	/* inline display */
+}
+
+/* Responsive quick action grid with many modules enabled */
+@media (min-width: 480px) {
+	.pt-quick-actions-buttons {
+		grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+	}
+}

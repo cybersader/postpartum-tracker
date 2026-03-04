@@ -23,32 +23,42 @@ export class CodeBlockStore {
 			if (!trimmed) return this.makeEmpty();
 			const parsed = JSON.parse(trimmed);
 
-			// Backward-compat: merge saved layout with defaults (new modules get appended)
+			// Merge saved layout with defaults: preserve all saved IDs, append missing defaults
 			let layout: string[] = [...DEFAULT_LAYOUT];
 			if (Array.isArray(parsed.layout) && parsed.layout.length > 0) {
-				const validSet = new Set(DEFAULT_LAYOUT);
-				const saved = parsed.layout.filter((id: string) => validSet.has(id));
-				const missing = DEFAULT_LAYOUT.filter(id => !saved.includes(id));
-				layout = [...saved, ...missing];
+				const savedSet = new Set(parsed.layout as string[]);
+				const missing = DEFAULT_LAYOUT.filter(id => !savedSet.has(id));
+				layout = [...(parsed.layout as string[]), ...missing];
 			}
 
 			const trackers = parsed.trackers && typeof parsed.trackers === 'object'
 				? parsed.trackers
 				: {};
 
+			// Build tracker data: known keys with defaults, then preserve extra keys
+			const trackerData: PostpartumData['trackers'] = {
+				feeding: Array.isArray(trackers.feeding) ? trackers.feeding : [],
+				diaper: Array.isArray(trackers.diaper) ? trackers.diaper : [],
+				medication: Array.isArray(trackers.medication) ? trackers.medication : [],
+				medicationConfig: Array.isArray(trackers.medicationConfig)
+					? trackers.medicationConfig
+					: [...DEFAULT_MEDICATIONS],
+				logNotes: Array.isArray(trackers.logNotes) ? trackers.logNotes : [],
+			};
+
+			// Preserve arbitrary tracker keys (library trackers like sleep, pain, etc.)
+			const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes']);
+			for (const key of Object.keys(trackers)) {
+				if (!knownKeys.has(key)) {
+					trackerData[key] = Array.isArray(trackers[key]) ? trackers[key] : [];
+				}
+			}
+
 			return {
 				version: parsed.version || 1,
 				meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
 				layout,
-				trackers: {
-					feeding: Array.isArray(trackers.feeding) ? trackers.feeding : [],
-					diaper: Array.isArray(trackers.diaper) ? trackers.diaper : [],
-					medication: Array.isArray(trackers.medication) ? trackers.medication : [],
-					medicationConfig: Array.isArray(trackers.medicationConfig)
-						? trackers.medicationConfig
-						: [...DEFAULT_MEDICATIONS],
-					logNotes: Array.isArray(trackers.logNotes) ? trackers.logNotes : [],
-				},
+				trackers: trackerData,
 				settingsOverrides: parsed.settingsOverrides && typeof parsed.settingsOverrides === 'object'
 					? parsed.settingsOverrides
 					: undefined,

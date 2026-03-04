@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type PostpartumTrackerPlugin from './main';
-import type { NotificationType } from './types';
+import type { NotificationType, TrackerCategory } from './types';
+import { TRACKER_LIBRARY, TRACKER_CATEGORIES, BUILTIN_MODULE_IDS } from './trackers/library';
 
 /**
  * Plugin settings tab.
@@ -44,6 +45,81 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		// --- Tracker Library ---
+		new Setting(containerEl).setName('Tracker library').setHeading();
+		new Setting(containerEl)
+			.setDesc('Enable or disable tracking modules. Core modules have deep notification and Todoist integration. Smart modules support automatic reminders. Reload the plugin after changing these.');
+
+		const enabledModules = this.plugin.settings.enabledModules;
+
+		// Group trackers by category, core modules first
+		const coreModuleIds = new Set(BUILTIN_MODULE_IDS as readonly string[]);
+		const categories: TrackerCategory[] = ['baby-care', 'baby-development', 'mother-recovery', 'general'];
+
+		for (const cat of categories) {
+			const catMeta = TRACKER_CATEGORIES[cat];
+
+			// Core modules in baby-care
+			if (cat === 'baby-care') {
+				new Setting(containerEl)
+					.setName(catMeta.label)
+					.setDesc(catMeta.description)
+					.setHeading();
+
+				for (const id of BUILTIN_MODULE_IDS) {
+					const module = this.plugin.registry.get(id);
+					if (!module) continue;
+					const badges = '\u00A0\u00A0[core]';
+					new Setting(containerEl)
+						.setName(`${module.displayName}${badges}`)
+						.setDesc('Core module with built-in notifications and Todoist integration.')
+						.addToggle(toggle => toggle
+							.setValue(enabledModules.includes(id))
+							.onChange(async (value) => {
+								if (value && !enabledModules.includes(id)) {
+									enabledModules.push(id);
+								} else if (!value) {
+									const idx = enabledModules.indexOf(id);
+									if (idx >= 0) enabledModules.splice(idx, 1);
+								}
+								await this.plugin.saveSettings();
+								new Notice('Reload the plugin to apply changes.');
+							})
+						);
+				}
+				continue;
+			}
+
+			// Library trackers for this category
+			const catTrackers = TRACKER_LIBRARY.filter(d => d.category === cat);
+			if (catTrackers.length === 0) continue;
+
+			new Setting(containerEl)
+				.setName(catMeta.label)
+				.setDesc(catMeta.description)
+				.setHeading();
+
+			for (const def of catTrackers) {
+				const badges = def.isSmart ? '\u00A0\u00A0[smart]' : '';
+				new Setting(containerEl)
+					.setName(`${def.icon} ${def.displayName}${badges}`)
+					.setDesc(def.description)
+					.addToggle(toggle => toggle
+						.setValue(enabledModules.includes(def.id))
+						.onChange(async (value) => {
+							if (value && !enabledModules.includes(def.id)) {
+								enabledModules.push(def.id);
+							} else if (!value) {
+								const idx = enabledModules.indexOf(def.id);
+								if (idx >= 0) enabledModules.splice(idx, 1);
+							}
+							await this.plugin.saveSettings();
+							new Notice('Reload the plugin to apply changes.');
+						})
+					);
+			}
+		}
 
 		// --- Feeding ---
 		new Setting(containerEl).setName('Feeding').setHeading();

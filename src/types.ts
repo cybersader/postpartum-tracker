@@ -53,6 +53,51 @@ export interface LogNoteEntry {
 	text: string;
 }
 
+// ── Simple Tracker Library ──────────────────────────────────
+
+export type TrackerCategory = 'baby-care' | 'baby-development' | 'mother-recovery' | 'general';
+
+/** Field definition for a simple (data-driven) tracker. */
+export interface SimpleTrackerField {
+	key: string;
+	label: string;
+	type: 'text' | 'number' | 'select' | 'boolean' | 'datetime' | 'rating';
+	options?: string[];       // For 'select' type
+	required?: boolean;
+	placeholder?: string;
+	unit?: string;            // Display unit (e.g., 'cm', 'kg', 'F')
+	min?: number;
+	max?: number;
+}
+
+/** Definition for a data-driven tracker in the library. */
+export interface SimpleTrackerDef {
+	id: string;
+	displayName: string;
+	category: TrackerCategory;
+	icon: string;
+	description: string;
+	isSmart: boolean;         // Has notification/alert logic
+	fields: SimpleTrackerField[];
+	defaultOrder: number;
+	hasDuration?: boolean;    // Shows start/end timer
+	notificationConfig?: {
+		reminderEnabled: boolean;
+		reminderIntervalHours: number;
+		reminderMessage: string;
+	};
+}
+
+/** A generic entry for simple (library) trackers. */
+export interface SimpleTrackerEntry {
+	id: string;
+	timestamp: string;        // ISO8601
+	end?: string | null;      // For duration-based trackers
+	durationSec?: number;
+	fields: Record<string, string | number | boolean>;
+	notes: string;
+}
+
 // ── Medication Config ────────────────────────────────────────
 
 export type MedicationCategory = 'medication' | 'remedy';
@@ -124,7 +169,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 
 export interface NotificationItem {
 	id: string;
-	category: 'feeding' | 'medication' | 'diaper';
+	category: 'feeding' | 'medication' | 'diaper' | string;
 	level: 'info' | 'warning' | 'urgent';
 	title: string;
 	message: string;
@@ -139,7 +184,7 @@ export interface TodoistSettings {
 	apiToken: string;
 	projectId: string;
 	projectName: string;
-	sectionIds: { feeding: string; diaper: string; medication: string };
+	sectionIds: { feeding: string; diaper: string; medication: string; [key: string]: string };
 	/** Create Todoist tasks when notification alerts fire */
 	createOnAlert: boolean;
 	/** Create proactive "next action" tasks after logging entries */
@@ -193,10 +238,10 @@ export const DEFAULT_TODOIST_SETTINGS: TodoistSettings = {
 // ── Tracker Events (for integrations) ───────────────────────
 
 export interface TrackerEvent {
-	type: 'feeding-logged' | 'medication-logged' | 'diaper-logged' | 'todoist-entry-created';
-	entry: FeedingEntry | MedicationEntry | DiaperEntry;
+	type: 'feeding-logged' | 'medication-logged' | 'diaper-logged' | 'simple-logged' | 'todoist-entry-created';
+	entry: FeedingEntry | MedicationEntry | DiaperEntry | SimpleTrackerEntry;
 	config?: MedicationConfig;
-	/** Module ID for todoist-entry-created events */
+	/** Module ID (for todoist-entry-created and simple-logged events) */
 	module?: string;
 }
 
