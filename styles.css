@@ -1,0 +1,1045 @@
+/* =============================================================
+   Obsidian Postpartum Tracker - Mobile-First Styles
+   ============================================================= */
+
+/* --- Widget Container --- */
+.pt-widget {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 16px;
+	border-radius: 12px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+/* --- Hidden utility --- */
+.pt-hidden {
+	display: none !important;
+}
+
+/* --- Baby Info Bar --- */
+.pt-baby-info-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.pt-baby-info-text {
+	flex: 1;
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.pt-baby-name {
+	font-weight: 700;
+	font-size: 1.05rem;
+	color: var(--text-normal);
+}
+
+.pt-baby-separator {
+	color: var(--text-faint);
+	margin: 0 2px;
+}
+
+.pt-baby-day {
+	font-weight: 600;
+	font-size: 0.95rem;
+	color: var(--interactive-accent);
+}
+
+.pt-baby-weeks {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}
+
+.pt-baby-info-empty {
+	flex: 1;
+	font-size: 0.85rem;
+	color: var(--text-faint);
+	font-style: italic;
+}
+
+.pt-baby-info-edit {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	font-size: 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.pt-baby-info-edit:hover {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+/* --- Daily Summary Dashboard --- */
+.pt-daily-summary {
+	margin-bottom: 4px;
+}
+
+.pt-summary-cards {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.pt-summary-card {
+	flex: 1;
+	min-width: 80px;
+	text-align: center;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.pt-summary-card-value {
+	font-size: 1.8rem;
+	font-weight: 700;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+}
+
+.pt-summary-card-label {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.pt-summary-card-sublabel {
+	font-size: 0.7rem;
+	color: var(--text-faint);
+	margin-top: 2px;
+}
+
+/* --- Quick Actions --- */
+.pt-quick-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pt-quick-actions-buttons {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+	gap: 8px;
+}
+
+/* Clock row for past-time logging */
+.pt-clock-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: var(--background-primary);
+	border: 2px solid var(--interactive-accent);
+}
+
+.pt-clock-label {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--interactive-accent);
+	white-space: nowrap;
+}
+
+.pt-clock-input {
+	flex: 1;
+	padding: 6px 8px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: 0.85rem;
+	font-family: inherit;
+	min-width: 0;
+}
+
+.pt-quick-btn--clock {
+	border-color: var(--text-faint);
+	border-style: dashed;
+}
+
+.pt-quick-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	padding: 12px 8px;
+	min-height: 60px;
+	border-radius: 10px;
+	border: 2px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-family: inherit;
+}
+
+.pt-quick-btn:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-primary-alt);
+}
+
+.pt-quick-btn:active {
+	transform: scale(0.95);
+}
+
+.pt-quick-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.pt-quick-btn--active {
+	border-color: var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.pt-quick-btn-icon {
+	font-size: 1.4rem;
+}
+
+.pt-quick-btn-label {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.pt-quick-btn-sublabel {
+	font-size: 0.6rem;
+	font-weight: 400;
+	color: var(--text-muted);
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+/* Quick button color variants */
+.pt-quick-btn--feeding-left { border-color: #e8a0bf; }
+.pt-quick-btn--feeding-left:hover { background: #e8a0bf20; }
+.pt-quick-btn--feeding-right { border-color: #a0c4e8; }
+.pt-quick-btn--feeding-right:hover { background: #a0c4e820; }
+.pt-quick-btn--feeding-both { border-color: #c4a0e8; }
+.pt-quick-btn--feeding-both:hover { background: #c4a0e820; }
+.pt-quick-btn--diaper-wet { border-color: #e8d44d; }
+.pt-quick-btn--diaper-wet:hover { background: #e8d44d20; }
+.pt-quick-btn--diaper-dirty { border-color: #d4956b; }
+.pt-quick-btn--diaper-dirty:hover { background: #d4956b20; }
+.pt-quick-btn--diaper-both { border-color: #c4b44d; }
+.pt-quick-btn--diaper-both:hover { background: #c4b44d20; }
+.pt-quick-btn--med { border-color: #6baed4; }
+.pt-quick-btn--med:hover { background: #6baed420; }
+
+/* --- Inline Edit Panel --- */
+.pt-edit-panel-container {
+	/* Container is always present; empty when no panel shown */
+}
+
+.pt-edit-panel {
+	padding: 12px;
+	border-radius: 8px;
+	border: 2px solid var(--interactive-accent);
+	background: var(--background-secondary);
+	margin-bottom: 12px;
+}
+
+.pt-edit-panel-title {
+	font-weight: 600;
+	font-size: 0.85rem;
+	color: var(--interactive-accent);
+	margin-bottom: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.pt-edit-field {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	margin-bottom: 8px;
+}
+
+.pt-edit-label {
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.pt-edit-input,
+.pt-edit-select {
+	padding: 8px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	font-family: inherit;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.pt-edit-input:focus,
+.pt-edit-select:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
+
+.pt-edit-buttons {
+	display: flex;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.pt-edit-save {
+	flex: 1;
+	padding: 8px 16px;
+	border-radius: 6px;
+	border: none;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.pt-edit-save:hover {
+	opacity: 0.9;
+}
+
+.pt-edit-cancel {
+	padding: 8px 16px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	font-size: 0.85rem;
+	font-weight: 500;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.pt-edit-cancel:hover {
+	border-color: var(--text-muted);
+	color: var(--text-normal);
+}
+
+/* --- Health Alerts --- */
+.pt-alerts-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pt-alert {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	border-left: 4px solid var(--color-yellow);
+	background: var(--background-primary);
+}
+
+.pt-alert--urgent {
+	border-left-color: var(--color-red);
+	background: color-mix(in srgb, var(--color-red) 5%, var(--background-primary));
+}
+
+.pt-alert--warning {
+	border-left-color: var(--color-yellow);
+}
+
+.pt-alert--info {
+	border-left-color: var(--color-blue);
+}
+
+.pt-alert-icon {
+	font-size: 1.1rem;
+	flex-shrink: 0;
+}
+
+.pt-alert-message {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.pt-alert-detail {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+	margin-top: 4px;
+}
+
+/* --- Collapsible Sections --- */
+.pt-collapsible {
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	overflow: hidden;
+}
+
+.pt-collapsible-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	cursor: pointer;
+	user-select: none;
+	background: var(--background-primary);
+	transition: background 0.1s;
+}
+
+.pt-collapsible-header:hover {
+	background: var(--background-primary-alt);
+}
+
+.pt-collapsible-chevron {
+	font-size: 0.7rem;
+	color: var(--text-muted);
+	width: 12px;
+	text-align: center;
+}
+
+.pt-collapsible-title {
+	font-weight: 600;
+	font-size: 0.9rem;
+	flex: 1;
+}
+
+.pt-collapsible-badge {
+	font-size: 0.7rem;
+	padding: 2px 8px;
+	border-radius: 10px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.pt-collapsible-body {
+	padding: 12px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Move controls */
+.pt-move-controls {
+	display: flex;
+	gap: 2px;
+	margin-left: auto;
+}
+
+.pt-move-btn {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	font-size: 0.7rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+}
+
+.pt-move-btn:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+
+.pt-drag-handle {
+	cursor: grab;
+	color: var(--text-faint);
+	font-size: 1.2rem;
+	padding: 0 4px;
+	user-select: none;
+}
+
+.pt-dragging {
+	opacity: 0.6;
+}
+
+/* --- Big Button (Stop, etc.) --- */
+.pt-big-button {
+	width: 100%;
+	min-height: 50px;
+	padding: 12px 24px;
+	border-radius: 10px;
+	border: 2px solid var(--interactive-accent);
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-family: inherit;
+}
+
+.pt-big-button:hover {
+	opacity: 0.9;
+}
+
+.pt-big-button:active {
+	transform: scale(0.97);
+}
+
+.pt-big-button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.pt-big-button--active {
+	animation: pt-pulse 1.5s ease-in-out infinite;
+}
+
+.pt-btn-stop {
+	background: var(--color-red);
+	border-color: var(--color-red);
+	margin-top: 8px;
+}
+
+/* --- Timer Display --- */
+.pt-timer-display {
+	text-align: center;
+	padding: 8px 0;
+}
+
+.pt-timer-label {
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	margin-bottom: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.pt-timer-time {
+	font-size: clamp(2rem, 8vw, 3.5rem);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.1;
+	color: var(--text-normal);
+}
+
+.pt-timer-display--active .pt-timer-label {
+	color: var(--interactive-accent);
+	animation: pt-pulse 1.5s ease-in-out infinite;
+}
+
+.pt-timer-display--active .pt-timer-time {
+	color: var(--interactive-accent);
+}
+
+/* --- Feeding Section --- */
+.pt-feeding-timer-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.pt-feeding-stats {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	padding: 4px 0;
+}
+
+.pt-feeding-stat {
+	/* inline display */
+}
+
+/* --- Diaper Section --- */
+.pt-diaper-color-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	border-radius: 8px;
+	background: var(--background-secondary);
+	margin-bottom: 12px;
+}
+
+.pt-color-picker-label {
+	font-size: 0.85rem;
+	font-weight: 500;
+}
+
+.pt-color-swatches {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pt-color-swatch {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	border: 2px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.pt-color-swatch:hover {
+	transform: scale(1.15);
+	border-color: var(--interactive-accent);
+}
+
+.pt-color-skip {
+	align-self: flex-start;
+	font-size: 0.8rem;
+	padding: 4px 12px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.pt-diaper-desc-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.85rem;
+}
+
+.pt-diaper-desc-input {
+	flex: 1;
+	padding: 4px 8px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.85rem;
+}
+
+.pt-diaper-stats {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	padding: 4px 0;
+}
+
+/* --- Medication Section --- */
+.pt-med-alternating {
+	font-size: 0.85rem;
+	padding: 8px 12px;
+	border-radius: 8px;
+	background: var(--background-secondary);
+	margin-bottom: 8px;
+}
+
+.pt-med-alternating-text {
+	color: var(--text-normal);
+	font-weight: 500;
+}
+
+.pt-med-dose-timers {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.pt-dose-timer-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.8rem;
+	padding: 4px 0;
+}
+
+.pt-dose-timer-name {
+	font-weight: 500;
+	color: var(--text-normal);
+}
+
+.pt-dose-timer-value {
+	color: var(--text-muted);
+}
+
+.pt-dose-timer--safe {
+	color: var(--color-green);
+}
+
+.pt-dose-timer--wait {
+	color: var(--color-orange);
+}
+
+/* Risk bars */
+.pt-med-risk-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.pt-risk-bar-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.75rem;
+}
+
+.pt-risk-bar-label {
+	width: 80px;
+	font-weight: 500;
+}
+
+.pt-risk-bar-count {
+	width: 30px;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.pt-risk-bar-outer {
+	flex: 1;
+	height: 8px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	overflow: hidden;
+}
+
+.pt-risk-bar-inner {
+	height: 100%;
+	border-radius: 4px;
+	transition: width 0.3s ease;
+}
+
+.pt-risk-bar--safe {
+	background: var(--color-green);
+}
+
+.pt-risk-bar--warning {
+	background: var(--color-yellow);
+}
+
+.pt-risk-bar--danger {
+	background: var(--color-red);
+}
+
+/* --- Entry List --- */
+.pt-entry-list {
+	margin-top: 8px;
+}
+
+.pt-entry-list-empty {
+	font-size: 0.8rem;
+	color: var(--text-faint);
+	text-align: center;
+	padding: 12px;
+}
+
+.pt-entry-list-items {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-height: 250px;
+	overflow-y: auto;
+}
+
+.pt-entry-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	border-radius: 6px;
+	font-size: 0.8rem;
+	transition: background 0.1s;
+}
+
+.pt-entry-row:hover {
+	background: var(--background-secondary);
+}
+
+.pt-entry-time {
+	color: var(--text-muted);
+	min-width: 60px;
+	font-variant-numeric: tabular-nums;
+}
+
+.pt-entry-icon {
+	width: 24px;
+	text-align: center;
+}
+
+.pt-entry-text {
+	flex: 1;
+	color: var(--text-normal);
+}
+
+.pt-entry-subtext {
+	color: var(--text-muted);
+	font-size: 0.75rem;
+}
+
+.pt-entry-actions {
+	display: flex;
+	gap: 4px;
+}
+
+.pt-entry-action-btn {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	font-size: 0.85rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+}
+
+.pt-entry-action-btn:hover {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+.pt-entry-action-btn--delete:hover {
+	border-color: var(--color-red);
+	color: var(--color-red);
+}
+
+/* Feeding entry side colors */
+.pt-entry--feeding-left .pt-entry-icon { color: #e8a0bf; }
+.pt-entry--feeding-right .pt-entry-icon { color: #a0c4e8; }
+.pt-entry--feeding-both .pt-entry-icon { color: #c4a0e8; }
+.pt-entry--feeding-breast .pt-entry-icon { color: #c4a0e8; }
+
+/* --- Settings: Medication Editor --- */
+.pt-med-editor {
+	margin: 4px 0 12px;
+	padding: 12px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.pt-med-editor .setting-item {
+	padding: 8px 0;
+	border-top: none;
+}
+
+/* --- Toast Notifications --- */
+.pt-toast-container {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 10000;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-width: 360px;
+	pointer-events: auto;
+}
+
+.pt-toast {
+	padding: 12px 14px;
+	border-radius: 10px;
+	border-left: 4px solid var(--interactive-accent);
+	background: var(--background-primary);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	font-size: 0.85rem;
+	pointer-events: auto;
+}
+
+.pt-toast--urgent {
+	border-left-color: var(--color-red);
+}
+
+.pt-toast--warning {
+	border-left-color: var(--color-yellow);
+}
+
+.pt-toast--info {
+	border-left-color: var(--color-blue);
+}
+
+.pt-toast-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 4px;
+}
+
+.pt-toast-icon {
+	font-size: 1.1rem;
+	flex-shrink: 0;
+}
+
+.pt-toast-title {
+	font-weight: 600;
+	flex: 1;
+	color: var(--text-normal);
+}
+
+.pt-toast-close {
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.8rem;
+}
+
+.pt-toast-close:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.pt-toast-message {
+	color: var(--text-muted);
+	line-height: 1.4;
+	margin-bottom: 8px;
+}
+
+.pt-toast-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.pt-toast-btn {
+	padding: 4px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: 0.75rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.pt-toast-btn:hover {
+	background: var(--background-modifier-hover);
+}
+
+.pt-toast-btn--dismiss {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.pt-toast-btn--dismiss:hover {
+	opacity: 0.9;
+}
+
+.pt-toast-snooze-menu {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.pt-toast-snooze-item {
+	padding: 3px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	font-size: 0.7rem;
+	cursor: pointer;
+}
+
+.pt-toast-snooze-item:hover {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+/* --- Animations --- */
+@keyframes pt-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+/* --- Sections Container --- */
+.pt-sections {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* --- Mobile Optimization --- */
+@media (max-width: 480px) {
+	.pt-widget {
+		padding: 12px;
+		gap: 12px;
+	}
+
+	.pt-quick-actions-buttons {
+		grid-template-columns: repeat(3, 1fr);
+	}
+
+	.pt-quick-btn {
+		min-height: 54px;
+		padding: 10px 6px;
+	}
+
+	.pt-clock-row {
+		flex-wrap: wrap;
+	}
+
+	.pt-clock-input {
+		flex: 1 1 100%;
+	}
+}
+
+/* --- Todoist Settings --- */
+.pt-todoist-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	margin-bottom: 8px;
+	border-radius: 6px;
+	background: var(--background-primary);
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.pt-todoist-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.pt-todoist-dot--connected {
+	background: #4caf50;
+}

@@ -1,0 +1,326 @@
+import type { TrackerModule } from '../BaseTracker';
+import type { DiaperEntry, DiaperColor, PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent } from '../../types';
+import { DiaperStats, computeDiaperStats, getDiaperAlerts } from './diaperStats';
+import { formatTime, generateId } from '../../utils/formatters';
+import { div, span } from '../../utils/dom';
+import { filterToday } from '../../data/dateUtils';
+import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
+import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
+
+const DIAPER_COLORS: { value: DiaperColor; label: string; cssColor: string }[] = [
+	{ value: 'meconium', label: 'Meconium', cssColor: '#1a1a2e' },
+	{ value: 'transitional', label: 'Transitional', cssColor: '#2d5016' },
+	{ value: 'yellow-seedy', label: 'Yellow seedy', cssColor: '#d4a017' },
+	{ value: 'green', label: 'Green', cssColor: '#4a7c3f' },
+	{ value: 'brown', label: 'Brown', cssColor: '#6b4226' },
+	{ value: 'other', label: 'Other', cssColor: '#888888' },
+];
+
+export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
+	readonly id = 'diaper';
+	readonly displayName = 'Diapers';
+	readonly defaultExpanded = true;
+	readonly defaultOrder = 1;
+
+	private entries: DiaperEntry[] = [];
+	private save: (() => Promise<void>) | null = null;
+	private settings: PostpartumTrackerSettings | null = null;
+	private emitEvent: ((event: TrackerEvent) => void) | null = null;
+
+	// UI
+	private bodyEl: HTMLElement | null = null;
+	private editPanelContainer: HTMLElement | null = null;
+	private colorPickerEl: HTMLElement | null = null;
+	private pendingEntryId: string | null = null;
+	private entryList: EntryList | null = null;
+	private statsEl: HTMLElement | null = null;
+	private currentEditPanel: InlineEditPanel | null = null;
+
+	parseEntries(raw: unknown): DiaperEntry[] {
+		if (!Array.isArray(raw)) return [];
+		return raw as DiaperEntry[];
+	}
+
+	serializeEntries(): DiaperEntry[] {
+		return this.entries;
+	}
+
+	emptyEntries(): DiaperEntry[] {
+		return [];
+	}
+
+	update(entries: DiaperEntry[]): void {
+		this.entries = entries;
+		this.refreshUI();
+	}
+
+	buildUI(
+		bodyEl: HTMLElement,
+		save: () => Promise<void>,
+		settings: PostpartumTrackerSettings,
+		emitEvent?: (event: TrackerEvent) => void
+	): void {
+		this.save = save;
+		this.settings = settings;
+		this.emitEvent = emitEvent || null;
+		this.bodyEl = bodyEl;
+
+		// Container for edit panels (always at top)
+		this.editPanelContainer = bodyEl.createDiv({ cls: 'pt-edit-panel-container' });
+
+		// Color picker (hidden by default, shown after dirty/both)
+		this.colorPickerEl = bodyEl.createDiv({ cls: 'pt-diaper-color-picker pt-hidden' });
+		this.colorPickerEl.createDiv({ cls: 'pt-color-picker-label', text: 'Stool color:' });
+		const swatchRow = this.colorPickerEl.createDiv({ cls: 'pt-color-swatches' });
+		for (const color of DIAPER_COLORS) {
+			const swatch = swatchRow.createEl('button', {
+				cls: 'pt-color-swatch',
+				title: color.label,
+			});
+			swatch.style.backgroundColor = color.cssColor;
+			swatch.addEventListener('click', () => this.selectColor(color.value));
+		}
+		// Skip color button
+		const skipBtn = this.colorPickerEl.createEl('button', {
+			cls: 'pt-color-skip',
+			text: 'Skip',
+		});
+		skipBtn.addEventListener('click', () => this.dismissColorPicker());
+
+		// Description input (shown with color picker)
+		const descRow = this.colorPickerEl.createDiv({ cls: 'pt-diaper-desc-row' });
+		descRow.createSpan({ text: 'Notes: ' });
+		const descInput = descRow.createEl('input', {
+			cls: 'pt-diaper-desc-input',
+			attr: { type: 'text', placeholder: 'Consistency, amount, etc.' },
+		});
+		descInput.dataset.role = 'diaper-desc';
+
+		// Stats line
+		this.statsEl = bodyEl.createDiv({ cls: 'pt-diaper-stats' });
+
+		// Entry list
+		this.entryList = new EntryList(bodyEl, 'No diaper changes today');
+		this.entryList.setCallbacks(
+			(id) => this.editEntry(id),
+			(id) => this.deleteEntry(id)
+		);
+
+		this.refreshUI();
+	}
+
+	getQuickActions(): QuickAction[] {
+		return [
+			{
+				id: 'diaper-wet',
+				label: 'Wet',
+				icon: '\uD83D\uDCA7',
+				cls: 'pt-quick-btn--diaper-wet',
+				onClick: (ts) => this.logDiaper(true, false, ts),
+			},
+			{
+				id: 'diaper-dirty',
+				label: 'Dirty',
+				icon: '\uD83D\uDCA9',
+				cls: 'pt-quick-btn--diaper-dirty',
+				onClick: (ts) => this.logDiaper(false, true, ts),
+			},
+			{
+				id: 'diaper-both',
+				label: 'Both',
+				icon: '\uD83D\uDCA7\uD83D\uDCA9',
+				cls: 'pt-quick-btn--diaper-both',
+				onClick: (ts) => this.logDiaper(true, true, ts),
+			},
+		];
+	}
+
+	computeStats(entries: DiaperEntry[], dayStart: Date): DiaperStats {
+		return computeDiaperStats(entries, dayStart);
+	}
+
+	renderSummary(el: HTMLElement, stats: DiaperStats): void {
+		const card = el.createDiv({ cls: 'pt-module-summary-card' });
+		card.createDiv({ cls: 'pt-module-summary-value', text: String(stats.totalChanges) });
+		card.createDiv({ cls: 'pt-module-summary-label', text: 'Diapers' });
+		card.createDiv({
+			cls: 'pt-module-summary-sublabel',
+			text: `${stats.totalWet}W ${stats.totalDirty}D`,
+		});
+	}
+
+	getAlerts(entries: DiaperEntry[], dayStart: Date, birthDate?: string): HealthAlert[] {
+		return getDiaperAlerts(
+			entries,
+			dayStart,
+			birthDate,
+			this.settings?.diaper.alertThreshold
+		);
+	}
+
+	// ── Actions ──
+
+	private async logDiaper(wet: boolean, dirty: boolean, timestamp?: string): Promise<void> {
+		const entry: DiaperEntry = {
+			id: generateId(),
+			timestamp: timestamp || new Date().toISOString(),
+			wet,
+			dirty,
+			description: '',
+			notes: '',
+		};
+
+		this.entries.push(entry);
+		// Sort by timestamp to keep order
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+		if (dirty && this.settings?.diaper.showColorPicker) {
+			// Show color picker for dirty diapers
+			this.pendingEntryId = entry.id;
+			this.showColorPicker();
+		} else {
+			this.emitEvent?.({ type: 'diaper-logged', entry });
+			this.refreshUI();
+			if (this.save) await this.save();
+		}
+	}
+
+	private showColorPicker(): void {
+		if (this.colorPickerEl) {
+			this.colorPickerEl.removeClass('pt-hidden');
+			// Clear description input
+			const input = this.colorPickerEl.querySelector('[data-role="diaper-desc"]') as HTMLInputElement;
+			if (input) input.value = '';
+		}
+	}
+
+	private async selectColor(color: DiaperColor): Promise<void> {
+		if (this.pendingEntryId) {
+			const entry = this.entries.find(e => e.id === this.pendingEntryId);
+			if (entry) {
+				entry.color = color;
+				// Grab description from input
+				const input = this.colorPickerEl?.querySelector('[data-role="diaper-desc"]') as HTMLInputElement;
+				if (input && input.value.trim()) {
+					entry.description = input.value.trim();
+				}
+				this.emitEvent?.({ type: 'diaper-logged', entry });
+			}
+		}
+		this.dismissColorPicker();
+		this.refreshUI();
+		if (this.save) await this.save();
+	}
+
+	private async dismissColorPicker(): Promise<void> {
+		if (this.colorPickerEl) {
+			// Grab description even on skip
+			if (this.pendingEntryId) {
+				const entry = this.entries.find(e => e.id === this.pendingEntryId);
+				const input = this.colorPickerEl.querySelector('[data-role="diaper-desc"]') as HTMLInputElement;
+				if (entry && input && input.value.trim()) {
+					entry.description = input.value.trim();
+				}
+			}
+			this.colorPickerEl.addClass('pt-hidden');
+		}
+		this.pendingEntryId = null;
+		this.refreshUI();
+		if (this.save) await this.save();
+	}
+
+	private async editEntry(id: string): Promise<void> {
+		const entry = this.entries.find(e => e.id === id);
+		if (!entry) return;
+
+		this.dismissEditPanel();
+		if (!this.editPanelContainer) return;
+
+		const colorOptions = [
+			{ value: '', label: 'None' },
+			...DIAPER_COLORS.map(c => ({ value: c.value, label: c.label })),
+		];
+
+		const fields: EditField[] = [
+			{ key: 'time', label: 'Time', type: 'datetime', value: entry.timestamp },
+			{ key: 'description', label: 'Description', type: 'text', value: entry.description || '', placeholder: 'Consistency, amount, etc.' },
+			{ key: 'notes', label: 'Notes', type: 'text', value: entry.notes || '', placeholder: 'Optional' },
+		];
+
+		// Add color selector if dirty
+		if (entry.dirty) {
+			fields.splice(1, 0, {
+				key: 'color', label: 'Stool color', type: 'select',
+				value: entry.color || '',
+				options: colorOptions,
+			});
+		}
+
+		this.currentEditPanel = new InlineEditPanel(
+			this.editPanelContainer,
+			'Edit diaper change',
+			fields,
+			async (values) => {
+				entry.timestamp = values.time;
+				if (values.color !== undefined) entry.color = (values.color || undefined) as DiaperColor | undefined;
+				entry.description = values.description || '';
+				entry.notes = values.notes || '';
+
+				this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+				this.dismissEditPanel();
+				this.refreshUI();
+				if (this.save) await this.save();
+			},
+			() => this.dismissEditPanel()
+		);
+	}
+
+	private dismissEditPanel(): void {
+		if (this.currentEditPanel) {
+			this.currentEditPanel.destroy();
+			this.currentEditPanel = null;
+		}
+	}
+
+	private async deleteEntry(id: string): Promise<void> {
+		this.entries = this.entries.filter(e => e.id !== id);
+		this.refreshUI();
+		if (this.save) await this.save();
+	}
+
+	// ── UI Refresh ──
+
+	private refreshUI(): void {
+		if (this.statsEl) {
+			this.statsEl.empty();
+			const stats = computeDiaperStats(this.entries);
+			if (stats.totalChanges > 0) {
+				span(this.statsEl, 'pt-diaper-stat',
+					`Today: ${stats.totalWet} wet, ${stats.totalDirty} dirty`
+				);
+				if (stats.lastChangeAgo) {
+					span(this.statsEl, 'pt-diaper-stat', ` \u2022 Last: ${stats.lastChangeAgo}`);
+				}
+			}
+		}
+
+		if (this.entryList) {
+			const todayEntries = filterToday(this.entries, e => e.timestamp);
+			const items: EntryListItem[] = todayEntries.map(e => {
+				const parts: string[] = [];
+				if (e.wet) parts.push('wet');
+				if (e.dirty) parts.push('dirty');
+				const icon = e.wet && e.dirty ? '\uD83D\uDCA7\uD83D\uDCA9' : e.wet ? '\uD83D\uDCA7' : '\uD83D\uDCA9';
+				const colorLabel = e.color ? ` (${e.color.replace('-', ' ')})` : '';
+				return {
+					id: e.id,
+					time: formatTime(e.timestamp, this.settings?.timeFormat),
+					icon,
+					text: parts.join(' + ') + colorLabel,
+					subtext: e.description || e.notes || undefined,
+				};
+			});
+			this.entryList.update(items);
+		}
+	}
+}

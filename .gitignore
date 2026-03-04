@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output (included in GitHub releases, not in repo)
+main.js
+main.js.map
+*.js.map
+
+# Bun
+bun.lockb
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+
+# Obsidian plugin data (generated at runtime)
+data.json
+
+# Claude Code infrastructure
+.claude/
+
+# Todoist debug log (written at runtime)
+todoist-debug.log
+
+# Hot Reload plugin marker
+.hotreload
