@@ -16,6 +16,10 @@ export class TrackerRegistry {
 		this.modules.set(module.id, module);
 	}
 
+	clear(): void {
+		this.modules.clear();
+	}
+
 	get(id: string): TrackerModule | undefined {
 		return this.modules.get(id);
 	}

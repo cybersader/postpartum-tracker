@@ -49,7 +49,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		// --- Tracker Library ---
 		new Setting(containerEl).setName('Tracker library').setHeading();
 		new Setting(containerEl)
-			.setDesc('Enable or disable tracking modules. Core modules have deep notification and Todoist integration. Smart modules support automatic reminders. Reload the plugin after changing these.');
+			.setDesc('Enable or disable tracking modules. Core modules have deep notification and Todoist integration. Smart modules support automatic reminders.');
 
 		const enabledModules = this.plugin.settings.enabledModules;
 
@@ -84,7 +84,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 									if (idx >= 0) enabledModules.splice(idx, 1);
 								}
 								await this.plugin.saveSettings();
-								new Notice('Reload the plugin to apply changes.');
+								await this.plugin.rebuildRegistry();
 							})
 						);
 				}

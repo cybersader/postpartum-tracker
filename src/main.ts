@@ -196,6 +196,38 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.notificationService?.stop();
 	}
 
+	/**
+	 * Rebuild the tracker registry from current settings and refresh all open
+	 * tracker widgets so changes take effect without a plugin reload.
+	 */
+	async rebuildRegistry(): Promise<void> {
+		this.registry.clear();
+
+		// Core modules
+		this.registry.register(new FeedingTracker());
+		this.registry.register(new DiaperTracker());
+		this.registry.register(new MedicationTracker());
+
+		// Library modules
+		for (const def of TRACKER_LIBRARY) {
+			if (this.settings.enabledModules.includes(def.id)) {
+				this.registry.register(new SimpleTrackerModule(def));
+			}
+		}
+
+		// Force Obsidian to re-render all postpartum-tracker code blocks by
+		// touching each file that contains one.  vault.process() with an
+		// identity transform triggers the code-block processor again.
+		const files = this.app.vault.getMarkdownFiles();
+		for (const file of files) {
+			const content = await this.app.vault.cachedRead(file);
+			if (content.includes('```postpartum-tracker')) {
+				// Trigger a re-read by the editor – a no-op modify is enough
+				await this.app.vault.process(file, (c) => c);
+			}
+		}
+	}
+
 	async loadSettings(): Promise<void> {
 		this.settings = deepMerge(DEFAULT_SETTINGS, await this.loadData());
 	}
