@@ -1,6 +1,6 @@
 import { Editor, Notice, Plugin, TFile } from 'obsidian';
 import type { PostpartumTrackerSettings, TrackerEvent } from './types';
-import { DEFAULT_SETTINGS, EMPTY_DATA } from './types';
+import { DEFAULT_SETTINGS, DEFAULT_MEDICATIONS, EMPTY_DATA } from './types';
 import { CodeBlockStore } from './data/CodeBlockStore';
 import { TrackerRegistry } from './data/TrackerRegistry';
 import { TrackerWidget } from './widget/TrackerWidget';
@@ -51,6 +51,14 @@ export default class PostpartumTrackerPlugin extends Plugin {
 
 		// Register simple (library) tracker modules for enabled IDs
 		for (const def of TRACKER_LIBRARY) {
+			if (this.settings.enabledModules.includes(def.id)) {
+				const override = this.settings.libraryTrackerOverrides[def.id];
+				this.registry.register(new SimpleTrackerModule(def, override));
+			}
+		}
+
+		// Register user-created custom trackers
+		for (const def of this.settings.customTrackers) {
 			if (this.settings.enabledModules.includes(def.id)) {
 				this.registry.register(new SimpleTrackerModule(def));
 			}
@@ -299,6 +307,14 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		// Library modules
 		for (const def of TRACKER_LIBRARY) {
 			if (this.settings.enabledModules.includes(def.id)) {
+				const override = this.settings.libraryTrackerOverrides[def.id];
+				this.registry.register(new SimpleTrackerModule(def, override));
+			}
+		}
+
+		// Custom trackers
+		for (const def of this.settings.customTrackers) {
+			if (this.settings.enabledModules.includes(def.id)) {
 				this.registry.register(new SimpleTrackerModule(def));
 			}
 		}
@@ -318,6 +334,29 @@ export default class PostpartumTrackerPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = deepMerge(DEFAULT_SETTINGS, await this.loadData());
+		this.reconcileMedications();
+	}
+
+	/** Ensure any new DEFAULT_MEDICATIONS items are added to saved settings. */
+	private reconcileMedications(): void {
+		const saved = this.settings.medication.medications;
+		const savedNames = new Set(saved.map(m => m.name.toLowerCase()));
+
+		for (const defaultMed of DEFAULT_MEDICATIONS) {
+			if (!savedNames.has(defaultMed.name.toLowerCase())) {
+				saved.push({ ...defaultMed, enabled: false });
+			}
+		}
+
+		// Backfill category field on items saved before the field existed
+		for (const med of saved) {
+			if (!med.category) {
+				const match = DEFAULT_MEDICATIONS.find(
+					d => d.name.toLowerCase() === med.name.toLowerCase()
+				);
+				med.category = match?.category || 'medication';
+			}
+		}
 	}
 
 	async saveSettings(): Promise<void> {

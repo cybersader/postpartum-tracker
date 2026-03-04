@@ -228,6 +228,49 @@ export const TRACKER_LIBRARY: SimpleTrackerDef[] = [
 		defaultOrder: 25,
 	},
 
+	{
+		id: 'bleeding',
+		displayName: 'Bleeding/lochia',
+		category: 'mother-recovery',
+		icon: '\uD83E\uDE78',   // drop of blood
+		description: 'Track postpartum bleeding — amount, color, and clots',
+		isSmart: true,
+		fields: [
+			{ key: 'amount', label: 'Amount', type: 'select', options: ['light', 'moderate', 'heavy'], required: true },
+			{ key: 'color', label: 'Color', type: 'select', options: ['bright red', 'dark red', 'pink', 'brown', 'yellow'] },
+			{ key: 'clots', label: 'Clots', type: 'boolean' },
+		],
+		defaultOrder: 26,
+		notificationConfig: {
+			reminderEnabled: true,
+			reminderIntervalHours: 12,
+			reminderMessage: 'Log your bleeding/lochia status',
+		},
+	},
+	{
+		id: 'skin-to-skin',
+		displayName: 'Skin-to-skin',
+		category: 'baby-care',
+		icon: '\uD83E\uDD32',   // palms up
+		description: 'Track skin-to-skin contact sessions',
+		isSmart: false,
+		fields: [],
+		defaultOrder: 28,
+		hasDuration: true,
+	},
+	{
+		id: 'cord-care',
+		displayName: 'Cord care',
+		category: 'baby-care',
+		icon: '\uD83E\uDE79',   // adhesive bandage
+		description: 'Track umbilical cord care and observations',
+		isSmart: false,
+		fields: [
+			{ key: 'status', label: 'Status', type: 'select', options: ['normal', 'redness', 'discharge', 'fell off'] },
+		],
+		defaultOrder: 29,
+	},
+
 	// ── General ───────────────────────────────────────────────
 
 	{

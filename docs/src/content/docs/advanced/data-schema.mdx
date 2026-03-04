@@ -35,6 +35,9 @@ interface PostpartumData {
 
   /** Optional per-code-block settings overrides */
   settingsOverrides?: Partial<PostpartumTrackerSettings>;
+
+  /** Active logic pack ID (overrides global setting for this block) */
+  logicPackId?: string;
 }
 ```
 
@@ -145,6 +148,35 @@ The `layout` array controls the order of sections in the widget:
 ```
 
 Module IDs not in the layout array appear after the listed ones, sorted by `defaultOrder`. Module IDs in the layout that aren't enabled are silently skipped.
+
+## Logic packs
+
+Logic packs define expected milestones and thresholds by day of life. The `logicPackId` field on the code block overrides the global setting.
+
+Built-in pack IDs:
+- `first-week-newborn` — AAP-based first week expectations (diapers, feedings, stool color)
+- `postpartum-recovery` — Mother's recovery milestones (pain, bowel movements, walking)
+- `breastfeeding-establishment` — Feeding frequency targets for the first 8 weeks
+
+Each pack contains milestone rules evaluated against actual tracker data:
+
+```typescript
+interface MilestoneRule {
+  moduleId: string;           // Which tracker module ('diaper', 'feeding', etc.)
+  field: string;              // '_count', '_count_wet', '_count_dirty', '_duration_avg', or a field key
+  fromDay: number;            // Start day of life (0 = birth day)
+  toDay: number;              // End day of life
+  expect: {
+    min?: number;             // Minimum expected value
+    max?: number;             // Maximum expected value
+    values?: string[];        // Expected string values (e.g., ['yellow-seedy'])
+    perPeriod?: 'day' | '24h'; // Count per day vs cumulative
+  };
+  alertLevel: 'info' | 'warning' | 'urgent';
+  description: string;
+  onTrackMessage?: string;    // Shown when the expectation IS met
+}
+```
 
 ## Version
 

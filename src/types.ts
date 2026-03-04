@@ -98,6 +98,56 @@ export interface SimpleTrackerEntry {
 	notes: string;
 }
 
+// ── Logic Packs (Milestone Rules) ────────────────────────────
+
+/** A single milestone expectation within a logic pack. */
+export interface MilestoneRule {
+	/** Which tracker module this rule applies to */
+	moduleId: string;
+	/** Which field to evaluate: '_count' for entry count, '_duration_avg' for avg duration,
+	 *  or a specific field key from the tracker's entries (e.g., 'color' for diaper). */
+	field: string;
+	/** Day of life range this rule applies (inclusive, 0-indexed) */
+	fromDay: number;
+	toDay: number;
+	/** Expected value or range */
+	expect: {
+		min?: number;
+		max?: number;
+		/** Expected select values (e.g., ['yellow-seedy']) */
+		values?: string[];
+		/** Period for count-based rules */
+		perPeriod?: 'day' | '24h';
+	};
+	/** Alert level when expectation not met */
+	alertLevel: 'info' | 'warning' | 'urgent';
+	/** Human-readable description of what's expected */
+	description: string;
+	/** Message shown when expectation IS met (positive reinforcement) */
+	onTrackMessage?: string;
+}
+
+/** A logic pack definition. */
+export interface LogicPackDef {
+	id: string;
+	displayName: string;
+	description: string;
+	/** Who this pack is for */
+	target: 'baby' | 'mother' | 'both';
+	/** Recommended trackers to enable with this pack */
+	recommendedModules: string[];
+	/** Time-based milestone rules */
+	milestones: MilestoneRule[];
+}
+
+/** Result of evaluating a single milestone rule against actual data. */
+export interface MilestoneStatus {
+	rule: MilestoneRule;
+	actual: number | string[];
+	met: boolean;
+	message: string;
+}
+
 // ── Medication Config ────────────────────────────────────────
 
 export type MedicationCategory = 'medication' | 'remedy';
@@ -116,18 +166,27 @@ export interface MedicationConfig {
 export const DEFAULT_MEDICATIONS: MedicationConfig[] = [
 	// Pain medications
 	{ name: 'Tylenol', technicalName: 'Acetaminophen', dosage: '500mg', minIntervalHours: 6, maxDailyDoses: 4, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Ibuprofen', technicalName: 'Ibuprofen', dosage: '200mg', minIntervalHours: 6, maxDailyDoses: 4, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Norco', technicalName: 'Hydrocodone/Acetaminophen', dosage: '5/325mg', minIntervalHours: 4, maxDailyDoses: 6, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Ibuprofen', technicalName: 'Ibuprofen', dosage: '800mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Hydrocodone-Acetamin', technicalName: 'Hydrocodone/Acetaminophen', dosage: '5-325mg (half pill)', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 	// Supplements
-	{ name: 'Stool softener', technicalName: 'Docusate sodium', dosage: '100mg', minIntervalHours: 24, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Prenatal vitamin', technicalName: '', dosage: '', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Iron supplement', technicalName: 'Ferrous sulfate', dosage: '', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Stool softener', technicalName: 'Docusate sodium', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Prenatal vitamin', technicalName: '', dosage: '2 gummies', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Iron', technicalName: 'Ferrous sulfate', dosage: '324mg', minIntervalHours: 48, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 	// Topical remedies / perineal care
 	{ name: 'Dermoplast', technicalName: 'Benzocaine/Menthol spray', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
 	{ name: 'Lidocaine cream', technicalName: 'Lidocaine topical', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
 	{ name: 'EMLA cream', technicalName: 'Lidocaine/Prilocaine', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
 	{ name: 'Proctofoam', technicalName: 'Pramoxine/Hydrocortisone', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
 	{ name: 'Witch hazel pads', technicalName: 'Tucks pads', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Nipple cream', technicalName: 'Lanolin', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Sitz bath', technicalName: 'Perineal soak', dosage: '15-20 min', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEC1', category: 'remedy' },
+	{ name: 'Perineum ice pack', technicalName: 'Cold pack / padsicle', dosage: '20 min', minIntervalHours: 1, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
+	{ name: 'Hemorrhoid cream', technicalName: 'Preparation H', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Breast ice/heat pack', technicalName: '', dosage: '15-20 min', minIntervalHours: 2, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
+	{ name: 'Peri bottle', technicalName: 'Perineal irrigation', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEBF', category: 'remedy' },
+	{ name: 'Naproxen', technicalName: 'Aleve', dosage: '220mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Colace', technicalName: 'Docusate sodium', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Miralax', technicalName: 'Polyethylene glycol', dosage: '17g', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 ];
 
 // ── Notification Types ───────────────────────────────────────
@@ -280,14 +339,39 @@ export interface PostpartumTrackerSettings {
 	/** Notifications */
 	notifications: NotificationSettings;
 
+	/** Active logic pack IDs (can stack: e.g., one baby + one mother pack) */
+	activeLogicPacks: string[];
+
+	/** Per-library-tracker config overrides (keyed by tracker ID) */
+	libraryTrackerOverrides: Record<string, LibraryTrackerOverride>;
+
+	/** User-created custom trackers */
+	customTrackers: SimpleTrackerDef[];
+
 	/** Todoist integration */
 	todoist: TodoistSettings;
+}
+
+/** User-editable overrides for a library tracker's settings. */
+export interface LibraryTrackerOverride {
+	/** Custom display name (empty = use default) */
+	displayName?: string;
+	/** Custom icon (empty = use default) */
+	icon?: string;
+	/** Notification override */
+	notification?: {
+		reminderEnabled: boolean;
+		reminderIntervalHours: number;
+	};
 }
 
 export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	timeFormat: '12h',
 	hapticFeedback: true,
 	enableDebugLog: false,
+	activeLogicPacks: [],
+	libraryTrackerOverrides: {},
+	customTrackers: [],
 	enabledModules: ['feeding', 'diaper', 'medication'],
 	feeding: {
 		showTimer: true,
@@ -335,6 +419,9 @@ export interface PostpartumData {
 
 	/** Per-code-block settings overrides */
 	settingsOverrides?: Partial<PostpartumTrackerSettings>;
+
+	/** Per-code-block logic pack override (overrides global activeLogicPacks for this block) */
+	logicPackId?: string;
 }
 
 export const DEFAULT_LAYOUT: string[] = ['feeding', 'diaper', 'medication'];

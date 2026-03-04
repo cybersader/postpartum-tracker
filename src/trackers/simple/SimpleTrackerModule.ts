@@ -13,6 +13,7 @@ import type {
 	HealthAlert,
 	TrackerEvent,
 	TrackerCategory,
+	LibraryTrackerOverride,
 } from '../../types';
 import { SimpleTrackerStats, computeSimpleTrackerStats } from './simpleTrackerStats';
 import { formatTime, formatDuration, formatDurationShort, generateId } from '../../utils/formatters';
@@ -48,15 +49,27 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 	private statsEl: HTMLElement | null = null;
 	private currentEditPanel: InlineEditPanel | null = null;
 
-	constructor(def: SimpleTrackerDef) {
+	constructor(def: SimpleTrackerDef, override?: LibraryTrackerOverride) {
 		this.def = def;
 		this.id = def.id;
-		this.displayName = def.displayName;
+		this.displayName = override?.displayName || def.displayName;
 		this.defaultOrder = def.defaultOrder;
 		this.category = def.category;
-		this.icon = def.icon;
+		this.icon = override?.icon || def.icon;
 		this.description = def.description;
 		this.isSmart = def.isSmart;
+
+		// Apply notification overrides
+		if (override?.notification && def.notificationConfig) {
+			this.def = {
+				...def,
+				notificationConfig: {
+					...def.notificationConfig,
+					reminderEnabled: override.notification.reminderEnabled,
+					reminderIntervalHours: override.notification.reminderIntervalHours,
+				},
+			};
+		}
 	}
 
 	parseEntries(raw: unknown): SimpleTrackerEntry[] {
@@ -126,7 +139,7 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 		if (primarySelect && primarySelect.options) {
 			return primarySelect.options.map(option => ({
 				id: `${this.id}-${option}`,
-				label: `${option}`,
+				label: `${option}\n${this.def.displayName}`,
 				icon: this.def.icon,
 				cls: `pt-quick-btn--${this.id}`,
 				onClick: (ts) => this.onQuickSelectAction(primarySelect.key, option, ts),

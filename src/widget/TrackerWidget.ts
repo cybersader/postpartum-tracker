@@ -10,6 +10,8 @@ import { DailySummary, type SummaryCard } from './DailySummary';
 import { AlertsPanel } from './AlertsPanel';
 import { InlineEditPanel, type EditField } from './shared/InlineEditPanel';
 import { deepMerge } from '../utils/deepMerge';
+import { evaluateMilestones } from '../trackers/milestoneEvaluator';
+import { getLogicPacks } from '../trackers/logicPacks';
 import type PostpartumTrackerPlugin from '../main';
 
 /**
@@ -313,10 +315,33 @@ export class TrackerWidget extends MarkdownRenderChild {
 			});
 		}
 
+		// Logic pack milestone progress cards
+		if (this.data.meta.birthDate) {
+			const dol = daysSinceBirth(this.data.meta.birthDate);
+			if (dol >= 0) {
+				const packIds = this.data.logicPackId
+					? [this.data.logicPackId]
+					: this.settings.activeLogicPacks;
+				const packs = getLogicPacks(packIds);
+				if (packs.length > 0) {
+					const statuses = evaluateMilestones(this.data, packs, dol);
+					const met = statuses.filter(s => s.met).length;
+					const total = statuses.length;
+					if (total > 0) {
+						cards.push({
+							value: `${met}/${total}`,
+							label: 'Milestones',
+							sublabel: met === total ? 'All on track' : `${total - met} need attention`,
+						});
+					}
+				}
+			}
+		}
+
 		this.dailySummary.render(cards);
 	}
 
-	/** Collect and display health alerts from all modules. */
+	/** Collect and display health alerts from all modules + logic packs. */
 	private updateAlerts(): void {
 		const dayStart = getDayStart();
 		const allAlerts: HealthAlert[] = [];
@@ -327,6 +352,30 @@ export class TrackerWidget extends MarkdownRenderChild {
 			const rawEntries = this.data.trackers[module.id];
 			const entries = module.parseEntries(rawEntries);
 			allAlerts.push(...module.getAlerts(entries, dayStart, this.data.meta.birthDate));
+		}
+
+		// Logic pack milestone alerts
+		if (this.data.meta.birthDate) {
+			const dol = daysSinceBirth(this.data.meta.birthDate);
+			if (dol >= 0) {
+				const packIds = this.data.logicPackId
+					? [this.data.logicPackId]
+					: this.settings.activeLogicPacks;
+				const packs = getLogicPacks(packIds);
+				if (packs.length > 0) {
+					const statuses = evaluateMilestones(this.data, packs, dol);
+					for (const s of statuses) {
+						if (s.met) continue; // Only show unmet milestones as alerts
+						allAlerts.push({
+							level: s.rule.alertLevel,
+							message: s.message,
+							detail: typeof s.actual === 'number'
+								? `Current: ${s.actual}${s.rule.expect.min !== undefined ? ` / ${s.rule.expect.min} expected` : ''}`
+								: undefined,
+						});
+					}
+				}
+			}
 		}
 
 		this.alertsPanel.render(allAlerts);

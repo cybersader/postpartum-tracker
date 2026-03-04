@@ -137,7 +137,7 @@
 
 .pt-quick-actions-buttons {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(80px, 100%), 1fr));
 	gap: 8px;
 }
 
@@ -218,10 +218,19 @@
 }
 
 .pt-quick-btn-label {
-	font-size: 0.75rem;
+	font-size: 0.72rem;
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
+	text-align: center;
+	max-width: 100%;
+	/* Allow wrapping to 2 lines so labels are always visible */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	word-break: break-word;
+	line-height: 1.2;
 }
 
 .pt-quick-btn-sublabel {
@@ -230,6 +239,13 @@
 	color: var(--text-muted);
 	text-transform: none;
 	letter-spacing: 0;
+	text-align: center;
+	max-width: 100%;
+	display: -webkit-box;
+	-webkit-line-clamp: 1;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	word-break: break-word;
 }
 
 /* Quick button color variants */
@@ -833,6 +849,102 @@
 .pt-entry--feeding-both .pt-entry-icon { color: #c4a0e8; }
 .pt-entry--feeding-breast .pt-entry-icon { color: #c4a0e8; }
 
+/* --- Settings: Tab Bar --- */
+.pt-settings-tabs {
+	display: flex;
+	gap: 0;
+	border-bottom: 2px solid var(--background-modifier-border);
+	margin-bottom: 1rem;
+}
+
+.pt-settings-tab {
+	padding: 8px 16px;
+	border: none;
+	background: none;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: color 0.15s, border-color 0.15s;
+	font-family: inherit;
+}
+
+.pt-settings-tab:hover {
+	color: var(--text-normal);
+}
+
+.pt-settings-tab.is-active {
+	color: var(--text-accent);
+	border-bottom-color: var(--text-accent);
+}
+
+.pt-settings-tab-body {
+	/* Tab content containers */
+}
+
+/* --- Settings: Library Search + Filter --- */
+.pt-lib-search {
+	margin-bottom: 8px;
+}
+
+.pt-lib-search-input {
+	width: 100%;
+	padding: 8px 12px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	font-family: inherit;
+	box-sizing: border-box;
+}
+
+.pt-lib-search-input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+}
+
+.pt-lib-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.pt-lib-chip {
+	padding: 4px 12px;
+	border-radius: 16px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	font-size: 0.78rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.15s;
+	font-family: inherit;
+}
+
+.pt-lib-chip:hover {
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+.pt-lib-chip.is-active {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.pt-lib-empty {
+	text-align: center;
+	padding: 24px 12px;
+	color: var(--text-faint);
+	font-size: 0.85rem;
+}
+
 /* --- Settings: Medication Editor --- */
 .pt-med-editor {
 	margin: 4px 0 12px;
@@ -845,6 +957,104 @@
 .pt-med-editor .setting-item {
 	padding: 8px 0;
 	border-top: none;
+}
+
+.pt-custom-field-row {
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 4px 8px;
+	margin-bottom: 6px;
+}
+.pt-custom-field-row .setting-item {
+	padding: 4px 0;
+}
+
+/* --- Emoji Picker --- */
+.pt-emoji-picker {
+	margin: 4px 0 8px;
+}
+.pt-emoji-toggle {
+	font-size: 0.8rem;
+	padding: 4px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+.pt-emoji-toggle:hover {
+	border-color: var(--interactive-accent);
+}
+.pt-emoji-grid {
+	margin-top: 6px;
+	padding: 8px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+.pt-emoji-browse-btn {
+	display: block;
+	width: 100%;
+	margin-top: 6px;
+	padding: 6px 12px;
+	font-size: 0.78rem;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 6px;
+	background: none;
+	color: var(--text-accent);
+	cursor: pointer;
+}
+.pt-emoji-browse-btn:hover {
+	background: var(--background-modifier-hover);
+	border-style: solid;
+}
+/* Emoji suggest modal items */
+.pt-emoji-suggest-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.pt-emoji-suggest-icon {
+	font-size: 1.4rem;
+	width: 28px;
+	text-align: center;
+}
+.pt-emoji-suggest-name {
+	font-size: 0.9rem;
+}
+.pt-emoji-group-label {
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	margin: 6px 0 2px;
+	letter-spacing: 0.04em;
+}
+.pt-emoji-group-label:first-child {
+	margin-top: 0;
+}
+.pt-emoji-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+.pt-emoji-btn {
+	width: 36px;
+	height: 36px;
+	font-size: 1.3rem;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	background: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.1s ease;
+}
+.pt-emoji-btn:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+	transform: scale(1.15);
 }
 
 /* --- Toast Notifications --- */
@@ -1001,12 +1211,21 @@
 	}
 
 	.pt-quick-actions-buttons {
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(auto-fill, minmax(min(70px, calc(33.33% - 6px)), 1fr));
 	}
 
 	.pt-quick-btn {
 		min-height: 54px;
-		padding: 10px 6px;
+		padding: 10px 4px;
+		font-size: 0.72rem;
+	}
+
+	.pt-quick-btn-label {
+		font-size: 0.68rem;
+	}
+
+	.pt-quick-btn-sublabel {
+		font-size: 0.55rem;
 	}
 
 	.pt-clock-row {
@@ -1064,8 +1283,8 @@
 }
 
 /* Responsive quick action grid with many modules enabled */
-@media (min-width: 480px) {
+@media (min-width: 481px) {
 	.pt-quick-actions-buttons {
-		grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
 	}
 }
