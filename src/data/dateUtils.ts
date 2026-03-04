@@ -39,12 +39,19 @@ export function filterToday<T>(
 	});
 }
 
+/** Parse a YYYY-MM-DD string as local midnight (avoids UTC timezone shift). */
+export function parseLocalDate(dateStr: string): Date {
+	const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);
+	return new Date(y, m - 1, d);
+}
+
 /**
  * Calculate days since a date (inclusive of the birth day as day 0).
  * Returns -1 if birthDate is in the future.
  */
 export function daysSinceBirth(birthDateIso: string): number {
-	const birth = getDayStart(new Date(birthDateIso));
+	const birth = parseLocalDate(birthDateIso);
+	birth.setHours(0, 0, 0, 0);
 	const today = getDayStart();
 	const diff = today.getTime() - birth.getTime();
 	if (diff < 0) return -1;

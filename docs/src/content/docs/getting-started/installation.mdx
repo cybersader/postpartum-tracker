@@ -28,6 +28,22 @@ import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
 
 BRAT will automatically check for updates when you open Obsidian.
 
+## Shared vaults (Obsidian Sync)
+
+:::tip[Multi-user setup]
+If you share your vault with others via **Obsidian Sync**, only **one person** needs to install the plugin via BRAT. To make this work:
+
+1. Go to **Settings > Sync > Vault configuration sync**.
+2. Enable **Installed community plugins**.
+3. Enable **Active community plugins**.
+
+Once synced, the plugin and its settings will appear on all connected devices. Other users just need to restart Obsidian or toggle restricted mode off and on.
+:::
+
+:::caution[Sensitive settings sync]
+Plugin settings sync to all users. This includes your **Todoist API token** and **webhook URLs**. If users need separate Todoist accounts, each device should configure its own Todoist settings after syncing.
+:::
+
 ## Manual installation
 
 <Steps>
