@@ -37,6 +37,19 @@ Every tracker implements:
 ### TrackerRegistry (data/TrackerRegistry.ts)
 - Map<string, TrackerModule> with `register()`, `get()`, `getAll()` (sorted by defaultOrder)
 
+## Code Block Scope & Data Locality
+
+Each `postpartum-tracker` code block is **self-contained**. The JSON inside the code block holds all tracker data for that widget instance. Key implications:
+
+- **Multiple code blocks** in different notes (or even the same note) have **independent data**. They don't share entries.
+- **Plugin settings** (enabled modules, medication configs, notification preferences, Todoist config) are **global** -- stored in `data.json` and shared across all code blocks.
+- **The library toggles** (enable/disable sleep, mood, etc.) control which `SimpleTrackerModule` instances get registered in the `TrackerRegistry` at plugin load. This is a global setting -- all code blocks see the same set of enabled modules.
+- **Module layout order** is stored per-code-block in `layout: string[]`. Each code block can have its sections reordered independently.
+- **Notification scanning** reads tracker data from **all** code blocks in the vault. `NotificationService.check()` scans all markdown files for `postpartum-tracker` code blocks and aggregates their data for alert evaluation. So if you have feeding entries spread across two code blocks, both are considered for the "time since last feeding" alert.
+- **Todoist integration** fires tasks based on events from whichever code block the user interacts with. Two-way sync writes entries back to the **first** matching code block found in the vault.
+
+**Practical recommendation**: Use a single code block in one note (e.g., "Baby Tracker.md"). Multiple code blocks are supported but can cause confusion with notification aggregation and Todoist two-way sync targeting.
+
 ## Data Flow
 
 ```

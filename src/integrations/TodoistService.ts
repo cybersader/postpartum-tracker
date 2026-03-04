@@ -226,7 +226,9 @@ export class TodoistService {
 	 */
 	async fetchWorkspaces(): Promise<TodoistWorkspace[]> {
 		if (!this.settings.apiToken) return [];
+		await this.log('fetchWorkspaces: fetching team workspaces');
 		const workspaces = await this.apiList<TodoistWorkspace>('/workspaces');
+		await this.log(`fetchWorkspaces: found ${workspaces?.length ?? 0} workspaces`, workspaces);
 		return workspaces || [];
 	}
 
@@ -246,7 +248,11 @@ export class TodoistService {
 			}
 			await this.log(`setup: found ${projects.length} projects`);
 
-			let project: TodoistProject | undefined = projects.find(p => p.name === this.settings.projectName);
+			const wantWorkspace = this.settings.workspaceId || null;
+			let project: TodoistProject | undefined = projects.find(p =>
+				p.name === this.settings.projectName &&
+				(p.workspace_id || null) === wantWorkspace
+			);
 			if (!project) {
 				const createBody: Record<string, unknown> = { name: this.settings.projectName };
 				if (this.settings.workspaceId) {
@@ -260,7 +266,7 @@ export class TodoistService {
 				}
 				project = created;
 			}
-			await this.log('setup: using project', { id: project.id, name: project.name });
+			await this.log('setup: using project', { id: project.id, name: project.name, workspace_id: project.workspace_id || 'personal' });
 			this.settings.projectId = project.id;
 
 			// Find or create sections
@@ -303,6 +309,52 @@ export class TodoistService {
 			await this.log('setup: EXCEPTION', String(e));
 			return false;
 		}
+	}
+
+	// ── Project Cleanup ─────────────────────────────────────
+
+	/**
+	 * Delete the Todoist project and all its tasks, clear local task map,
+	 * and reset setup state. Returns true on success.
+	 */
+	async removeProject(): Promise<boolean> {
+		const projectId = this.settings.projectId;
+		if (!projectId) {
+			await this.log('removeProject: no projectId set');
+			return false;
+		}
+
+		try {
+			await this.log('removeProject: deleting project', { projectId });
+			const res = await this.api<null>('DELETE', `/projects/${projectId}`);
+			await this.log('removeProject: delete response', res);
+
+			// Clear local state
+			this.taskMap.clear();
+			this.saveTaskMap();
+
+			// Reset settings
+			this.settings.projectId = '';
+			this.settings.setupComplete = false;
+			this.settings.lastConnectedAt = 0;
+			this.settings.sectionIds = { feeding: '', diaper: '', medication: '' };
+			await this.plugin.saveSettings();
+
+			await this.log('removeProject: COMPLETE — project deleted and local state cleared');
+			return true;
+		} catch (e) {
+			await this.log('removeProject: EXCEPTION', String(e));
+			return false;
+		}
+	}
+
+	/**
+	 * Clear local task tracking without touching Todoist.
+	 * Useful if tasks were manually deleted in Todoist.
+	 */
+	clearLocalTaskMap(): void {
+		this.taskMap.clear();
+		this.saveTaskMap();
 	}
 
 	// ── Task CRUD ───────────────────────────────────────────

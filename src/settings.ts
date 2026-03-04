@@ -695,6 +695,47 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		// --- Cleanup ---
+		new Setting(containerEl).setName('Cleanup').setHeading();
+
+		new Setting(containerEl)
+			.setName('Clear local task cache')
+			.setDesc('Remove locally tracked task references without touching Todoist. Use if tasks were manually deleted in Todoist.')
+			.addButton(btn => btn
+				.setButtonText('Clear cache')
+				.onClick(() => {
+					this.plugin.todoistService.clearLocalTaskMap();
+					new Notice('Local task cache cleared.');
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Remove project from Todoist')
+			.setDesc('Permanently delete the Todoist project and all its tasks. This cannot be undone.')
+			.addButton(btn => btn
+				.setButtonText('Remove project')
+				.setWarning()
+				.onClick(async () => {
+					// Confirm before deleting
+					const confirmed = confirm(
+						`This will permanently delete the "${todoist.projectName}" project and all tasks in Todoist.\n\nThis cannot be undone. Continue?`
+					);
+					if (!confirmed) return;
+
+					btn.setDisabled(true);
+					btn.setButtonText('Removing...');
+					const ok = await this.plugin.todoistService.removeProject();
+					btn.setDisabled(false);
+					if (ok) {
+						new Notice('Todoist project removed and local state cleared.');
+						this.display(); // Refresh to show disconnected state
+					} else {
+						new Notice('Failed to remove project. Check todoist-debug.log.');
+						btn.setButtonText('Remove project');
+					}
+				})
+			);
 	}
 
 	/** Update the Todoist connection status indicator. */
