@@ -7,6 +7,39 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-04
+
+### Added
+
+- **Tabbed settings UI**: Settings organized into 3 tabs (Trackers, Notifications, General) for easier navigation.
+- **Logic packs**: Configurable milestone rule sets that define expected outcomes by day of life. 3 built-in packs: "First week newborn", "Postpartum recovery", "Breastfeeding establishment".
+- **Milestone evaluator**: Compares actual tracker data against logic pack expectations and surfaces alerts/progress.
+- **Library tracker editing**: Pencil button on each library tracker to customize display name, icon, and notification settings without affecting the underlying definition.
+- **Custom tracker builder**: Create your own trackers directly from settings with name, icon, description, category, duration toggle, and dynamic field definitions.
+- **Emoji picker modal**: Searchable emoji picker using Obsidian's native fuzzy suggest modal (~200 emojis with keyword search) plus curated quick-pick grid.
+- **Medication reconciliation**: Plugin automatically adds new default medications/remedies on load so existing users get new items without losing their customizations.
+- 4 new library trackers: Bleeding/lochia, Skin-to-skin, Cord care, Hiccups.
+- 10+ new default medications/remedies: Nipple cream, Sitz bath, Perineum ice pack, Hemorrhoid cream, Breast ice/heat pack, Naproxen, Colace, Miralax, Peri bottle, Hydrocodone-Acetamin.
+- `[core]`, `[smart]`, `[duration]`, `[custom]`, `[logic pack]` badges in tracker library browser.
+- Category filter chips and fuzzy search in tracker library browser.
+
+### Changed
+
+- Medication defaults updated: Ibuprofen 800mg/8h, Stool softener 12h intervals, Prenatal vitamin 2 gummies, Iron 324mg/48h.
+- Quick-action button labels now wrap to 2 lines instead of truncating to nothing.
+- Select-option quick buttons (e.g., pumping left/right) show parent module name as sublabel.
+- Library tracker toggles now rebuild registry immediately (no more "Reload plugin" notice).
+
+### Removed
+
+- "Perineal care" tracker (redundant -- individual items exist as remedies: Sitz bath, Ice pack, Dermoplast, Peri bottle, etc.).
+
+### Fixed
+
+- Mobile quick-action button grid overflow on phones < 375px wide.
+- Recovery care section appearing empty for existing users (medication reconciliation now backfills missing items).
+- Medications saved before `category` field was added now get correct category assignment.
+
 ## [0.5.0] - 2026-03-04
 
 ### Fixed
@@ -109,7 +142,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/cybersader/postpartum-tracker/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/cybersader/postpartum-tracker/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/cybersader/postpartum-tracker/compare/0.3.0...0.4.0
