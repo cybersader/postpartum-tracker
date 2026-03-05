@@ -371,8 +371,7 @@ export class NotificationService {
 		if (settings.webhookEnabled) {
 			// ntfy
 			if (this.isNtfyActive(settings)) {
-				const url = `https://ntfy.sh/${settings.ntfyTopic}`;
-				this.fireNtfy(notif, url);
+				this.fireNtfy(notif, settings.ntfyTopic);
 			}
 
 			// Pushover
@@ -426,18 +425,19 @@ export class NotificationService {
 
 	/**
 	 * Send notification via ntfy.sh.
-	 * Uses ntfy's JSON publishing API with only the fields ntfy understands.
-	 * Topic is in the URL path, so we do NOT duplicate it in the body.
+	 * JSON publishing must POST to the server root with `topic` in the body.
+	 * Posting JSON to a topic URL causes ntfy to display raw JSON as plain text.
 	 */
-	private async fireNtfy(notif: NotificationItem, url: string): Promise<void> {
+	private async fireNtfy(notif: NotificationItem, topic: string, serverUrl = 'https://ntfy.sh'): Promise<void> {
 		try {
 			const priorityMap: Record<string, number> = { info: 2, warning: 3, urgent: 5 };
 			const tags = NotificationService.ntfyTagsForCategory(notif.category, notif.level);
 
-			await fetch(url, {
+			await fetch(serverUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					topic,
 					title: notif.title,
 					message: notif.message,
 					priority: priorityMap[notif.level] ?? 3,
@@ -579,21 +579,20 @@ export class NotificationService {
 		if (!settings.webhookEnabled || !settings.scheduleNtfyOnLog) return;
 		if (delaySec <= 0) return;
 
-		// Use ntfyTopic directly if available, fall back to webhookUrl for legacy
-		const url = settings.ntfyTopic
-			? `https://ntfy.sh/${settings.ntfyTopic}`
-			: settings.webhookUrl;
-		if (!url) return;
+		const topic = settings.ntfyTopic;
+		if (!topic) return;
 		const tags = NotificationService.ntfyTagsForCategory(category, priority >= 5 ? 'urgent' : 'warning');
 
 		try {
-			await fetch(url, {
+			// JSON publishing must POST to server root with topic in body
+			await fetch('https://ntfy.sh', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'In': `${Math.round(delaySec)}s`,
 				},
 				body: JSON.stringify({
+					topic,
 					title,
 					message,
 					priority,
