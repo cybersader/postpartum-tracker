@@ -155,13 +155,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 			this.dailySummary = new DailySummary(root);
 		}
 
-		// 5. Event history feed (after sections)
+		// Event history is now a first-class section inside sectionsContainer (see buildSections)
 		this.eventHistory = null;
-		if (this.settings.showEventHistory) {
-			this.eventHistory = new EventHistorySection(
-				root, this.registry, this.settings, () => this.save()
-			);
-		}
 
 		// Initialize all modules with their data and build UI
 		this.initializeModules();
@@ -309,6 +304,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 		}
 	}
 
+	private static readonly HISTORY_ID = 'event-history';
+
 	/** Build collapsible sections in layout order with move controls. */
 	private buildSections(): void {
 		this.sectionCollapsibles.clear();
@@ -321,29 +318,57 @@ export class TrackerWidget extends MarkdownRenderChild {
 			}
 		}
 
-		const activeLayout = this.data.layout.filter(
-			id => this.settings.enabledModules.includes(id)
-		);
+		// Ensure event-history is in the layout if enabled
+		if (this.settings.showEventHistory && !this.data.layout.includes(TrackerWidget.HISTORY_ID)) {
+			this.data.layout.push(TrackerWidget.HISTORY_ID);
+		}
 
-		for (const moduleId of activeLayout) {
-			const module = this.registry.get(moduleId);
+		const activeLayout = this.data.layout.filter(id => {
+			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			return this.settings.enabledModules.includes(id);
+		});
+
+		for (const itemId of activeLayout) {
+			// Event history — first-class moveable section
+			if (itemId === TrackerWidget.HISTORY_ID) {
+				const collapsible = new CollapsibleSection(
+					this.sectionsContainer,
+					'Recent activity',
+					TrackerWidget.HISTORY_ID,
+					true
+				);
+				collapsible.enableMove(
+					() => this.moveSection(TrackerWidget.HISTORY_ID, -1),
+					() => this.moveSection(TrackerWidget.HISTORY_ID, 1)
+				);
+				collapsible.enableDrag((dir) => this.moveSection(TrackerWidget.HISTORY_ID, dir));
+				this.sectionCollapsibles.set(TrackerWidget.HISTORY_ID, collapsible);
+
+				this.eventHistory = new EventHistorySection(
+					collapsible.getBodyEl(), this.registry, this.settings, () => this.save()
+				);
+				continue;
+			}
+
+			// Regular tracker module section
+			const module = this.registry.get(itemId);
 			if (!module) continue;
 
 			const collapsible = new CollapsibleSection(
 				this.sectionsContainer,
 				module.displayName,
-				moduleId,
+				itemId,
 				module.defaultExpanded
 			);
 
 			// Wire move controls
 			collapsible.enableMove(
-				() => this.moveSection(moduleId, -1),
-				() => this.moveSection(moduleId, 1)
+				() => this.moveSection(itemId, -1),
+				() => this.moveSection(itemId, 1)
 			);
-			collapsible.enableDrag((direction) => this.moveSection(moduleId, direction));
+			collapsible.enableDrag((direction) => this.moveSection(itemId, direction));
 
-			this.sectionCollapsibles.set(moduleId, collapsible);
+			this.sectionCollapsibles.set(itemId, collapsible);
 
 			// Delegate UI building to the module
 			module.buildUI(
@@ -564,9 +589,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 	/** Update which move arrows are enabled based on position. */
 	private updateMoveButtons(): void {
-		const activeLayout = this.data.layout.filter(
-			id => this.settings.enabledModules.includes(id)
-		);
+		const activeLayout = this.data.layout.filter(id => {
+			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			return this.settings.enabledModules.includes(id);
+		});
 		for (let i = 0; i < activeLayout.length; i++) {
 			const collapsible = this.sectionCollapsibles.get(activeLayout[i]);
 			if (collapsible) {

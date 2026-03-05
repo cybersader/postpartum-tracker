@@ -39,11 +39,9 @@ export class EventHistorySection {
 
 		this.el = parent.createDiv({ cls: 'pt-event-history' });
 
-		// Header row with title and undo button
-		const header = this.el.createDiv({ cls: 'pt-event-history-header' });
-		header.createSpan({ cls: 'pt-event-history-title', text: 'Recent activity' });
-
-		this.undoBtn = header.createEl('button', {
+		// Undo toolbar (compact row inside body — header is provided by CollapsibleSection)
+		const toolbar = this.el.createDiv({ cls: 'pt-event-history-toolbar' });
+		this.undoBtn = toolbar.createEl('button', {
 			cls: 'pt-event-history-undo pt-hidden',
 			text: 'Undo last',
 		});

@@ -1831,25 +1831,11 @@
 	font-weight: 500;
 }
 
-/* --- History modal --- */
-/* --- Event History Section (inline feed) --- */
-.pt-event-history {
-	margin-top: 12px;
-	padding-top: 8px;
-	border-top: 1px solid var(--background-modifier-border);
-}
-.pt-event-history-header {
+/* --- Event History Section (inside collapsible) --- */
+.pt-event-history-toolbar {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 8px;
-}
-.pt-event-history-title {
-	font-size: 0.85rem;
-	font-weight: 600;
-	color: var(--text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	justify-content: flex-end;
+	margin-bottom: 6px;
 }
 .pt-event-history-undo {
 	font-size: 0.75rem;

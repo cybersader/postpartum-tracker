@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.4] - 2026-03-05
+
+### Changed
+
+- **Recent activity is now a first-class section**: The event history feed is now a collapsible, reorderable section like all other tracker modules. It participates in the layout system with move arrows and drag-to-reorder, so you can position it anywhere among your sections.
+- Entry icons (module emojis) are visible on each row in the activity feed.
+
 ## [0.15.3] - 2026-03-05
 
 ### Fixed
