@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-03-05
+
+### Fixed
+
+- **Entry list ordering**: All entry lists now show newest entries at the top instead of oldest first.
+- **Day separator headers**: Entry lists show "Today", "Yesterday", or formatted date headers between entry groups.
+- **ntfy notifications**: Fixed ntfy payloads — removed `extras` object and duplicate `topic` field that caused display issues. ntfy now receives only the fields it understands (title, message, priority, tags).
+- **Gotify notifications**: Gotify now gets its own dedicated sender with the correct payload format and auto-appended `/message` endpoint.
+- **Custom webhook**: Cleaned up generic webhook payload to include flat `level`, `category`, `plugin` fields instead of nested `extras`.
+
 ## [0.15.0] - 2026-03-05
 
 ### Added
