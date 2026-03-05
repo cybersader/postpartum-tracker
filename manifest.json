@@ -1,10 +1,10 @@
 {
 	"id": "obsidian-postpartum-tracker",
 	"name": "Postpartum tracker",
-	"version": "0.7.1",
 	"minAppVersion": "0.15.0",
 	"description": "Mobile-friendly postpartum tracker for feeding, diapers, and medication with markdown-native data storage.",
 	"author": "cybersader",
 	"authorUrl": "https://github.com/cybersader",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"version": "0.7.2"
 }
