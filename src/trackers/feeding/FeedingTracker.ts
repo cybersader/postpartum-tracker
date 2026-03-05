@@ -669,6 +669,10 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 		});
+		el.addEventListener('mouseup', (e) => {
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();

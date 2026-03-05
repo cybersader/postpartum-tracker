@@ -7,11 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.6] - 2026-03-05
+
+### Fixed
+
+- **Modals immediately closing on mobile**: Edit modals would "pop up and then go away" because mobile browsers synthesize delayed mouseup/click events ~300ms after a touch. The unhandled mouseup propagated to Obsidian's document-level modal backdrop listener, triggering an immediate close. Fix: defer modal opening to the next animation frame via `requestAnimationFrame` and block all delayed synthetic mouse events (mousedown + mouseup) from propagating.
+
 ## [0.15.5] - 2026-03-05
 
 ### Fixed
 
-- **Edit/action buttons firing twice on mobile**: Modal edit panels (and other button actions) would "pop up and then go away" on mobile due to the browser's 300ms tap-to-click delay causing a double-fire. The `handledByPointer` flag now stays active for 400ms, and a `mousedown` handler blocks the delayed synthetic event from propagating to document-level listeners (e.g., Obsidian's modal backdrop close). Fixed across all 9 button handler files.
+- **Edit/action buttons firing twice on mobile**: The 300ms tap-to-click delay caused handler double-fire. The `handledByPointer` flag now stays active for 400ms, and mousedown/mouseup handlers block delayed synthetic events from propagating to document-level listeners. Fixed across all button handler files.
 
 ## [0.15.4] - 2026-03-05
 

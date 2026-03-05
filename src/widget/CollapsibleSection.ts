@@ -57,12 +57,19 @@ export class CollapsibleSection {
 			e.stopImmediatePropagation();
 		});
 
-		// Block delayed synthetic mousedown (mobile 300ms tap delay)
+		// Block delayed synthetic mouse events (mobile 300ms tap delay)
 		this.headerEl.addEventListener('mousedown', (e) => {
 			const target = e.target as HTMLElement;
 			if (target.closest('.pt-move-controls')) return;
 			if (target.closest('.pt-drag-handle')) return;
 			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+		this.headerEl.addEventListener('mouseup', (e) => {
+			const target = e.target as HTMLElement;
+			if (target.closest('.pt-move-controls')) return;
+			if (target.closest('.pt-drag-handle')) return;
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 		});

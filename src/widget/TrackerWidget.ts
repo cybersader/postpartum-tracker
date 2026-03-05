@@ -222,6 +222,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 		});
+		editBtn.addEventListener('mouseup', (e) => {
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
 		editBtn.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -243,6 +247,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 			});
 			this.babyInfoBar.addEventListener('mousedown', (e) => {
 				e.preventDefault();
+				e.stopPropagation();
+				e.stopImmediatePropagation();
+			});
+			this.babyInfoBar.addEventListener('mouseup', (e) => {
 				e.stopPropagation();
 				e.stopImmediatePropagation();
 			});

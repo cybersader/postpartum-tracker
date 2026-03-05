@@ -103,10 +103,14 @@ export class EntryList {
 			e.stopImmediatePropagation();
 		});
 
-		// Block delayed synthetic mousedown (mobile 300ms tap delay) from
+		// Block delayed synthetic mouse events (mobile 300ms tap delay) from
 		// propagating to document-level listeners (e.g. modal backdrop close)
 		el.addEventListener('mousedown', (e) => {
 			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+		el.addEventListener('mouseup', (e) => {
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 		});

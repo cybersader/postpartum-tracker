@@ -28,6 +28,17 @@ export class TrackerEditModal extends Modal {
 		this.onCancelCb = onCancel;
 	}
 
+	/**
+	 * Defer opening to the next animation frame so the pointer/mouse event
+	 * chain fully settles before the modal backdrop becomes visible.
+	 * On mobile, the browser synthesises delayed mouseup/click events ~300ms
+	 * after touchend; if the backdrop is already present, those events can
+	 * trigger Obsidian's "click outside modal" detection and immediately close it.
+	 */
+	open(): void {
+		requestAnimationFrame(() => super.open());
+	}
+
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.addClass('pt-modal-edit');
