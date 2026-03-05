@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-03-05
+
+### Fixed
+
+- **Birth date off by one day**: Editing birth date showed the previous day (e.g., Feb 26 → Feb 25) because `new Date("YYYY-MM-DD")` parses as UTC midnight, which shifts back a day in US timezones. Date-only strings are now passed through without UTC conversion.
+
 ## [0.7.4] - 2026-03-05
 
 ### Added
@@ -219,7 +225,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...HEAD
+[0.7.5]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...0.7.5
 [0.7.4]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...0.7.4
 [0.7.3]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...0.7.3
 [0.7.2]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...0.7.2
