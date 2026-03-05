@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 import type { PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent, TrackerCategory } from '../types';
 
 /**
@@ -51,7 +52,8 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 		bodyEl: HTMLElement,
 		save: () => Promise<void>,
 		settings: PostpartumTrackerSettings,
-		emitEvent?: (event: TrackerEvent) => void
+		emitEvent?: (event: TrackerEvent) => void,
+		app?: App
 	): void;
 
 	/**
@@ -79,6 +81,12 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 	 * Called every 200ms for modules that need live updates (e.g., feeding timer).
 	 */
 	tick?(): void;
+
+	/**
+	 * Return IDs of quick-action buttons that should be highlighted
+	 * (e.g., when a timer is running). Called each tick.
+	 */
+	getActiveActionIds?(): string[];
 
 	/**
 	 * Return any health alerts/flags for the current data.

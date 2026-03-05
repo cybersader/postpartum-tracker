@@ -58,6 +58,20 @@ export function daysSinceBirth(birthDateIso: string): number {
 	return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Get the recommended feeding reminder interval based on baby's age.
+ * Days 0-7: 2h, Days 8-28: 2.5h, Days 29+: 3h.
+ * Returns 3 if no birth date is provided.
+ */
+export function getDynamicFeedingIntervalHours(birthDateIso?: string): number {
+	if (!birthDateIso) return 3;
+	const dol = daysSinceBirth(birthDateIso);
+	if (dol < 0) return 3;
+	if (dol <= 7) return 2;
+	if (dol <= 28) return 2.5;
+	return 3;
+}
+
 /** Format "X ago" from an ISO timestamp. */
 export function timeAgo(iso: string): string {
 	const diff = Date.now() - new Date(iso).getTime();

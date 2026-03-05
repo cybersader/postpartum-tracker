@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 import type { TrackerModule } from '../BaseTracker';
 import type { FeedingEntry, PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent } from '../../types';
 import { FeedingStats, computeFeedingStats, getActiveElapsed } from './feedingStats';
@@ -7,6 +8,7 @@ import { filterToday, timeAgo } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { TimerDisplay } from '../../widget/shared/TimerDisplay';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
+import { TrackerEditModal } from '../../ui/TrackerEditModal';
 
 export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats> {
 	readonly id = 'feeding';
@@ -18,6 +20,7 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 	private save: (() => Promise<void>) | null = null;
 	private settings: PostpartumTrackerSettings | null = null;
 	private emitEvent: ((event: TrackerEvent) => void) | null = null;
+	private app: App | null = null;
 
 	// UI elements
 	private bodyEl: HTMLElement | null = null;
@@ -51,11 +54,13 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		bodyEl: HTMLElement,
 		save: () => Promise<void>,
 		settings: PostpartumTrackerSettings,
-		emitEvent?: (event: TrackerEvent) => void
+		emitEvent?: (event: TrackerEvent) => void,
+		app?: App
 	): void {
 		this.save = save;
 		this.settings = settings;
 		this.emitEvent = emitEvent || null;
+		this.app = app || null;
 		this.bodyEl = bodyEl;
 
 		// Container for edit panels (always at top)
@@ -106,7 +111,21 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 				cls: 'pt-quick-btn--feeding-both',
 				onClick: (ts) => this.startFeeding('both', ts),
 			},
+			{
+				id: 'feeding-bottle',
+				label: 'Bottle',
+				icon: '\uD83C\uDF7C',
+				cls: 'pt-quick-btn--feeding-bottle',
+				onClick: (ts) => this.logBottle(ts),
+			},
 		];
+	}
+
+	getActiveActionIds(): string[] {
+		const active = this.entries.find(e => e.end === null);
+		if (!active) return [];
+		const sideMap: Record<string, string> = { left: 'feeding-left', right: 'feeding-right', both: 'feeding-both' };
+		return active.side ? [sideMap[active.side] || 'feeding-both'] : ['feeding-both'];
 	}
 
 	computeStats(entries: FeedingEntry[], dayStart: Date): FeedingStats {
@@ -117,8 +136,14 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		const card = el.createDiv({ cls: 'pt-module-summary-card' });
 		card.createDiv({ cls: 'pt-module-summary-value', text: String(stats.totalFeedings) });
 		card.createDiv({ cls: 'pt-module-summary-label', text: 'Feedings' });
-		if (stats.totalDurationMin > 0) {
-			card.createDiv({ cls: 'pt-module-summary-sublabel', text: `${stats.totalDurationMin}m total` });
+		const parts: string[] = [];
+		if (stats.totalDurationMin > 0) parts.push(`${stats.totalDurationMin}m nursing`);
+		if (stats.bottleCount > 0) {
+			const vol = stats.totalBottleMl > 0 ? ` (${stats.totalBottleMl}ml)` : '';
+			parts.push(`${stats.bottleCount} bottle${stats.bottleCount > 1 ? 's' : ''}${vol}`);
+		}
+		if (parts.length > 0) {
+			card.createDiv({ cls: 'pt-module-summary-sublabel', text: parts.join(' \u2022 ') });
 		}
 	}
 
@@ -170,8 +195,15 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			return;
 		}
 
-		// If already feeding, stop current and start new (side switch)
 		const active = this.entries.find(e => e.end === null);
+
+		// Same side tap → just stop the feeding (toggle off)
+		if (active && active.side === side) {
+			await this.stopFeeding();
+			return;
+		}
+
+		// Different side → stop current and start new (side switch)
 		if (active) {
 			active.end = new Date().toISOString();
 			active.durationSec = Math.round(
@@ -196,7 +228,6 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 	/** Show panel for logging a past feeding with duration. */
 	private showPastFeedingPanel(side: 'left' | 'right' | 'both', timestamp: string): void {
 		this.dismissEditPanel();
-		if (!this.editPanelContainer) return;
 
 		const fields: EditField[] = [
 			{ key: 'time', label: 'Start time', type: 'datetime', value: timestamp },
@@ -212,35 +243,38 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Optional' },
 		];
 
-		this.currentEditPanel = new InlineEditPanel(
-			this.editPanelContainer,
-			'Log past feeding',
-			fields,
-			async (values) => {
-				const durationMin = parseInt(values.duration, 10) || 15;
-				const startTime = values.time;
-				const endTime = new Date(new Date(startTime).getTime() + durationMin * 60_000).toISOString();
+		const onSave = async (values: Record<string, string>) => {
+			const durationMin = parseInt(values.duration, 10) || 15;
+			const startTime = values.time;
+			const endTime = new Date(new Date(startTime).getTime() + durationMin * 60_000).toISOString();
 
-				const entry: FeedingEntry = {
-					id: generateId(),
-					type: 'breast',
-					side: (values.side as 'left' | 'right' | 'both') || side,
-					start: startTime,
-					end: endTime,
-					durationSec: durationMin * 60,
-					notes: values.notes || '',
-				};
+			const entry: FeedingEntry = {
+				id: generateId(),
+				type: 'breast',
+				side: (values.side as 'left' | 'right' | 'both') || side,
+				start: startTime,
+				end: endTime,
+				durationSec: durationMin * 60,
+				notes: values.notes || '',
+			};
 
-				this.entries.push(entry);
-				// Sort by start time so entries stay in order
-				this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-				this.emitEvent?.({ type: 'feeding-logged', entry });
-				this.dismissEditPanel();
-				this.refreshUI();
-				if (this.save) await this.save();
-			},
-			() => this.dismissEditPanel()
-		);
+			this.entries.push(entry);
+			this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+			this.emitEvent?.({ type: 'feeding-logged', entry });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Log past feeding', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Log past feeding', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
 	}
 
 	private async stopFeeding(): Promise<void> {
@@ -257,19 +291,61 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		if (this.save) await this.save();
 	}
 
+	private logBottle(timestamp?: string): void {
+		this.dismissEditPanel();
+
+		const fields: EditField[] = [
+			{ key: 'time', label: 'Time', type: 'datetime', value: timestamp || new Date().toISOString() },
+			{ key: 'volumeMl', label: 'Amount', type: 'number', value: '', min: '0', placeholder: '120', unit: 'ml' },
+			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Formula, breast milk, etc.' },
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			const entry: FeedingEntry = {
+				id: generateId(),
+				type: 'bottle',
+				start: values.time,
+				end: values.time,
+				durationSec: 0,
+				volumeMl: parseInt(values.volumeMl, 10) || undefined,
+				notes: values.notes || '',
+			};
+
+			this.entries.push(entry);
+			this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+			this.emitEvent?.({ type: 'feeding-logged', entry });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Log bottle feeding', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Log bottle feeding', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
+
 	private async editEntry(id: string): Promise<void> {
 		const entry = this.entries.find(e => e.id === id);
 		if (!entry) return;
 
 		this.dismissEditPanel();
-		if (!this.editPanelContainer) return;
 
 		const fields: EditField[] = [
-			{ key: 'time', label: 'Start time', type: 'datetime', value: entry.start },
+			{ key: 'time', label: entry.type === 'bottle' ? 'Time' : 'Start time', type: 'datetime', value: entry.start },
 		];
 
-		// Only show side/duration for completed entries
-		if (entry.end !== null) {
+		if (entry.type === 'bottle') {
+			fields.push({
+				key: 'volumeMl', label: 'Amount', type: 'number',
+				value: entry.volumeMl ? String(entry.volumeMl) : '', min: '0', placeholder: '120', unit: 'ml',
+			});
+		} else if (entry.end !== null) {
 			fields.push({
 				key: 'side', label: 'Side', type: 'select', value: entry.side || 'left',
 				options: [
@@ -289,31 +365,38 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			value: entry.notes || '', placeholder: 'Optional',
 		});
 
-		this.currentEditPanel = new InlineEditPanel(
-			this.editPanelContainer,
-			'Edit feeding',
-			fields,
-			async (values) => {
-				entry.start = values.time;
-				if (values.side) entry.side = values.side as 'left' | 'right' | 'both';
-				if (values.duration && entry.end !== null) {
-					const durationMin = parseInt(values.duration, 10);
-					if (!isNaN(durationMin) && durationMin > 0) {
-						entry.durationSec = durationMin * 60;
-						entry.end = new Date(
-							new Date(entry.start).getTime() + durationMin * 60_000
-						).toISOString();
-					}
+		const onSave = async (values: Record<string, string>) => {
+			entry.start = values.time;
+			if (values.volumeMl !== undefined) {
+				entry.volumeMl = parseInt(values.volumeMl, 10) || undefined;
+			}
+			if (values.side) entry.side = values.side as 'left' | 'right' | 'both';
+			if (values.duration && entry.end !== null) {
+				const durationMin = parseInt(values.duration, 10);
+				if (!isNaN(durationMin) && durationMin > 0) {
+					entry.durationSec = durationMin * 60;
+					entry.end = new Date(
+						new Date(entry.start).getTime() + durationMin * 60_000
+					).toISOString();
 				}
-				entry.notes = values.notes || '';
+			}
+			entry.notes = values.notes || '';
 
-				this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-				this.dismissEditPanel();
-				this.refreshUI();
-				if (this.save) await this.save();
-			},
-			() => this.dismissEditPanel()
-		);
+			this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Edit feeding', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Edit feeding', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
 	}
 
 	private dismissEditPanel(): void {
@@ -370,14 +453,27 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			const todayEntries = filterToday(this.entries, e => e.start);
 			const items: EntryListItem[] = todayEntries
 				.filter(e => e.end !== null)
-				.map(e => ({
-					id: e.id,
-					time: formatTime(e.start, this.settings?.timeFormat),
-					icon: e.side === 'left' ? 'L' : e.side === 'right' ? 'R' : 'B',
-					text: `${e.side || 'breast'}`,
-					subtext: e.durationSec ? formatDurationShort(e.durationSec) : '',
-					cls: `pt-entry--feeding-${e.side || 'breast'}`,
-				}));
+				.map(e => {
+					if (e.type === 'bottle') {
+						const vol = e.volumeMl ? `${e.volumeMl}ml` : '';
+						return {
+							id: e.id,
+							time: formatTime(e.start, this.settings?.timeFormat),
+							icon: '\uD83C\uDF7C',
+							text: 'Bottle' + (vol ? ` ${vol}` : ''),
+							subtext: e.notes || undefined,
+							cls: 'pt-entry--feeding-bottle',
+						};
+					}
+					return {
+						id: e.id,
+						time: formatTime(e.start, this.settings?.timeFormat),
+						icon: e.side === 'left' ? 'L' : e.side === 'right' ? 'R' : 'B',
+						text: `${e.side || 'breast'}`,
+						subtext: e.durationSec ? formatDurationShort(e.durationSec) : '',
+						cls: `pt-entry--feeding-${e.side || 'breast'}`,
+					};
+				});
 			this.entryList.update(items);
 		}
 	}

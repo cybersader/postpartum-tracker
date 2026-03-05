@@ -16,6 +16,7 @@ export class CollapsibleSection {
 	private moveControls: HTMLElement | null = null;
 	private expanded: boolean;
 	private storageKey: string;
+	private handledByPointer = false;
 
 	constructor(
 		parent: HTMLElement,
@@ -46,13 +47,14 @@ export class CollapsibleSection {
 		this.bodyEl = this.el.createDiv({ cls: 'pt-collapsible-body' });
 		if (!this.expanded) this.bodyEl.addClass('pt-hidden');
 
-		// Use pointerdown to prevent CodeMirror from eating the event
+		// Use pointerdown/pointerup to prevent CodeMirror from eating the event in Live Preview
 		this.headerEl.addEventListener('pointerdown', (e) => {
 			const target = e.target as HTMLElement;
 			if (target.closest('.pt-move-controls')) return;
 			if (target.closest('.pt-drag-handle')) return;
 			e.preventDefault();
 			e.stopPropagation();
+			e.stopImmediatePropagation();
 		});
 
 		this.headerEl.addEventListener('pointerup', (e) => {
@@ -61,15 +63,21 @@ export class CollapsibleSection {
 			if (target.closest('.pt-drag-handle')) return;
 			e.preventDefault();
 			e.stopPropagation();
+			e.stopImmediatePropagation();
+			this.handledByPointer = true;
 			this.toggle();
+			setTimeout(() => { this.handledByPointer = false; }, 0);
 		});
 
-		// Fallback for reading mode
+		// Fallback for reading mode (skip if pointerup already handled)
 		this.headerEl.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement;
 			if (target.closest('.pt-move-controls')) return;
 			if (target.closest('.pt-drag-handle')) return;
+			e.preventDefault();
 			e.stopPropagation();
+			e.stopImmediatePropagation();
+			if (this.handledByPointer) return;
 			this.toggle();
 		});
 	}
@@ -206,6 +214,7 @@ export class CollapsibleSection {
 	 * Uses pointerdown + pointerup to prevent CodeMirror from eating events.
 	 */
 	private addButtonHandler(el: HTMLElement, handler: () => void): void {
+		let handled = false;
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -216,13 +225,16 @@ export class CollapsibleSection {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+			handled = true;
 			handler();
+			setTimeout(() => { handled = false; }, 0);
 		});
 
 		el.addEventListener('click', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+			if (handled) return;
 			handler();
 		});
 	}

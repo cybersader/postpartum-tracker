@@ -19,7 +19,8 @@ The notification system runs at the plugin level and periodically scans your vau
 Fires when the time since the last completed feeding exceeds the configured threshold (default: 3 hours). No alert fires if a feeding is actively in progress.
 
 Toggle: **Feeding reminder enabled**
-Setting: **Feeding reminder hours**
+
+The interval adjusts automatically based on your baby's age: 2 hours (days 0-7), 2.5 hours (days 8-28), 3 hours (day 29+). You can override this with a custom value in settings.
 
 ### Medication dose ready
 
@@ -65,17 +66,30 @@ Uses the Web Notification API to show desktop notifications. The plugin requests
 System notifications do not work on Obsidian mobile. The Capacitor runtime blocks the Web Notification API. Use in-app toasts or webhooks for mobile.
 :::
 
-### Webhooks
+### Webhooks (push notifications)
 
-POST a JSON payload to any URL when an alert fires. Compatible with [Gotify](https://gotify.net/), [ntfy.sh](https://ntfy.sh/), or any REST endpoint.
+Send push notifications to your phone via external services. The plugin supports three presets:
 
-**Payload format:**
+| Service | Platform | Alarm loop? | DND bypass? | Cost |
+|---------|----------|-------------|-------------|------|
+| **Pushover** | Android + iOS | Yes (retry until ack) | Yes (Critical Alerts) | $4.99 one-time |
+| **ntfy.sh** | Android + iOS | Android only | Android only | Free |
+| **Gotify** | Android | No | No | Free (self-hosted) |
+
+To configure:
+1. Enable **Webhook notifications**.
+2. Select a preset (ntfy, Pushover, Gotify, or Custom).
+3. Fill in the required fields (topic name, API keys, etc.).
+4. Click **Send test** to verify connectivity.
+
+#### ntfy payload format
 
 ```json
 {
   "title": "Feeding reminder",
   "message": "Last feeding was 3.5 hours ago",
   "priority": 5,
+  "tags": ["baby_bottle"],
   "extras": {
     "category": "feeding",
     "plugin": "postpartum-tracker"
@@ -83,13 +97,17 @@ POST a JSON payload to any URL when an alert fires. Compatible with [Gotify](htt
 }
 ```
 
-To configure:
-1. Enable **Webhook notifications**.
-2. Enter your webhook URL.
-3. Click **Test webhook** to verify connectivity.
+#### Scheduled reminders
+
+When you log a feeding or medication dose, the plugin can immediately schedule a future push notification at the expected next reminder time:
+
+- **ntfy**: Uses server-side scheduled delivery (`In:` header) -- works even after closing Obsidian.
+- **Pushover**: Uses in-process timeout -- only works while Obsidian is open. Pair with Todoist for offline reliability.
+
+Toggle: **Schedule reminders on log** (enabled by default for ntfy).
 
 :::tip
-For mobile push notifications, set up [ntfy.sh](https://ntfy.sh/) (free, self-hostable) and point the webhook URL to your topic. Install the ntfy app on your phone for instant push alerts.
+For the best overnight alarm experience, see the [Alarm setup guide](/postpartum-tracker/guides/alarm-setup/). **iOS users** should use Pushover for alarm-loop notifications. **Android users** can use either ntfy (free) or Pushover.
 :::
 
 ## Suppressing notifications

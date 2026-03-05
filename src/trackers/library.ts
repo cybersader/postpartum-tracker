@@ -47,9 +47,9 @@ export const TRACKER_LIBRARY: SimpleTrackerDef[] = [
 		description: 'Track naps and nighttime sleep with start/end times',
 		isSmart: true,
 		fields: [
-			{ key: 'type', label: 'Type', type: 'select', options: ['nap', 'night'], required: true },
-			{ key: 'quality', label: 'Quality', type: 'rating', min: 1, max: 5 },
-			{ key: 'location', label: 'Location', type: 'select', options: ['crib', 'bassinet', 'cosleep', 'swing', 'arms', 'other'] },
+			{ key: 'type', label: 'Type', type: 'select', options: ['nap', 'night'], required: true, collectOn: 'start' },
+			{ key: 'quality', label: 'Quality', type: 'rating', min: 1, max: 5, collectOn: 'stop' },
+			{ key: 'location', label: 'Location', type: 'select', options: ['crib', 'bassinet', 'cosleep', 'swing', 'arms', 'other'], collectOn: 'start' },
 		],
 		defaultOrder: 10,
 		hasDuration: true,
@@ -67,7 +67,7 @@ export const TRACKER_LIBRARY: SimpleTrackerDef[] = [
 		description: 'Track tummy time sessions with milestone notes',
 		isSmart: false,
 		fields: [
-			{ key: 'milestone', label: 'Milestone', type: 'text', placeholder: 'Lifted head, rolled over, etc.' },
+			{ key: 'milestone', label: 'Milestone', type: 'text', placeholder: 'Lifted head, rolled over, etc.', collectOn: 'stop' },
 		],
 		defaultOrder: 11,
 		hasDuration: true,
@@ -191,7 +191,7 @@ export const TRACKER_LIBRARY: SimpleTrackerDef[] = [
 		description: 'Track walks and physical activity',
 		isSmart: false,
 		fields: [
-			{ key: 'distance', label: 'Distance', type: 'text', placeholder: 'e.g., around the block' },
+			{ key: 'distance', label: 'Distance', type: 'text', placeholder: 'e.g., around the block', collectOn: 'stop' },
 		],
 		defaultOrder: 23,
 		hasDuration: true,
@@ -204,8 +204,8 @@ export const TRACKER_LIBRARY: SimpleTrackerDef[] = [
 		description: 'Track breast pumping with amount and side',
 		isSmart: true,
 		fields: [
-			{ key: 'side', label: 'Side', type: 'select', options: ['left', 'right', 'both'], required: true },
-			{ key: 'amountMl', label: 'Amount', type: 'number', unit: 'ml' },
+			{ key: 'side', label: 'Side', type: 'select', options: ['left', 'right', 'both'], required: true, collectOn: 'start' },
+			{ key: 'amountMl', label: 'Amount', type: 'number', unit: 'ml', collectOn: 'stop' },
 		],
 		defaultOrder: 24,
 		hasDuration: true,

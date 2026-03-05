@@ -102,10 +102,11 @@
 	flex: 1;
 	min-width: 80px;
 	text-align: center;
-	padding: 8px 12px;
+	padding: 8px 6px;
 	border-radius: 8px;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
+	overflow: hidden;
 }
 
 .pt-summary-card-value {
@@ -116,10 +117,13 @@
 }
 
 .pt-summary-card-label {
-	font-size: 0.75rem;
+	font-size: 0.65rem;
 	color: var(--text-muted);
 	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	letter-spacing: 0.02em;
+	line-height: 1.2;
+	word-break: break-word;
+	overflow-wrap: break-word;
 }
 
 .pt-summary-card-sublabel {
@@ -137,7 +141,7 @@
 
 .pt-quick-actions-buttons {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(80px, 100%), 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(105px, 100%), 1fr));
 	gap: 8px;
 }
 
@@ -181,9 +185,9 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 4px;
-	padding: 12px 8px;
-	min-height: 60px;
+	gap: 2px;
+	padding: 8px 6px;
+	min-height: 72px;
 	border-radius: 10px;
 	border: 2px solid var(--background-modifier-border);
 	background: var(--background-primary);
@@ -207,45 +211,125 @@
 	cursor: not-allowed;
 }
 
+/* Active timer button base */
 .pt-quick-btn--active {
 	border-color: var(--interactive-accent);
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 }
 
+/* Pulse animation (default) */
+[data-timer-anim="pulse"] .pt-quick-btn--active {
+	animation: pt-pulse 1.5s ease-in-out infinite;
+}
+@keyframes pt-pulse {
+	0%, 100% {
+		box-shadow: 0 0 0 0 var(--interactive-accent);
+		opacity: 1;
+	}
+	50% {
+		box-shadow: 0 0 12px 4px var(--interactive-accent);
+		opacity: 0.8;
+	}
+}
+
+/* Blink animation */
+[data-timer-anim="blink"] .pt-quick-btn--active {
+	animation: pt-blink 1s step-end infinite;
+}
+@keyframes pt-blink {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.3; }
+}
+
+/* Steady glow */
+[data-timer-anim="glow"] .pt-quick-btn--active {
+	box-shadow: 0 0 14px 5px var(--interactive-accent);
+}
+
+/* Solid (no animation) */
+[data-timer-anim="solid"] .pt-quick-btn--active {
+	/* Just the base color, no effects */
+}
+
 .pt-quick-btn-icon {
 	font-size: 1.4rem;
+	flex-shrink: 0;
 }
 
 .pt-quick-btn-label {
-	font-size: 0.72rem;
+	font-size: 0.65rem;
 	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
 	text-align: center;
 	max-width: 100%;
-	/* Allow wrapping to 2 lines so labels are always visible */
+	overflow: hidden;
+	text-overflow: ellipsis;
+	word-break: break-word;
+	line-height: 1.15;
+	/* Wrap up to 2 lines, then ellipsis */
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
-	overflow: hidden;
-	word-break: break-word;
-	line-height: 1.2;
 }
 
 .pt-quick-btn-sublabel {
-	font-size: 0.6rem;
+	font-size: 0.55rem;
 	font-weight: 400;
 	color: var(--text-muted);
-	text-transform: none;
-	letter-spacing: 0;
 	text-align: center;
 	max-width: 100%;
-	display: -webkit-box;
-	-webkit-line-clamp: 1;
-	-webkit-box-orient: vertical;
 	overflow: hidden;
-	word-break: break-word;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Label toggle: hide labels on non-essential buttons when compact mode is on */
+.pt-labels-hidden .pt-quick-btn:not(.pt-label-essential) .pt-quick-btn-label,
+.pt-labels-hidden .pt-quick-btn:not(.pt-label-essential) .pt-quick-btn-sublabel {
+	display: none;
+}
+.pt-labels-hidden .pt-quick-btn:not(.pt-label-essential) {
+	min-height: 48px;
+	padding: 8px 6px;
+}
+
+/* Button size variants */
+.pt-btn-compact {
+	grid-template-columns: repeat(auto-fill, minmax(min(80px, 100%), 1fr)) !important;
+}
+.pt-btn-compact .pt-quick-btn {
+	min-height: 48px;
+	padding: 5px 4px;
+	gap: 1px;
+}
+.pt-btn-compact .pt-quick-btn-icon {
+	font-size: 1.2rem;
+}
+.pt-btn-compact .pt-quick-btn-label {
+	font-size: 0.58rem;
+	-webkit-line-clamp: 1;
+}
+.pt-btn-compact .pt-quick-btn-sublabel {
+	display: none;
+}
+
+.pt-btn-large {
+	grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr)) !important;
+}
+.pt-btn-large .pt-quick-btn {
+	min-height: 92px;
+	padding: 10px 8px;
+	gap: 3px;
+}
+.pt-btn-large .pt-quick-btn-icon {
+	font-size: 1.8rem;
+}
+.pt-btn-large .pt-quick-btn-label {
+	font-size: 0.78rem;
+	-webkit-line-clamp: 3;
+}
+.pt-btn-large .pt-quick-btn-sublabel {
+	font-size: 0.65rem;
 }
 
 /* Quick button color variants */
@@ -255,6 +339,8 @@
 .pt-quick-btn--feeding-right:hover { background: #a0c4e820; }
 .pt-quick-btn--feeding-both { border-color: #c4a0e8; }
 .pt-quick-btn--feeding-both:hover { background: #c4a0e820; }
+.pt-quick-btn--feeding-bottle { border-color: #e8c8a0; }
+.pt-quick-btn--feeding-bottle:hover { background: #e8c8a020; }
 .pt-quick-btn--diaper-wet { border-color: #e8d44d; }
 .pt-quick-btn--diaper-wet:hover { background: #e8d44d20; }
 .pt-quick-btn--diaper-dirty { border-color: #d4956b; }
@@ -606,8 +692,21 @@
 
 .pt-color-swatches {
 	display: flex;
-	gap: 8px;
+	gap: 12px;
 	flex-wrap: wrap;
+}
+
+.pt-color-swatch-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	cursor: pointer;
+}
+
+.pt-color-swatch-wrap:hover .pt-color-swatch {
+	transform: scale(1.15);
+	border-color: var(--interactive-accent);
 }
 
 .pt-color-swatch {
@@ -622,6 +721,14 @@
 .pt-color-swatch:hover {
 	transform: scale(1.15);
 	border-color: var(--interactive-accent);
+}
+
+.pt-color-swatch-label {
+	font-size: 0.6rem;
+	color: var(--text-muted);
+	text-align: center;
+	max-width: 54px;
+	line-height: 1.2;
 }
 
 .pt-color-skip {
@@ -1211,21 +1318,21 @@
 	}
 
 	.pt-quick-actions-buttons {
-		grid-template-columns: repeat(auto-fill, minmax(min(70px, calc(33.33% - 6px)), 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(min(90px, calc(33.33% - 6px)), 1fr));
 	}
 
 	.pt-quick-btn {
-		min-height: 54px;
-		padding: 10px 4px;
+		min-height: 64px;
+		padding: 6px 4px;
 		font-size: 0.72rem;
 	}
 
 	.pt-quick-btn-label {
-		font-size: 0.68rem;
+		font-size: 0.6rem;
 	}
 
 	.pt-quick-btn-sublabel {
-		font-size: 0.55rem;
+		font-size: 0.5rem;
 	}
 
 	.pt-clock-row {
@@ -1287,4 +1394,414 @@
 	.pt-quick-actions-buttons {
 		grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
 	}
+}
+
+/* --- Settings: Summary Order List --- */
+.pt-summary-order-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 12px;
+}
+.pt-summary-order-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 8px;
+	border-radius: 6px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+}
+.pt-summary-order-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 0.7rem;
+	color: var(--text-muted);
+	padding: 2px 4px;
+	border-radius: 4px;
+}
+.pt-summary-order-btn:hover:not(:disabled) {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+.pt-summary-order-btn:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+.pt-summary-order-checkbox {
+	margin-right: 4px;
+	cursor: pointer;
+}
+.pt-summary-order-label {
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+.pt-summary-order-label--hidden {
+	color: var(--text-faint);
+	text-decoration: line-through;
+}
+
+/* ── Rating picker (command palette modals) ── */
+.pt-rating-picker-row {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	justify-content: center;
+	margin: 1rem 0;
+}
+.pt-rating-btn {
+	min-width: 40px;
+	height: 40px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+.pt-rating-btn:hover {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+.pt-numeric-input-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 1rem 0;
+}
+.pt-numeric-input-row input {
+	flex: 1;
+}
+
+/* ── Modal edit panel ── */
+.pt-modal-edit {
+	padding: 0.5rem 0;
+}
+.pt-modal-edit h3 {
+	margin: 0 0 1rem 0;
+	font-size: 1.1rem;
+}
+.pt-modal-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 0.75rem;
+}
+.pt-modal-label {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--text-muted);
+}
+.pt-modal-input,
+.pt-modal-select {
+	width: 100%;
+	padding: 6px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+}
+.pt-modal-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 1rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* =============================================================
+   Rich Field Renderer Styles (shared by modal + inline)
+   ============================================================= */
+
+/* --- Field row layout --- */
+.pt-field-row {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 0.85rem;
+}
+.pt-field-label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+/* --- Rating (tappable number circles) --- */
+.pt-field-rating-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+.pt-field-rating-btn {
+	min-width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: 2px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+}
+.pt-field-rating-btn:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+.pt-field-rating-btn--selected {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+}
+
+/* --- Select: pill grid (≤6 options) --- */
+.pt-field-select-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.pt-field-select-pill {
+	padding: 8px 16px;
+	border-radius: 20px;
+	border: 2px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+.pt-field-select-pill:hover {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-hover);
+}
+.pt-field-select-pill--selected {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	border-color: var(--interactive-accent) !important;
+}
+
+/* --- Select: styled dropdown (>6 options) --- */
+.pt-field-select-dropdown {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1rem;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+/* --- Boolean: toggle switch --- */
+.pt-field-toggle-wrap {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.pt-field-toggle {
+	width: 48px;
+	height: 26px;
+	-webkit-appearance: none;
+	appearance: none;
+	border-radius: 13px;
+	background: var(--background-modifier-border);
+	position: relative;
+	cursor: pointer;
+	transition: background 0.2s ease;
+	border: none;
+	outline: none;
+	flex-shrink: 0;
+}
+.pt-field-toggle::after {
+	content: '';
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: white;
+	transition: transform 0.2s ease;
+}
+.pt-field-toggle:checked {
+	background: var(--interactive-accent);
+}
+.pt-field-toggle:checked::after {
+	transform: translateX(22px);
+}
+.pt-field-toggle-label {
+	font-size: 0.9rem;
+	color: var(--text-normal);
+}
+
+/* --- Number: stepper with +/- buttons --- */
+.pt-field-number-stepper {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.pt-field-stepper-btn {
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1.2rem;
+	font-weight: 600;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+.pt-field-stepper-btn:hover {
+	background: var(--background-modifier-hover);
+}
+.pt-field-number-input {
+	flex: 1;
+	min-width: 60px;
+	max-width: 120px;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1rem;
+	text-align: center;
+}
+.pt-field-number-unit {
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	margin-left: 4px;
+}
+
+/* --- Text input (larger) --- */
+.pt-field-text-input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1rem;
+}
+
+/* --- Datetime/Date input (larger) --- */
+.pt-field-datetime-input,
+.pt-field-date-input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 1rem;
+}
+
+/* --- Modal fields container --- */
+.pt-modal-fields {
+	margin: 0.5rem 0;
+}
+
+/* --- Webhook setup guide --- */
+.pt-webhook-guide {
+	padding: 12px 16px;
+	margin: 8px 0;
+	border-radius: 8px;
+	background: var(--background-primary-alt);
+	border: 1px solid var(--background-modifier-border);
+}
+.pt-webhook-guide-title {
+	font-weight: 600;
+	margin-bottom: 8px;
+	font-size: 0.9rem;
+}
+.pt-webhook-guide-steps {
+	margin: 0 0 8px 0;
+	padding-left: 20px;
+}
+.pt-webhook-guide-steps li {
+	margin-bottom: 4px;
+	font-size: 0.85rem;
+}
+.pt-webhook-guide-note {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin: 0;
+}
+
+/* --- Platform support table --- */
+.pt-platform-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.82rem;
+	margin: 8px 0 12px;
+}
+.pt-platform-table th,
+.pt-platform-table td {
+	padding: 4px 8px;
+	text-align: left;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+.pt-platform-table th {
+	font-weight: 600;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}
+.pt-platform-table td:first-child {
+	font-weight: 500;
+}
+
+/* --- History modal --- */
+.pt-history-modal {
+	max-height: 70vh;
+	overflow-y: auto;
+}
+.pt-history-day-header {
+	margin-top: 16px;
+	font-size: 1rem;
+	font-weight: 600;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 4px;
+}
+.pt-history-day-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 8px 0;
+}
+.pt-history-entry {
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+	padding: 4px 0;
+	font-size: 0.85rem;
+}
+.pt-history-time {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	min-width: 60px;
+}
+.pt-history-module {
+	font-weight: 600;
+	color: var(--text-accent);
+	min-width: 80px;
+}
+.pt-history-text {
+	color: var(--text-normal);
+}
+.pt-history-empty {
+	color: var(--text-muted);
+	text-align: center;
+	padding: 2rem;
 }

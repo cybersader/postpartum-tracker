@@ -7,6 +7,8 @@ export interface FeedingStats {
 	leftCount: number;
 	rightCount: number;
 	bothCount: number;
+	bottleCount: number;
+	totalBottleMl: number;
 	leftDurationMin: number;
 	rightDurationMin: number;
 	avgDurationMin: number;
@@ -34,11 +36,16 @@ export function computeFeedingStats(entries: FeedingEntry[], day: Date = new Dat
 	const completed = todayEntries.filter(e => e.end !== null);
 	const active = todayEntries.find(e => e.end === null) || null;
 
-	let leftCount = 0, rightCount = 0, bothCount = 0;
+	let leftCount = 0, rightCount = 0, bothCount = 0, bottleCount = 0;
 	let leftDurationSec = 0, rightDurationSec = 0;
-	let totalDurationSec = 0;
+	let totalDurationSec = 0, totalBottleMl = 0;
 
 	for (const e of completed) {
+		if (e.type === 'bottle') {
+			bottleCount++;
+			if (e.volumeMl) totalBottleMl += e.volumeMl;
+			continue;
+		}
 		const dur = getFeedingDuration(e);
 		totalDurationSec += dur;
 		switch (e.side) {
@@ -83,6 +90,8 @@ export function computeFeedingStats(entries: FeedingEntry[], day: Date = new Dat
 		leftCount,
 		rightCount,
 		bothCount,
+		bottleCount,
+		totalBottleMl,
 		leftDurationMin: Math.round(leftDurationSec / 60),
 		rightDurationMin: Math.round(rightDurationSec / 60),
 		avgDurationMin: Math.round(avgDurationSec / 60),

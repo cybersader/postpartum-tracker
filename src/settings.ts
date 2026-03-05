@@ -362,20 +362,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(el)
-			.setName('Wet diaper alert threshold')
-			.setDesc('Minimum wet diapers per day before showing a warning.')
-			.addText(text => text
-				.setValue(String(this.plugin.settings.diaper.alertThreshold))
-				.onChange(async (value) => {
-					const num = parseInt(value, 10);
-					if (!isNaN(num) && num >= 0) {
-						this.plugin.settings.diaper.alertThreshold = num;
-						await this.plugin.saveSettings();
-					}
-				})
-			);
-
 		// --- Medication ---
 		new Setting(el).setName('Medication').setHeading();
 
@@ -487,7 +473,46 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 	private buildNotificationsTab(el: HTMLElement): void {
 		const notif = this.plugin.settings.notifications;
 
-		new Setting(el).setName('Notifications').setHeading();
+		// ── How notifications work (collapsible guide) ──
+		new Setting(el).setName('How notifications work').setHeading();
+
+		const howItWorks = el.createDiv({ cls: 'pt-webhook-guide' });
+		howItWorks.createEl('p', {
+			text: 'This plugin sends alerts through multiple channels simultaneously. Enable the ones that suit your setup.',
+		});
+
+		const table = howItWorks.createEl('table', { cls: 'pt-platform-table' });
+		const thead = table.createEl('thead');
+		const headRow = thead.createEl('tr');
+		for (const h of ['Feature', 'Desktop', 'Android', 'iOS']) {
+			headRow.createEl('th', { text: h });
+		}
+		const tbody = table.createEl('tbody');
+		const rows = [
+			['In-app toast', 'Yes', 'Yes', 'Yes'],
+			['System notification', 'Yes', 'No*', 'No*'],
+			['ntfy push notification', 'Yes', 'Yes', 'Yes'],
+			['ntfy alarm (loops until dismissed)', 'n/a', 'Yes', 'No'],
+			['ntfy bypass Do Not Disturb', 'n/a', 'Yes', 'No'],
+			['Pushover push notification', 'Yes', 'Yes', 'Yes'],
+			['Pushover alarm (retry until acknowledged)', 'n/a', 'Yes', 'Yes'],
+			['Pushover bypass DND (Critical Alerts)', 'n/a', 'Yes', 'Yes'],
+			['Todoist push reminder', 'Yes', 'Yes', 'Yes'],
+			['Works with Obsidian closed', 'ntfy/Pushover + Todoist', '', ''],
+		];
+		for (const row of rows) {
+			const tr = tbody.createEl('tr');
+			for (const cell of row) {
+				tr.createEl('td', { text: cell });
+			}
+		}
+		howItWorks.createEl('p', {
+			cls: 'pt-webhook-guide-note',
+			text: '* Obsidian mobile uses Capacitor which blocks the Web Notification API. Use ntfy or Todoist for mobile push notifications.',
+		});
+
+		// ── Alert settings ──
+		new Setting(el).setName('Alert settings').setHeading();
 
 		new Setting(el)
 			.setName('Enable notifications')
@@ -521,7 +546,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Check interval (minutes)')
-			.setDesc('How often to check for new alerts.')
+			.setDesc('How often to check for new alerts while Obsidian is open.')
 			.addText(text => text
 				.setValue(String(notif.checkIntervalMin))
 				.setPlaceholder('1')
@@ -536,25 +561,36 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Feeding reminder')
-			.setDesc('Alert when time since last feeding exceeds the threshold.')
+			.setDesc('Alert when time since last feeding exceeds the threshold. Interval adjusts by age: 2h (days 0-7), 2.5h (days 8-28), 3h (day 29+).')
 			.addToggle(toggle => toggle
 				.setValue(notif.feedingReminderEnabled)
 				.onChange(async (value) => {
 					notif.feedingReminderEnabled = value;
 					await this.plugin.saveSettings();
 				})
-			)
-			.addText(text => text
-				.setValue(String(notif.feedingReminderHours))
-				.setPlaceholder('3')
-				.onChange(async (value) => {
-					const num = parseFloat(value);
-					if (!isNaN(num) && num > 0) {
-						notif.feedingReminderHours = num;
-						await this.plugin.saveSettings();
-					}
-				})
 			);
+
+		if (notif.feedingReminderEnabled) {
+			new Setting(el)
+				.setName('Custom interval override (hours)')
+				.setDesc('Leave empty to use the age-based schedule above.')
+				.addText(text => text
+					.setValue(notif.feedingReminderOverride > 0 ? String(notif.feedingReminderOverride) : '')
+					.setPlaceholder('Auto')
+					.onChange(async (value) => {
+						const trimmed = value.trim();
+						if (trimmed === '' || trimmed === '0') {
+							notif.feedingReminderOverride = 0;
+						} else {
+							const num = parseFloat(trimmed);
+							if (!isNaN(num) && num > 0) {
+								notif.feedingReminderOverride = num;
+							}
+						}
+						await this.plugin.saveSettings();
+					})
+				);
+		}
 
 		new Setting(el)
 			.setName('Medication dose ready')
@@ -578,59 +614,278 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
-		// --- Webhook ---
-		new Setting(el).setName('Webhook').setHeading();
+		// ── Push Notifications (webhook) ──
+		new Setting(el).setName('Push notifications').setHeading();
 
 		new Setting(el)
-			.setName('Enable webhook')
-			.setDesc('Send notifications to an external service (Gotify, ntfy.sh, etc.).')
+			.setName('Enable push notifications')
+			.setDesc('Get alerts on your phone via ntfy.sh, Pushover, Gotify, or a custom webhook.')
 			.addToggle(toggle => toggle
 				.setValue(notif.webhookEnabled)
 				.onChange(async (value) => {
 					notif.webhookEnabled = value;
 					await this.plugin.saveSettings();
+					this.display();
 				})
 			);
 
-		new Setting(el)
-			.setName('Webhook URL')
-			.setDesc('POST endpoint for notifications. JSON body: { title, message, priority, extras }.')
-			.addText(text => text
-				.setValue(notif.webhookUrl)
-				.setPlaceholder('https://gotify.example.com/message?token=...')
-				.onChange(async (value) => {
-					notif.webhookUrl = value.trim();
-					await this.plugin.saveSettings();
-				})
-			);
-
-		if (notif.webhookEnabled && notif.webhookUrl) {
+		if (notif.webhookEnabled) {
+			// Quick setup preset
 			new Setting(el)
-				.setName('Test webhook')
-				.addButton(btn => btn
-					.setButtonText('Send test')
-					.onClick(async () => {
-						try {
-							const resp = await fetch(notif.webhookUrl, {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify({
-									title: 'Postpartum Tracker test',
-									message: 'If you see this, webhooks are working!',
-									priority: 5,
-									extras: { category: 'test', plugin: 'obsidian-postpartum-tracker' },
-								}),
-							});
-							if (resp.ok) {
-								new Notice('Webhook test sent successfully!');
-							} else {
-								new Notice(`Webhook test failed: ${resp.status} ${resp.statusText}`);
-							}
-						} catch (e) {
-							new Notice(`Webhook error: ${(e as Error).message}`);
+				.setName('Quick setup')
+				.setDesc('Choose a push notification service.')
+				.addDropdown(dd => {
+					dd.addOption('ntfy', 'ntfy.sh (free, Android alarms)');
+					dd.addOption('pushover', 'Pushover (iOS + Android alarms, $5 one-time)');
+					dd.addOption('gotify', 'Gotify (self-hosted)');
+					dd.addOption('custom', 'Custom webhook URL');
+					dd.setValue(notif.webhookPreset || 'ntfy');
+					dd.onChange(async (value) => {
+						notif.webhookPreset = value as 'ntfy' | 'gotify' | 'pushover' | 'custom';
+						if (value === 'ntfy' && notif.ntfyTopic) {
+							notif.webhookUrl = `https://ntfy.sh/${notif.ntfyTopic}`;
+						} else if (value === 'pushover') {
+							notif.webhookUrl = 'https://api.pushover.net/1/messages.json';
 						}
-					})
-				);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+				});
+
+			if (notif.webhookPreset === 'ntfy' || !notif.webhookPreset) {
+				// ntfy.sh setup
+				if (!notif.ntfyTopic) {
+					notif.ntfyTopic = 'pptracker-' + Math.random().toString(36).slice(2, 10);
+					notif.webhookUrl = `https://ntfy.sh/${notif.ntfyTopic}`;
+					this.plugin.saveSettings();
+				}
+
+				new Setting(el)
+					.setName('Topic name')
+					.setDesc('A unique topic name. Keep this private \u2014 anyone with it can see your notifications.')
+					.addText(text => text
+						.setValue(notif.ntfyTopic)
+						.setPlaceholder('pptracker-abc123')
+						.onChange(async (value) => {
+							notif.ntfyTopic = value.trim();
+							notif.webhookUrl = `https://ntfy.sh/${value.trim()}`;
+							await this.plugin.saveSettings();
+						})
+					);
+
+				// ── ntfy setup guide ──
+				const guideEl = el.createDiv({ cls: 'pt-webhook-guide' });
+
+				// Basic setup
+				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Basic setup:' });
+				const basicSteps = guideEl.createEl('ol', { cls: 'pt-webhook-guide-steps' });
+				basicSteps.createEl('li', { text: 'Install the ntfy app on your phone (iOS App Store / Google Play).' });
+				basicSteps.createEl('li', { text: `Open the app and subscribe to topic: ${notif.ntfyTopic}` });
+				basicSteps.createEl('li', { text: 'Tap "Send test" below to verify it works.' });
+
+				// Android alarm setup
+				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android: Enable alarm-style alerts' });
+				guideEl.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'These steps make urgent alerts ring continuously until you dismiss them, even when your phone is on silent or Do Not Disturb.',
+				});
+				const alarmSteps = guideEl.createEl('ol', { cls: 'pt-webhook-guide-steps' });
+				alarmSteps.createEl('li', { text: 'In the ntfy app, long-press your subscription \u2192 Notification settings' });
+				alarmSteps.createEl('li', { text: 'Enable "Insistent notification" (keeps ringing until dismissed)' });
+				alarmSteps.createEl('li', { text: 'Enable "Override Do Not Disturb"' });
+				alarmSteps.createEl('li', { text: 'Choose an alarm sound for the "Max priority" channel' });
+				alarmSteps.createEl('li', { text: 'These apply to urgent (priority 5) notifications: feeding reminders, overdue medication' });
+
+				// iOS limitations
+				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'iOS limitations' });
+				const iosNotes = guideEl.createEl('ul', { cls: 'pt-webhook-guide-steps' });
+				iosNotes.createEl('li', { text: 'iOS does not support insistent/looping notifications via ntfy' });
+				iosNotes.createEl('li', { text: 'Priority 5 maps to "time-sensitive" interruption level (no alarm loop)' });
+				iosNotes.createEl('li', { text: 'For alarm-style notifications on iOS, use Pushover instead (select it in the webhook preset above). Pushover emergency priority retries until you tap Acknowledge and supports iOS Critical Alerts that bypass DND and silent mode.' });
+
+				// Scheduled notifications
+				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Offline reliability' });
+				guideEl.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'When you log a feeding or take a medication, the plugin immediately schedules a future ntfy notification at the expected reminder time. The ntfy server holds the message and delivers it even after you close Obsidian.',
+				});
+
+				// Scheduled toggle
+				new Setting(el)
+					.setName('Schedule reminders on log')
+					.setDesc('When you log an entry, immediately schedule a future push notification for the next reminder. Works even after closing Obsidian.')
+					.addToggle(toggle => toggle
+						.setValue(notif.scheduleNtfyOnLog)
+						.onChange(async (value) => {
+							notif.scheduleNtfyOnLog = value;
+							await this.plugin.saveSettings();
+						})
+					);
+
+			} else if (notif.webhookPreset === 'pushover') {
+				// Pushover setup
+				new Setting(el)
+					.setName('App API token')
+					.setDesc('From pushover.net/apps \u2014 create an application to get a token.')
+					.addText(text => text
+						.setValue(notif.pushoverAppToken)
+						.setPlaceholder('azGDORePK8gMaC0QOYAMyEEuzJnyUi')
+						.onChange(async (value) => {
+							notif.pushoverAppToken = value.trim();
+							await this.plugin.saveSettings();
+						})
+					);
+
+				new Setting(el)
+					.setName('User key')
+					.setDesc('From your Pushover dashboard (pushover.net) \u2014 the "Your User Key" value.')
+					.addText(text => text
+						.setValue(notif.pushoverUserKey)
+						.setPlaceholder('uQiRzpo4DXghDmr9QzzfQu27cmVRsG')
+						.onChange(async (value) => {
+							notif.pushoverUserKey = value.trim();
+							await this.plugin.saveSettings();
+						})
+					);
+
+				// Pushover setup guide
+				const pushGuide = el.createDiv({ cls: 'pt-webhook-guide' });
+
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Setup instructions:' });
+				const pushSteps = pushGuide.createEl('ol', { cls: 'pt-webhook-guide-steps' });
+				pushSteps.createEl('li', { text: 'Install the Pushover app on your phone (iOS App Store / Google Play).' });
+				pushSteps.createEl('li', { text: 'Create an account at pushover.net \u2014 copy your User Key from the dashboard.' });
+				pushSteps.createEl('li', { text: 'Go to pushover.net/apps and create a new application \u2014 copy the API Token.' });
+				pushSteps.createEl('li', { text: 'Paste both values above, then tap "Send test" to verify.' });
+
+				// iOS Critical Alerts
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'iOS: Enable Critical Alerts (alarm that bypasses silent/DND)' });
+				const iosSteps = pushGuide.createEl('ol', { cls: 'pt-webhook-guide-steps' });
+				iosSteps.createEl('li', { text: 'In the Pushover iOS app, go to Settings.' });
+				iosSteps.createEl('li', { text: 'Enable "Critical Alerts" \u2014 this lets urgent notifications play sound even on silent mode and bypass Do Not Disturb.' });
+				iosSteps.createEl('li', { text: 'Urgent alerts (feeding reminders, overdue meds) use emergency priority \u2014 they repeat every 60 seconds until you tap "Acknowledge" in the app.' });
+
+				// Android
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android: Alarm behavior' });
+				pushGuide.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'On Android, emergency-priority notifications also loop until acknowledged. You can customize the notification sound and DND override in Android notification settings for the Pushover app.',
+				});
+
+				// Pricing note
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Pricing' });
+				pushGuide.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'Pushover costs $4.99 one-time (not a subscription). Includes 7,500 messages/month free. This is the only option that provides true alarm-style notifications on iOS.',
+				});
+
+				// Offline note
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Offline behavior' });
+				pushGuide.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'Pushover does not support server-side delayed delivery. Scheduled reminders only fire while Obsidian is open. For offline reminders, also enable Todoist integration (below) with due dates set to "Date + time" \u2014 Todoist sends its own push reminder independently.',
+				});
+
+			} else if (notif.webhookPreset === 'gotify') {
+				new Setting(el)
+					.setName('Gotify server URL')
+					.setDesc('Your Gotify server URL with app token (e.g., https://gotify.example.com/message?token=...).')
+					.addText(text => text
+						.setValue(notif.webhookUrl)
+						.setPlaceholder('https://gotify.example.com/message?token=...')
+						.onChange(async (value) => {
+							notif.webhookUrl = value.trim();
+							await this.plugin.saveSettings();
+						})
+					);
+			} else {
+				// Custom webhook
+				new Setting(el)
+					.setName('Webhook URL')
+					.setDesc('POST endpoint for notifications. JSON body: { title, message, priority }.')
+					.addText(text => text
+						.setValue(notif.webhookUrl)
+						.setPlaceholder('https://example.com/webhook')
+						.onChange(async (value) => {
+							notif.webhookUrl = value.trim();
+							await this.plugin.saveSettings();
+						})
+					);
+			}
+
+			// Test button
+			const canTest = notif.webhookPreset === 'pushover'
+				? (notif.pushoverAppToken && notif.pushoverUserKey)
+				: !!notif.webhookUrl;
+
+			if (canTest) {
+				new Setting(el)
+					.setName('Test notification')
+					.setDesc('Send a test push notification to verify your setup.')
+					.addButton(btn => btn
+						.setButtonText('Send test')
+						.onClick(async () => {
+							try {
+								let resp: Response;
+
+								if (notif.webhookPreset === 'pushover') {
+									// Pushover uses form-encoded POST
+									const body = new URLSearchParams({
+										token: notif.pushoverAppToken,
+										user: notif.pushoverUserKey,
+										title: 'Postpartum Tracker',
+										message: 'Test notification \u2014 your push setup is working!',
+										priority: '0',
+									});
+									resp = await fetch('https://api.pushover.net/1/messages.json', {
+										method: 'POST',
+										body,
+									});
+								} else {
+									resp = await fetch(notif.webhookUrl, {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify({
+											title: 'Postpartum Tracker',
+											message: 'Test notification \u2014 your push setup is working!',
+											priority: 3,
+											tags: ['white_check_mark'],
+											...(notif.webhookPreset === 'ntfy' ? { topic: notif.ntfyTopic } : {}),
+										}),
+									});
+								}
+
+								if (resp.ok) {
+									new Notice('Test sent! Check your phone.');
+								} else {
+									const body = await resp.text();
+									new Notice(`Test failed: ${resp.status} ${resp.statusText}\n${body}`);
+								}
+							} catch (e) {
+								new Notice(`Error: ${(e as Error).message}`);
+							}
+						})
+					);
+			}
+		}
+
+		// ── Best setup combo guide ──
+		if (notif.webhookEnabled) {
+			const comboGuide = el.createDiv({ cls: 'pt-webhook-guide' });
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Best setup for reliable alarms' });
+
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'Android users: ntfy with insistent notifications gives you alarm-style alerts that loop until dismissed, plus scheduled delivery when Obsidian is closed.' });
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'iOS users: Use Pushover instead of ntfy. Pushover emergency priority retries the notification every 60 seconds until you tap Acknowledge, and supports Critical Alerts that bypass DND and silent mode. This is the only way to get alarm-loop behavior on iOS.' });
+
+			const comboSteps = comboGuide.createEl('ol', { cls: 'pt-webhook-guide-steps' });
+			comboSteps.createEl('li', { text: 'Choose your push service above: ntfy (Android) or Pushover (iOS + Android)' });
+			comboSteps.createEl('li', { text: 'Enable Todoist integration (below) with due dates set to "Date + time"' });
+			comboSteps.createEl('li', { text: 'With both enabled:' });
+			const subList = comboSteps.createEl('ul');
+			subList.createEl('li', { text: 'Push service delivers alarm-style alerts to your phone' });
+			subList.createEl('li', { text: 'ntfy scheduled delivery works even after closing Obsidian' });
+			subList.createEl('li', { text: 'Todoist creates tasks and sends its own reminder at the due time' });
+			subList.createEl('li', { text: 'If one service is down, the other still works' });
 		}
 
 		// --- Todoist Integration ---
@@ -668,6 +923,128 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		// --- Appearance ---
+		new Setting(el).setName('Appearance').setHeading();
+
+		new Setting(el)
+			.setName('Show button labels')
+			.setDesc('Show text labels under quick-action buttons. Medication and tracker names are always visible.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showButtonLabels)
+				.onChange(async (value) => {
+					this.plugin.settings.showButtonLabels = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Button size')
+			.setDesc('Size of quick-action buttons.')
+			.addDropdown(dd => dd
+				.addOption('compact', 'Compact')
+				.addOption('normal', 'Normal')
+				.addOption('large', 'Large')
+				.setValue(this.plugin.settings.buttonSize)
+				.onChange(async (value) => {
+					this.plugin.settings.buttonSize = value as 'compact' | 'normal' | 'large';
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Button columns')
+			.setDesc('Fixed number of columns for the button grid, or auto to fit available width.')
+			.addDropdown(dd => dd
+				.addOption('0', 'Auto')
+				.addOption('2', '2 columns')
+				.addOption('3', '3 columns')
+				.addOption('4', '4 columns')
+				.addOption('5', '5 columns')
+				.addOption('6', '6 columns')
+				.setValue(String(this.plugin.settings.buttonColumns))
+				.onChange(async (value) => {
+					this.plugin.settings.buttonColumns = parseInt(value, 10);
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Timer button animation')
+			.setDesc('How active timer buttons are highlighted while running.')
+			.addDropdown(dd => dd
+				.addOption('pulse', 'Pulse (glow fades in/out)')
+				.addOption('blink', 'Blink (opacity flashes)')
+				.addOption('glow', 'Glow (steady glow ring)')
+				.addOption('solid', 'Solid (no animation)')
+				.setValue(this.plugin.settings.timerAnimation)
+				.onChange(async (value) => {
+					this.plugin.settings.timerAnimation = value as 'pulse' | 'blink' | 'glow' | 'solid';
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Input mode')
+			.setDesc('How data entry forms appear when logging past entries or editing.')
+			.addDropdown(dd => dd
+				.addOption('modal', 'Modal popup (centered dialog)')
+				.addOption('inline', 'Inline panel (inside tracker section)')
+				.setValue(this.plugin.settings.inputMode)
+				.onChange(async (value) => {
+					this.plugin.settings.inputMode = value as 'modal' | 'inline';
+					await this.plugin.saveSettings();
+				})
+			);
+
+		// --- Status bar ---
+		new Setting(el)
+			.setName('Status bar mode')
+			.setDesc('What to show in the Obsidian status bar.')
+			.addDropdown(dd => dd
+				.addOption('live', 'Live info (last feed, active timers, alerts)')
+				.addOption('badge', 'Alert count badge only')
+				.addOption('off', 'Hidden')
+				.setValue(this.plugin.settings.statusBarMode)
+				.onChange(async (value) => {
+					this.plugin.settings.statusBarMode = value as 'badge' | 'live' | 'off';
+					await this.plugin.saveSettings();
+					this.plugin.statusBarManager?.update();
+				})
+			);
+
+		// --- Summary bar ---
+		new Setting(el).setName('Summary bar').setHeading();
+
+		new Setting(el)
+			.setName('Show summary bar')
+			.setDesc('Display a stats bar with daily counts from selected trackers.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showSummaryBar)
+				.onChange(async (value) => {
+					this.plugin.settings.showSummaryBar = value;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		if (this.plugin.settings.showSummaryBar) {
+			new Setting(el)
+				.setName('Summary position')
+				.setDesc('Where the summary bar appears in the tracker widget.')
+				.addDropdown(dd => dd
+					.addOption('top', 'Top (above buttons)')
+					.addOption('after-buttons', 'After buttons')
+					.addOption('bottom', 'Bottom (below sections)')
+					.setValue(this.plugin.settings.summaryPosition || 'top')
+					.onChange(async (value) => {
+						this.plugin.settings.summaryPosition = value as 'top' | 'bottom' | 'after-buttons';
+						await this.plugin.saveSettings();
+					})
+				);
+
+			this.buildSummaryOrderSetting(el);
+		}
 
 		// --- Debug ---
 		new Setting(el).setName('Developer').setHeading();
@@ -1006,7 +1383,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			description: '',
 			category: 'general' as TrackerCategory,
 			hasDuration: false,
-			fields: [] as { key: string; label: string; type: string; options: string; unit: string; required: boolean }[],
+			fields: [] as { key: string; label: string; type: string; options: string; unit: string; required: boolean; collectOn: string }[],
 		};
 
 		new Setting(editor).setName('New custom tracker').setHeading();
@@ -1072,7 +1449,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		const fieldsContainer = editor.createDiv({ cls: 'pt-custom-fields-list' });
 
 		const addFieldRow = () => {
-			const fieldState = { key: '', label: '', type: 'text', options: '', unit: '', required: false };
+			const fieldState = { key: '', label: '', type: 'text', options: '', unit: '', required: false, collectOn: '' as string };
 			state.fields.push(fieldState);
 			const fieldIdx = state.fields.length - 1;
 
@@ -1120,6 +1497,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					.setValue(false)
 					.onChange(v => { fieldState.required = v; })
 				);
+
+			// Collect-on timing (for duration trackers)
+			new Setting(row)
+				.setName('Collect when')
+				.setDesc('When to ask for this field (duration trackers only).')
+				.addDropdown(dd => {
+					dd.addOption('', 'Default');
+					dd.addOption('start', 'On start');
+					dd.addOption('stop', 'On stop');
+					dd.addOption('always', 'Both');
+					dd.setValue('');
+					dd.onChange(v => { fieldState.collectOn = v; });
+				});
 		};
 
 		new Setting(editor)
@@ -1173,6 +1563,9 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 							field.min = 1;
 							field.max = 5;
 						}
+						if (f.collectOn) {
+							field.collectOn = f.collectOn;
+						}
 						return field;
 					});
 
@@ -1215,6 +1608,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		const customs = this.plugin.settings.customTrackers;
 		const def = customs.find(d => d.id === trackerId);
 		if (!def) return;
+		const snapshot = JSON.parse(JSON.stringify(def)) as typeof def;
 
 		const editor = document.createElement('div');
 		editor.className = 'pt-med-editor pt-tracker-editor';
@@ -1301,6 +1695,16 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		new Setting(editor)
 			.addButton(btn => btn
+				.setButtonText('Cancel')
+				.onClick(async () => {
+					Object.assign(def, snapshot);
+					await this.plugin.saveSettings();
+					editor.remove();
+					await this.plugin.rebuildRegistry();
+					this.display();
+				})
+			)
+			.addButton(btn => btn
 				.setButtonText('Done')
 				.setCta()
 				.onClick(async () => {
@@ -1322,6 +1726,86 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		'🚶', '🚽', '🚻', '💤', '🧘', '💧', '🍎', '☕', '🌞', '📝',
 		'📋', '📏', '🧠', '😊', '😮', '⭐', '🔔', '📈', '⏱️', '✅',
 	];
+
+	/** Build the summary card reorder UI. */
+	private buildSummaryOrderSetting(el: HTMLElement): void {
+		new Setting(el)
+			.setName('Visible summary modules')
+			.setDesc('Check the trackers you want to appear in the summary bar. Reorder with arrows.');
+
+		const enabledModules = this.plugin.settings.enabledModules;
+		const summaryOrder = this.plugin.settings.summaryOrder;
+		const visible = this.plugin.settings.visibleSummaryModules;
+
+		// Build ordered list: summaryOrder first, then any enabled modules not yet in the list
+		const ordered: string[] = [];
+		for (const id of summaryOrder) {
+			if (enabledModules.includes(id)) ordered.push(id);
+		}
+		for (const id of enabledModules) {
+			if (!ordered.includes(id)) ordered.push(id);
+		}
+
+		// Get display names from registry + library
+		const getDisplayName = (id: string): string => {
+			const module = this.plugin.registry.get(id);
+			return module?.displayName || id;
+		};
+
+		const listEl = el.createDiv({ cls: 'pt-summary-order-list' });
+
+		const renderList = () => {
+			listEl.empty();
+			for (let i = 0; i < ordered.length; i++) {
+				const id = ordered[i];
+				const isVisible = visible.includes(id);
+				const row = listEl.createDiv({ cls: 'pt-summary-order-row' });
+
+				// Visibility checkbox (opt-in: checked = shown)
+				const checkbox = row.createEl('input', {
+					attr: { type: 'checkbox' },
+					cls: 'pt-summary-order-checkbox',
+				}) as HTMLInputElement;
+				checkbox.checked = isVisible;
+				checkbox.addEventListener('change', async () => {
+					const idx = visible.indexOf(id);
+					if (checkbox.checked && idx < 0) {
+						visible.push(id);
+					} else if (!checkbox.checked && idx >= 0) {
+						visible.splice(idx, 1);
+					}
+					this.plugin.settings.visibleSummaryModules = [...visible];
+					await this.plugin.saveSettings();
+				});
+
+				// Move buttons
+				const moveUp = row.createEl('button', { cls: 'pt-summary-order-btn', text: '\u25B2' });
+				moveUp.disabled = i === 0;
+				moveUp.addEventListener('click', async () => {
+					if (i === 0) return;
+					[ordered[i], ordered[i - 1]] = [ordered[i - 1], ordered[i]];
+					this.plugin.settings.summaryOrder = [...ordered];
+					await this.plugin.saveSettings();
+					renderList();
+				});
+
+				const moveDown = row.createEl('button', { cls: 'pt-summary-order-btn', text: '\u25BC' });
+				moveDown.disabled = i === ordered.length - 1;
+				moveDown.addEventListener('click', async () => {
+					if (i >= ordered.length - 1) return;
+					[ordered[i], ordered[i + 1]] = [ordered[i + 1], ordered[i]];
+					this.plugin.settings.summaryOrder = [...ordered];
+					await this.plugin.saveSettings();
+					renderList();
+				});
+
+				const label = row.createSpan({ cls: 'pt-summary-order-label', text: getDisplayName(id) });
+				if (!isVisible) label.addClass('pt-summary-order-label--hidden');
+			}
+		};
+
+		renderList();
+	}
 
 	/** Build an inline emoji picker with quick picks + searchable modal. */
 	private buildEmojiPicker(container: HTMLElement, onSelect: (emoji: string) => void): void {
@@ -1406,6 +1890,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		const overrides = this.plugin.settings.libraryTrackerOverrides;
 		const override: LibraryTrackerOverride = overrides[trackerId] || {};
+		const snapshot = JSON.parse(JSON.stringify(override)) as LibraryTrackerOverride;
 
 		const editor = document.createElement('div');
 		editor.className = 'pt-tracker-editor pt-med-editor';
@@ -1513,6 +1998,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		new Setting(editor)
 			.addButton(btn => btn
+				.setButtonText('Cancel')
+				.onClick(async () => {
+					if (Object.keys(snapshot).length === 0) {
+						delete overrides[trackerId];
+					} else {
+						overrides[trackerId] = snapshot;
+					}
+					await this.plugin.saveSettings();
+					editor.remove();
+					this.display();
+				})
+			)
+			.addButton(btn => btn
 				.setButtonText('Done')
 				.setCta()
 				.onClick(() => {
@@ -1525,6 +2023,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 	private showMedEditor(settingItemEl: HTMLElement, index: number): void {
 		const meds = this.plugin.settings.medication.medications;
 		const med = meds[index];
+		const snapshot = JSON.parse(JSON.stringify(med)) as typeof med;
 		const editorId = `pt-med-editor-${index}`;
 
 		const existing = document.getElementById(editorId);
@@ -1557,6 +2056,18 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				.setValue(med.technicalName || '')
 				.onChange(async (value) => {
 					med.technicalName = value.trim() || undefined;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(editor)
+			.setName('Description')
+			.setDesc('Brief description of what this is for.')
+			.addText(text => text
+				.setValue(med.description || '')
+				.setPlaceholder('e.g., Pain reliever and fever reducer')
+				.onChange(async (value) => {
+					med.description = value.trim() || undefined;
 					await this.plugin.saveSettings();
 				})
 			);
@@ -1612,17 +2123,37 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(editor)
-			.setName('Icon')
-			.addText(text => text
-				.setValue(med.icon)
-				.onChange(async (value) => {
-					med.icon = value.trim() || '\uD83D\uDC8A';
-					await this.plugin.saveSettings();
-				})
-			);
+		{
+			const iconSetting = new Setting(editor).setName('Icon');
+			let iconInput: HTMLInputElement;
+			iconSetting.addText(text => {
+				text.setValue(med.icon)
+					.onChange(async (value) => {
+						med.icon = value.trim() || '\uD83D\uDC8A';
+						await this.plugin.saveSettings();
+					});
+				iconInput = text.inputEl;
+				iconInput.style.width = '60px';
+				iconInput.style.fontSize = '1.3rem';
+				iconInput.style.textAlign = 'center';
+			});
+			this.buildEmojiPicker(editor, async (emoji) => {
+				med.icon = emoji;
+				iconInput.value = emoji;
+				await this.plugin.saveSettings();
+			});
+		}
 
 		new Setting(editor)
+			.addButton(btn => btn
+				.setButtonText('Cancel')
+				.onClick(async () => {
+					Object.assign(med, snapshot);
+					await this.plugin.saveSettings();
+					editor.remove();
+					this.display();
+				})
+			)
 			.addButton(btn => btn
 				.setButtonText('Done')
 				.setCta()

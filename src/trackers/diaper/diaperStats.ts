@@ -51,13 +51,13 @@ export function getDiaperAlerts(
 	entries: DiaperEntry[],
 	dayStart: Date,
 	birthDate?: string,
-	alertThreshold: number = 6
 ): HealthAlert[] {
 	const alerts: HealthAlert[] = [];
 	const stats = computeDiaperStats(entries, dayStart);
 
-	// Determine expected wet diapers based on baby's age
-	let expectedWet = alertThreshold;
+	// Dynamic threshold: scales with baby's age (days 0-4), then falls back to 6
+	const FALLBACK_THRESHOLD = 6;
+	let expectedWet = FALLBACK_THRESHOLD;
 	if (birthDate) {
 		const dayOfLife = daysSinceBirth(birthDate);
 		if (dayOfLife >= 0 && dayOfLife < 5) {

@@ -7,6 +7,46 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-05
+
+### Added
+
+- **Pushover integration**: New webhook preset for iOS + Android alarm-style notifications. Emergency priority (priority=2) retries every 60 seconds until acknowledged. Supports iOS Critical Alerts that bypass DND and silent mode. $4.99 one-time purchase.
+- **Pushover settings UI**: App token and user key inputs with comprehensive setup guide covering iOS Critical Alerts, Android alarm configuration, and pricing.
+- **Scheduled ntfy reminders**: When you log a feeding or medication dose, the plugin immediately schedules a future ntfy notification at the expected next reminder time using ntfy's server-side `In:` header. Works even after closing Obsidian.
+- **Schedule reminders on log** toggle in notification settings.
+- **ntfy emoji tags**: Notifications include category-specific emoji tags (baby bottle, pill, baby, warning, rotating light).
+- **Summary bar controls**: Master toggle to show/hide the daily summary bar, position selector (top, bottom, after buttons), and per-module opt-in checkboxes. All modules hidden by default.
+- **Live settings refresh**: Changing any setting immediately re-renders all open tracker widgets without needing to reload the plugin.
+- **Status bar manager**: Live context display in Obsidian status bar showing active timer info.
+- **Modal edit panel**: Edit tracker entries in a centered Obsidian modal with rich, tappable field components.
+- **Field renderer**: Shared rich input component system (color pickers, toggle chips, duration wheels, sliders) used by both inline and modal edit panels.
+- **History modal**: View past tracker entries grouped by day.
+- **Export service**: Export tracker data to Markdown tables or CSV.
+- **URI handler**: `obsidian://postpartum-tracker` protocol handler for external automation (iOS Shortcuts, Tasker).
+- **Quick-action commands**: Palette commands for common tracker actions.
+- **Field timing (`collectOn`)**: Tracker fields can specify when to collect data — on start, stop, log, or always.
+- **Medication descriptions**: All default medications and remedies now include brief descriptions of what they're for.
+- **Feeding reminder override**: Manual override for feeding reminder interval (0 = use age-based dynamic value).
+- **Button size and timer animation** settings (compact/normal/large, pulse/blink/glow/solid).
+- **Platform support table** in notification settings showing feature availability across Desktop, Android, and iOS.
+- **Alarm setup guide** documentation page.
+
+### Changed
+
+- Default ntfy topic prefix changed from `baby-tracker-` to `pptracker-`.
+- Summary bar now defaults to hidden (opt-in instead of opt-out).
+- `hiddenSummaryModules` replaced with `visibleSummaryModules` allowlist (empty by default).
+- Webhook preset selector now includes ntfy, Gotify, Pushover, and Custom options.
+- Notification settings completely reorganized with collapsible guides, platform table, and combo setup recommendations.
+- Registry rebuild now refreshes widgets in-place instead of rewriting code block JSON.
+- Inline edit panel refactored to use shared FieldRenderer.
+
+### Fixed
+
+- Settings changes no longer require plugin reload to take effect in the tracker UI.
+- Feeding tracker field collection timing improved for duration-based entries.
+
 ## [0.6.0] - 2026-03-04
 
 ### Added
@@ -142,7 +182,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/cybersader/postpartum-tracker/compare/0.4.1...0.5.0
 [0.4.1]: https://github.com/cybersader/postpartum-tracker/compare/0.4.0...0.4.1

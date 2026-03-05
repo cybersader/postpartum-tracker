@@ -68,6 +68,8 @@ export interface SimpleTrackerField {
 	unit?: string;            // Display unit (e.g., 'cm', 'kg', 'F')
 	min?: number;
 	max?: number;
+	/** When to collect this field for duration trackers. Default: 'start' for duration, 'log' for non-duration. */
+	collectOn?: 'start' | 'stop' | 'log' | 'always';
 }
 
 /** Definition for a data-driven tracker in the library. */
@@ -155,6 +157,7 @@ export type MedicationCategory = 'medication' | 'remedy';
 export interface MedicationConfig {
 	name: string;
 	technicalName?: string;       // Generic/chemical name (e.g., 'Acetaminophen' for Tylenol)
+	description?: string;         // Brief description of what this medication is for
 	dosage: string;
 	minIntervalHours: number;   // Minimum hours between doses
 	maxDailyDoses: number;      // Max doses per 24h (0 = unlimited)
@@ -165,28 +168,28 @@ export interface MedicationConfig {
 
 export const DEFAULT_MEDICATIONS: MedicationConfig[] = [
 	// Pain medications
-	{ name: 'Tylenol', technicalName: 'Acetaminophen', dosage: '500mg', minIntervalHours: 6, maxDailyDoses: 4, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Ibuprofen', technicalName: 'Ibuprofen', dosage: '800mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Hydrocodone-Acetamin', technicalName: 'Hydrocodone/Acetaminophen', dosage: '5-325mg (half pill)', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Tylenol', technicalName: 'Acetaminophen', description: 'Pain reliever and fever reducer', dosage: '500mg', minIntervalHours: 6, maxDailyDoses: 4, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Ibuprofen', technicalName: 'Ibuprofen', description: 'Anti-inflammatory pain reliever', dosage: '800mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: true, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Hydrocodone-Acetamin', technicalName: 'Hydrocodone/Acetaminophen', description: 'Prescription opioid pain reliever', dosage: '5-325mg (half pill)', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 	// Supplements
-	{ name: 'Stool softener', technicalName: 'Docusate sodium', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Prenatal vitamin', technicalName: '', dosage: '2 gummies', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Iron', technicalName: 'Ferrous sulfate', dosage: '324mg', minIntervalHours: 48, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Stool softener', technicalName: 'Docusate sodium', description: 'Prevents constipation (Colace)', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Prenatal vitamin', technicalName: '', description: 'Daily prenatal nutritional supplement', dosage: '2 gummies', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Iron', technicalName: 'Ferrous sulfate', description: 'Iron supplement for anemia', dosage: '324mg', minIntervalHours: 48, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 	// Topical remedies / perineal care
-	{ name: 'Dermoplast', technicalName: 'Benzocaine/Menthol spray', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Lidocaine cream', technicalName: 'Lidocaine topical', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'EMLA cream', technicalName: 'Lidocaine/Prilocaine', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Proctofoam', technicalName: 'Pramoxine/Hydrocortisone', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Witch hazel pads', technicalName: 'Tucks pads', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Nipple cream', technicalName: 'Lanolin', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Sitz bath', technicalName: 'Perineal soak', dosage: '15-20 min', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEC1', category: 'remedy' },
-	{ name: 'Perineum ice pack', technicalName: 'Cold pack / padsicle', dosage: '20 min', minIntervalHours: 1, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
-	{ name: 'Hemorrhoid cream', technicalName: 'Preparation H', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
-	{ name: 'Breast ice/heat pack', technicalName: '', dosage: '15-20 min', minIntervalHours: 2, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
-	{ name: 'Peri bottle', technicalName: 'Perineal irrigation', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEBF', category: 'remedy' },
-	{ name: 'Naproxen', technicalName: 'Aleve', dosage: '220mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Colace', technicalName: 'Docusate sodium', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
-	{ name: 'Miralax', technicalName: 'Polyethylene glycol', dosage: '17g', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Dermoplast', technicalName: 'Benzocaine/Menthol spray', description: 'Numbing spray for perineal pain', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Lidocaine cream', technicalName: 'Lidocaine topical', description: 'Topical numbing cream', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'EMLA cream', technicalName: 'Lidocaine/Prilocaine', description: 'Prescription topical numbing cream', dosage: '', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Proctofoam', technicalName: 'Pramoxine/Hydrocortisone', description: 'Hemorrhoid/perineal anti-itch foam', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Witch hazel pads', technicalName: 'Tucks pads', description: 'Soothing anti-inflammatory pads', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Nipple cream', technicalName: 'Lanolin', description: 'Soothes cracked/sore nipples', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Sitz bath', technicalName: 'Perineal soak', description: 'Warm soak for perineal healing', dosage: '15-20 min', minIntervalHours: 4, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEC1', category: 'remedy' },
+	{ name: 'Perineum ice pack', technicalName: 'Cold pack / padsicle', description: 'Cold therapy for swelling/pain', dosage: '20 min', minIntervalHours: 1, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
+	{ name: 'Hemorrhoid cream', technicalName: 'Preparation H', description: 'Reduces hemorrhoid swelling and itch', dosage: '', minIntervalHours: 6, maxDailyDoses: 4, enabled: false, icon: '\uD83E\uDDF4', category: 'remedy' },
+	{ name: 'Breast ice/heat pack', technicalName: '', description: 'Relieves engorgement and breast pain', dosage: '15-20 min', minIntervalHours: 2, maxDailyDoses: 0, enabled: false, icon: '\uD83E\uDDCA', category: 'remedy' },
+	{ name: 'Peri bottle', technicalName: 'Perineal irrigation', description: 'Gentle cleansing after bathroom use', dosage: '', minIntervalHours: 0, maxDailyDoses: 0, enabled: false, icon: '\uD83D\uDEBF', category: 'remedy' },
+	{ name: 'Naproxen', technicalName: 'Aleve', description: 'Anti-inflammatory pain reliever', dosage: '220mg', minIntervalHours: 8, maxDailyDoses: 3, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Colace', technicalName: 'Docusate sodium', description: 'Stool softener for constipation', dosage: '100mg', minIntervalHours: 12, maxDailyDoses: 2, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
+	{ name: 'Miralax', technicalName: 'Polyethylene glycol', description: 'Osmotic laxative for constipation', dosage: '17g', minIntervalHours: 24, maxDailyDoses: 1, enabled: false, icon: '\uD83D\uDC8A', category: 'medication' },
 ];
 
 // ── Notification Types ───────────────────────────────────────
@@ -202,6 +205,8 @@ export interface NotificationSettings {
 	/** Feeding: alert when last feeding was this many hours ago */
 	feedingReminderHours: number;
 	feedingReminderEnabled: boolean;
+	/** User override for feeding reminder hours. 0 = use age-based dynamic value. */
+	feedingReminderOverride: number;
 
 	/** Medication: alert when a dose becomes safe to take */
 	medDoseReadyEnabled: boolean;
@@ -212,6 +217,16 @@ export interface NotificationSettings {
 	webhookUrl: string;
 	/** Whether to send webhooks */
 	webhookEnabled: boolean;
+	/** Webhook quick-setup preset */
+	webhookPreset: 'ntfy' | 'gotify' | 'pushover' | 'custom';
+	/** ntfy.sh topic name (used when preset = 'ntfy') */
+	ntfyTopic: string;
+	/** Schedule future ntfy notifications when logging entries (works offline). */
+	scheduleNtfyOnLog: boolean;
+	/** Pushover app API token */
+	pushoverAppToken: string;
+	/** Pushover user/group key */
+	pushoverUserKey: string;
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -220,10 +235,16 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 	checkIntervalMin: 1,
 	feedingReminderHours: 3,
 	feedingReminderEnabled: true,
+	feedingReminderOverride: 0,
 	medDoseReadyEnabled: true,
 	medAlternatingEnabled: true,
 	webhookUrl: '',
 	webhookEnabled: false,
+	webhookPreset: 'ntfy',
+	ntfyTopic: '',
+	scheduleNtfyOnLog: true,
+	pushoverAppToken: '',
+	pushoverUserKey: '',
 };
 
 export interface NotificationItem {
@@ -309,9 +330,28 @@ export interface TrackerEvent {
 
 // ── Plugin Settings ──────────────────────────────────────────
 
+export type ButtonSize = 'compact' | 'normal' | 'large';
+export type TimerAnimation = 'pulse' | 'blink' | 'glow' | 'solid';
+
 export interface PostpartumTrackerSettings {
 	timeFormat: '12h' | '24h';
 	hapticFeedback: boolean;
+	showButtonLabels: boolean;
+	buttonSize: ButtonSize;
+	buttonColumns: number;   // 0 = auto
+	timerAnimation: TimerAnimation;
+	/** How data entry forms are shown: modal popup or inline panel. */
+	inputMode: 'modal' | 'inline';
+	/** Status bar display mode. */
+	statusBarMode: 'badge' | 'live' | 'off';
+	/** Whether to show the daily summary stats bar at all. Default: off. */
+	showSummaryBar: boolean;
+	/** Where the summary bar appears in the widget layout. */
+	summaryPosition: 'top' | 'bottom' | 'after-buttons';
+	/** Module IDs in display order for the daily summary strip. Empty = default (all, module order). */
+	summaryOrder: string[];
+	/** Module IDs opted-in to appear in the daily summary bar. Empty = nothing shown. */
+	visibleSummaryModules: string[];
 	enableDebugLog: boolean;
 
 	/** Which module IDs are enabled */
@@ -327,7 +367,7 @@ export interface PostpartumTrackerSettings {
 	/** Diaper-specific */
 	diaper: {
 		showColorPicker: boolean;
-		/** Min wet diapers per day before warning */
+		/** @deprecated Dynamic threshold based on day-of-life is now used. Kept for data.json compat. */
 		alertThreshold: number;
 	};
 
@@ -368,6 +408,16 @@ export interface LibraryTrackerOverride {
 export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	timeFormat: '12h',
 	hapticFeedback: true,
+	showButtonLabels: true,
+	buttonSize: 'normal',
+	buttonColumns: 0,
+	timerAnimation: 'pulse',
+	inputMode: 'modal',
+	statusBarMode: 'live',
+	showSummaryBar: false,
+	summaryPosition: 'top',
+	summaryOrder: [],
+	visibleSummaryModules: [],
 	enableDebugLog: false,
 	activeLogicPacks: [],
 	libraryTrackerOverrides: {},
@@ -448,6 +498,8 @@ export interface QuickAction {
 	cls: string;
 	/** Called when button is tapped. timestamp is provided when "past time" clock is active. */
 	onClick: (timestamp?: string) => void;
+	/** When true, label is always shown even when showButtonLabels is off (e.g., medication names). */
+	labelEssential?: boolean;
 }
 
 export interface HealthAlert {

@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 import type { TrackerModule } from '../BaseTracker';
 import type { MedicationEntry, MedicationConfig, PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent } from '../../types';
 import { DEFAULT_MEDICATIONS } from '../../types';
@@ -7,6 +8,7 @@ import { div, span } from '../../utils/dom';
 import { filterToday } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
+import { TrackerEditModal } from '../../ui/TrackerEditModal';
 
 export class MedicationTracker implements TrackerModule<MedicationEntry, MedicationStats> {
 	readonly id = 'medication';
@@ -19,6 +21,7 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 	private save: (() => Promise<void>) | null = null;
 	private settings: PostpartumTrackerSettings | null = null;
 	private emitEvent: ((event: TrackerEvent) => void) | null = null;
+	private app: App | null = null;
 
 	// UI
 	private bodyEl: HTMLElement | null = null;
@@ -57,11 +60,13 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		bodyEl: HTMLElement,
 		save: () => Promise<void>,
 		settings: PostpartumTrackerSettings,
-		emitEvent?: (event: TrackerEvent) => void
+		emitEvent?: (event: TrackerEvent) => void,
+		app?: App
 	): void {
 		this.save = save;
 		this.settings = settings;
 		this.emitEvent = emitEvent || null;
+		this.app = app || null;
 		this.bodyEl = bodyEl;
 		if (settings.medication.medications.length > 0) {
 			this.configs = settings.medication.medications;
@@ -97,6 +102,7 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 			icon: med.icon,
 			cls: `pt-quick-btn--med`,
 			onClick: (ts) => this.logDose(med.name, med.dosage, ts),
+			labelEssential: true,
 		}));
 	}
 
@@ -141,9 +147,7 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		if (!entry) return;
 
 		this.dismissEditPanel();
-		if (!this.editPanelContainer) return;
 
-		// Build medication name options from configs
 		const medOptions = this.configs
 			.filter(c => c.enabled)
 			.map(c => ({ value: c.name, label: c.technicalName ? `${c.name} (${c.technicalName})` : c.name }));
@@ -157,25 +161,28 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 			{ key: 'notes', label: 'Notes', type: 'text', value: entry.notes || '', placeholder: 'Optional' },
 		];
 
-		this.currentEditPanel = new InlineEditPanel(
-			this.editPanelContainer,
-			'Edit medication dose',
-			fields,
-			async (values) => {
-				entry.timestamp = values.time;
-				entry.name = values.name;
-				// Update dosage based on selected med config
-				const config = this.configs.find(c => c.name === values.name);
-				if (config) entry.dosage = config.dosage || undefined;
-				entry.notes = values.notes || '';
+		const onSave = async (values: Record<string, string>) => {
+			entry.timestamp = values.time;
+			entry.name = values.name;
+			const config = this.configs.find(c => c.name === values.name);
+			if (config) entry.dosage = config.dosage || undefined;
+			entry.notes = values.notes || '';
 
-				this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-				this.dismissEditPanel();
-				this.refreshUI();
-				if (this.save) await this.save();
-			},
-			() => this.dismissEditPanel()
-		);
+			this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Edit medication dose', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Edit medication dose', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
 	}
 
 	private dismissEditPanel(): void {

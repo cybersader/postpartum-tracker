@@ -1,23 +1,26 @@
 /**
  * Inline edit panel for editing entry fields (timestamp, notes, etc.)
  * Replaces prompt() with a proper inline UI that works well on mobile.
- * Uses datetime-local inputs which trigger native OS pickers.
+ * Uses FieldRenderer for rich, tappable field components.
  */
+
+import { renderField } from './FieldRenderer';
 
 export interface EditField {
 	key: string;
 	label: string;
-	type: 'datetime' | 'date' | 'text' | 'number' | 'select';
+	type: 'datetime' | 'date' | 'text' | 'number' | 'select' | 'rating' | 'boolean';
 	value: string;
 	options?: { value: string; label: string }[];
 	placeholder?: string;
 	min?: string;
 	max?: string;
+	unit?: string;
 }
 
 export class InlineEditPanel {
 	private el: HTMLElement;
-	private fields: Map<string, HTMLInputElement | HTMLSelectElement> = new Map();
+	private valueAccessors: Map<string, () => string> = new Map();
 
 	constructor(
 		parent: HTMLElement,
@@ -38,56 +41,11 @@ export class InlineEditPanel {
 
 		this.el.createDiv({ cls: 'pt-edit-panel-title', text: title });
 
+		// Render fields using shared FieldRenderer
+		const fieldsContainer = this.el.createDiv({ cls: 'pt-edit-fields' });
 		for (const field of fields) {
-			const row = this.el.createDiv({ cls: 'pt-edit-field' });
-			row.createEl('label', { cls: 'pt-edit-label', text: field.label });
-
-			if (field.type === 'datetime') {
-				const input = row.createEl('input', {
-					cls: 'pt-edit-input',
-					attr: { type: 'datetime-local' },
-				});
-				input.value = this.toLocalDatetime(field.value);
-				this.fields.set(field.key, input);
-			} else if (field.type === 'date') {
-				const input = row.createEl('input', {
-					cls: 'pt-edit-input',
-					attr: { type: 'date' },
-				});
-				input.value = this.toLocalDate(field.value);
-				this.fields.set(field.key, input);
-			} else if (field.type === 'number') {
-				const attrs: Record<string, string> = { type: 'number' };
-				if (field.min) attrs.min = field.min;
-				if (field.max) attrs.max = field.max;
-				if (field.placeholder) attrs.placeholder = field.placeholder;
-				const input = row.createEl('input', {
-					cls: 'pt-edit-input',
-					attr: attrs,
-				});
-				input.value = field.value;
-				this.fields.set(field.key, input);
-			} else if (field.type === 'select') {
-				const select = row.createEl('select', { cls: 'pt-edit-select' });
-				for (const opt of field.options || []) {
-					const optEl = select.createEl('option', {
-						text: opt.label,
-						attr: { value: opt.value },
-					});
-					if (opt.value === field.value) optEl.selected = true;
-				}
-				this.fields.set(field.key, select);
-			} else {
-				const input = row.createEl('input', {
-					cls: 'pt-edit-input',
-					attr: {
-						type: 'text',
-						placeholder: field.placeholder || '',
-					},
-				});
-				input.value = field.value;
-				this.fields.set(field.key, input);
-			}
+			const getValue = renderField(fieldsContainer, field);
+			this.valueAccessors.set(field.key, getValue);
 		}
 
 		// Buttons
@@ -103,15 +61,8 @@ export class InlineEditPanel {
 
 		this.addButtonHandler(saveBtn, () => {
 			const values: Record<string, string> = {};
-			for (const [key, inputEl] of this.fields) {
-				if (inputEl instanceof HTMLInputElement && inputEl.type === 'datetime-local') {
-					const d = new Date(inputEl.value);
-					values[key] = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-				} else if (inputEl instanceof HTMLInputElement && inputEl.type === 'date') {
-					values[key] = inputEl.value; // Keep as YYYY-MM-DD
-				} else {
-					values[key] = inputEl.value;
-				}
+			for (const [key, getValue] of this.valueAccessors) {
+				values[key] = getValue();
 			}
 			onSave(values);
 		});
@@ -133,22 +84,6 @@ export class InlineEditPanel {
 				e.stopPropagation();
 			}
 		});
-	}
-
-	/** Convert ISO string to local datetime-local input value. */
-	private toLocalDatetime(iso: string): string {
-		const d = new Date(iso);
-		if (isNaN(d.getTime())) return this.toLocalDatetime(new Date().toISOString());
-		const pad = (n: number) => String(n).padStart(2, '0');
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-	}
-
-	/** Convert ISO string to date input value (YYYY-MM-DD). */
-	private toLocalDate(iso: string): string {
-		const d = new Date(iso);
-		if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
-		const pad = (n: number) => String(n).padStart(2, '0');
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 	}
 
 	destroy(): void {

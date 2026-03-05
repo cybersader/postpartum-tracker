@@ -1,4 +1,4 @@
-import type { QuickAction } from '../types';
+import type { ButtonSize, TimerAnimation, QuickAction } from '../types';
 import { haptic } from '../utils/dom';
 
 /**
@@ -9,7 +9,12 @@ import { haptic } from '../utils/dom';
 export class QuickActions {
 	private el: HTMLElement;
 	private hapticEnabled: boolean;
+	private showLabels: boolean;
+	private buttonSize: ButtonSize;
+	private buttonColumns: number;
+	private timerAnimation: TimerAnimation;
 	private buttonEls: Map<string, HTMLButtonElement> = new Map();
+	private btnRow: HTMLElement | null = null;
 
 	// Clock / past-time state
 	private clockActive = false;
@@ -17,9 +22,13 @@ export class QuickActions {
 	private clockToggle: HTMLButtonElement | null = null;
 	private clockRow: HTMLElement | null = null;
 
-	constructor(parent: HTMLElement, hapticEnabled: boolean) {
+	constructor(parent: HTMLElement, hapticEnabled: boolean, showLabels: boolean = true, buttonSize: ButtonSize = 'normal', buttonColumns: number = 0, timerAnimation: TimerAnimation = 'pulse') {
 		this.el = parent.createDiv({ cls: 'pt-quick-actions' });
 		this.hapticEnabled = hapticEnabled;
+		this.showLabels = showLabels;
+		this.buttonSize = buttonSize;
+		this.buttonColumns = buttonColumns;
+		this.timerAnimation = timerAnimation;
 	}
 
 	/** Render all quick action buttons from the provided actions. */
@@ -43,6 +52,14 @@ export class QuickActions {
 
 		// Button grid
 		const btnRow = this.el.createDiv({ cls: 'pt-quick-actions-buttons' });
+		this.btnRow = btnRow;
+		if (!this.showLabels) btnRow.addClass('pt-labels-hidden');
+		if (this.buttonSize !== 'normal') btnRow.addClass(`pt-btn-${this.buttonSize}`);
+		if (this.buttonColumns > 0) {
+			btnRow.style.gridTemplateColumns = `repeat(${this.buttonColumns}, 1fr)`;
+		}
+		// Timer animation variant
+		btnRow.dataset.timerAnim = this.timerAnimation;
 
 		// Clock toggle button
 		this.clockToggle = btnRow.createEl('button', {
@@ -71,6 +88,7 @@ export class QuickActions {
 			const btn = btnRow.createEl('button', {
 				cls: `pt-quick-btn ${action.cls}`,
 			});
+			if (action.labelEssential) btn.addClass('pt-label-essential');
 			btn.createSpan({ cls: 'pt-quick-btn-icon', text: action.icon });
 
 			// Support sublabel via newline in label text

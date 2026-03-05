@@ -1,0 +1,181 @@
+---
+title: Alarm setup
+description: Get audible push notifications and alarms on your phone using Pushover, ntfy.sh, Todoist, or Tasker.
+---
+
+The plugin's webhook feature lets you receive real-time push notifications on your phone -- even when Obsidian is running on a separate device. This is critical for overnight feeding reminders when you need to **actually wake up**.
+
+:::caution[Obsidian can't wake your phone]
+Obsidian plugins cannot trigger native alarms or override Do Not Disturb directly. Alarms require an external service to relay the notification to your phone's native alert system.
+:::
+
+## Quick comparison
+
+| Approach | Platform | Alarm loop? | Bypasses DND? | Offline? | Cost |
+|----------|----------|-------------|---------------|----------|------|
+| **Pushover** | Android + iOS | Yes (retry until acknowledged) | Yes (Critical Alerts on iOS) | Yes (cloud-based) | $4.99 one-time |
+| **ntfy.sh** | Android + iOS | Android only (insistent mode) | Android only | Yes (scheduled delivery) | Free |
+| **Todoist reminders** | Any | No | No | Yes | Free (basic) |
+| **Tasker + ntfy** | Android only | Yes (custom alarm) | Yes | Yes | $3.49 one-time |
+
+:::tip[iOS users]
+**Pushover is the only way to get alarm-loop notifications on iOS.** ntfy on iOS only supports "time-sensitive" interruption level -- no looping alarm, no DND bypass. Pushover's emergency priority retries every 60 seconds until you tap Acknowledge, and iOS Critical Alerts bypass both DND and silent mode.
+:::
+
+## Pushover (recommended for iOS)
+
+[Pushover](https://pushover.net/) ($4.99 one-time per platform) provides alarm-style notifications on both Android and iOS. Emergency priority notifications retry until you acknowledge them.
+
+### Setup
+
+1. Create an account at [pushover.net](https://pushover.net/).
+2. Install the **Pushover** app ([Google Play](https://play.google.com/store/apps/details?id=net.superblock.pushover) or [App Store](https://apps.apple.com/app/pushover-notifications/id506088175)).
+3. Copy your **User Key** from the Pushover dashboard.
+4. Create an application at [pushover.net/apps/build](https://pushover.net/apps/build) -- name it "Postpartum Tracker" or similar.
+5. Copy the **API Token** from your new application.
+6. In Obsidian: **Settings > Postpartum Tracker > Notifications**.
+7. Enable **Webhook notifications**, select **Pushover** from the preset dropdown.
+8. Paste your App token and User key.
+9. Click **Send test** to verify.
+
+### Priority mapping
+
+| Alert level | Pushover priority | Behavior |
+|-------------|------------------|----------|
+| Info | 0 (normal) | Standard notification |
+| Warning | 1 (high) | Highlighted, bypasses quiet hours |
+| Urgent | 2 (emergency) | **Retries every 60s until acknowledged** (up to 1 hour) |
+
+### iOS Critical Alerts
+
+To enable alarm-style behavior on iOS:
+
+1. Open **Pushover** app > **Settings**.
+2. Enable **Critical Alerts** (iOS will prompt for permission).
+3. Critical Alerts play sound even when the phone is on silent or DND.
+4. Emergency priority notifications will repeat every 60 seconds until you open the notification and tap **Acknowledge**.
+
+### Android alarm
+
+On Android, Pushover emergency notifications already repeat. For extra reliability:
+
+1. Exclude Pushover from battery optimization.
+2. In Android notification settings, set the Pushover channel to **Alarm** priority.
+
+## ntfy.sh (recommended for Android)
+
+[ntfy.sh](https://ntfy.sh/) is a free, open-source push notification service. Works with the public server or self-hosted.
+
+### Setup
+
+1. Install the **ntfy** app ([Google Play](https://play.google.com/store/apps/details?id=io.heckel.ntfy) or [App Store](https://apps.apple.com/app/ntfy/id1625396347)).
+2. In the app, subscribe to a unique topic (e.g., `my-baby-alerts-abc123`).
+3. In Obsidian: **Settings > Postpartum Tracker > Notifications**.
+4. Enable **webhooks**.
+5. Set webhook URL to `https://ntfy.sh/my-baby-alerts-abc123` (use your topic name).
+6. Click **Send test** to verify.
+
+### Priority mapping
+
+The plugin maps alert levels to ntfy priorities:
+
+| Alert level | ntfy priority | Android behavior |
+|-------------|--------------|-----------------|
+| Info | 2 (low) | Silent |
+| Warning | 3 (default) | Normal notification sound |
+| Urgent | 5 (max) | Overrides Do Not Disturb |
+
+Feeding reminders that exceed the threshold by 1+ hours are sent as **urgent** (priority 5).
+
+### Making it an alarm (Android)
+
+1. In the ntfy app, tap your subscription > **Settings**.
+2. Set **Min priority** to filter noise.
+3. Go to **Android Settings > Apps > ntfy > Notifications**.
+4. Find the notification channel and set it to **Alarm** or **Override DND**.
+5. Set a loud notification sound.
+
+### Making it an alarm (iOS)
+
+:::caution
+ntfy on iOS only supports "time-sensitive" interruption level. There is **no alarm loop or DND bypass** on iOS via ntfy. For alarm-style behavior on iOS, use [Pushover](#pushover-recommended-for-ios) instead.
+:::
+
+1. Go to **iOS Settings > Notifications > ntfy**.
+2. Enable **Time Sensitive Notifications** (breaks through Focus modes).
+3. Choose a loud alert sound.
+
+## Todoist reminders
+
+If you already have [Todoist integration](/postpartum-tracker/guides/todoist-integration/) enabled, Todoist creates tasks when alerts fire. Todoist Pro users get push notifications with reminder times.
+
+### Setup
+
+1. Enable Todoist integration with `createOnAlert: true`.
+2. Set `dueDateStyle` to `datetime` for timed reminders.
+3. Configure Todoist mobile app notifications:
+   - **Android**: Set notification channel to high priority / alarm sound.
+   - **iOS**: Enable Time Sensitive notifications for Todoist.
+
+:::tip
+Todoist reminders work without any webhook setup, but they depend on Todoist's notification delivery which may have slight delays. For time-critical overnight feeding reminders, **ntfy.sh + Todoist** together gives you both reliable alarms and task management.
+:::
+
+## Pushcut (iOS)
+
+[Pushcut](https://www.pushcut.io/) ($3) provides rich iOS notifications with automation triggers.
+
+1. Download **Pushcut** from the App Store.
+2. Create a notification action in Pushcut's server settings.
+3. Copy the webhook URL and paste it in the plugin's webhook URL field.
+4. Pushcut notifications support:
+   - Custom sounds (including alarm-like tones)
+   - Time Sensitive delivery
+   - Triggering iOS Shortcuts (e.g., set a timer, play alarm sound)
+
+:::note
+Pushcut expects `{ "title": "...", "text": "..." }` while the plugin sends `{ "title": "...", "message": "..." }`. You may need a Pushcut server action or middleware to remap the field.
+:::
+
+## Tasker + ntfy (Android power users)
+
+[Tasker](https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm) can intercept ntfy notifications and trigger a full alarm.
+
+1. Set up ntfy as described above.
+2. In Tasker, create a **Profile > Event > Notification** (App: ntfy).
+3. Add a Task that:
+   - Sets media volume to maximum
+   - Plays an alarm sound file on loop
+   - Shows a lock-screen scene with a "Dismiss" button
+4. Optionally filter by notification title (e.g., only trigger for "Feeding reminder").
+
+This gives you the most reliable wake-up experience -- a full system alarm that won't stop until you dismiss it.
+
+## Self-hosted ntfy
+
+For privacy, run your own ntfy server:
+
+```bash
+docker run -d -p 8080:80 binwiederhier/ntfy serve
+```
+
+Set webhook URL to `http://your-server:8080/your-topic`.
+
+## Troubleshooting
+
+**Notifications not arriving?**
+- Verify the webhook URL with the **Send test** button in settings.
+- Check that Obsidian is running (webhooks only fire while the plugin is active).
+- On Android: ensure ntfy is excluded from battery optimization.
+- On iOS: ensure ntfy has background refresh enabled.
+
+**Not waking you up?**
+- Verify the alert is **urgent** level (priority 5 in ntfy).
+- Check that the ntfy notification channel is set to **Alarm** priority in Android settings.
+- On iOS, verify **Time Sensitive Notifications** are enabled.
+- Test with `[Dev] Force notification check` command in Obsidian.
+
+**Webhook errors?**
+- The plugin sends JSON: `{ title, message, priority, topic?, extras }`.
+- Priority uses ntfy scale: 1-5 (not the old 3/5/8 scale).
+- Check the developer console (Ctrl+Shift+I) for error details.

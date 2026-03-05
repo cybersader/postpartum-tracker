@@ -14,6 +14,12 @@ import { evaluateMilestones } from '../trackers/milestoneEvaluator';
 import { getLogicPacks } from '../trackers/logicPacks';
 import type PostpartumTrackerPlugin from '../main';
 
+function setsEqual(a: Set<string>, b: Set<string>): boolean {
+	if (a.size !== b.size) return false;
+	for (const v of a) if (!b.has(v)) return false;
+	return true;
+}
+
 /**
  * The main inline tracker widget rendered inside a postpartum-tracker code block.
  * Extends MarkdownRenderChild for proper lifecycle management.
@@ -29,7 +35,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 	// UI components
 	private babyInfoBar!: HTMLElement;
 	private babyEditContainer!: HTMLElement;
-	private dailySummary!: DailySummary;
+	private dailySummary: DailySummary | null = null;
 	private quickActions!: QuickActions;
 	private alertsPanel!: AlertsPanel;
 	private sectionsContainer!: HTMLElement;
@@ -57,6 +63,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 	}
 
 	onload(): void {
+		this.plugin.registerWidget(this);
+
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('pt-widget');
@@ -76,23 +84,59 @@ export class TrackerWidget extends MarkdownRenderChild {
 		);
 	}
 
+	onunload(): void {
+		this.plugin.unregisterWidget(this);
+	}
+
+	/**
+	 * Refresh the widget in-place: re-read settings and rebuild the entire UI
+	 * without rewriting the code block JSON. Called when plugin settings change.
+	 */
+	refresh(): void {
+		// Re-merge settings (global may have changed)
+		this.settings = this.data.settingsOverrides
+			? deepMerge(this.plugin.settings, this.data.settingsOverrides as Record<string, unknown>)
+			: this.plugin.settings;
+
+		const root = this.containerEl;
+		root.empty();
+		root.addClass('pt-widget');
+		this.buildUI(root);
+	}
+
 	private buildUI(root: HTMLElement): void {
+		const showSummary = this.settings.showSummaryBar;
+		const summaryPos = this.settings.summaryPosition || 'top';
+
 		// 0. Baby info bar (name, day of life, edit)
 		this.babyInfoBar = root.createDiv({ cls: 'pt-baby-info-bar' });
 		this.babyEditContainer = root.createDiv({ cls: 'pt-edit-panel-container' });
 		this.renderBabyInfoBar();
 
-		// 1. Daily summary dashboard
-		this.dailySummary = new DailySummary(root);
+		// 1. Daily summary dashboard — position: 'top' means before buttons
+		this.dailySummary = null;
+		if (showSummary && summaryPos === 'top') {
+			this.dailySummary = new DailySummary(root);
+		}
 
 		// 2. Quick actions area (collected from all modules)
-		this.quickActions = new QuickActions(root, this.settings.hapticFeedback);
+		this.quickActions = new QuickActions(root, this.settings.hapticFeedback, this.settings.showButtonLabels, this.settings.buttonSize, this.settings.buttonColumns, this.settings.timerAnimation);
+
+		// Summary after buttons
+		if (showSummary && summaryPos === 'after-buttons') {
+			this.dailySummary = new DailySummary(root);
+		}
 
 		// 3. Health alerts
 		this.alertsPanel = new AlertsPanel(root);
 
 		// 4. Module sections (collapsible, reorderable)
 		this.sectionsContainer = root.createDiv({ cls: 'pt-sections' });
+
+		// Summary at bottom (after sections — appended after sections are built)
+		if (showSummary && summaryPos === 'bottom') {
+			this.dailySummary = new DailySummary(root);
+		}
 
 		// Initialize all modules with their data and build UI
 		this.initializeModules();
@@ -244,6 +288,13 @@ export class TrackerWidget extends MarkdownRenderChild {
 		this.sectionCollapsibles.clear();
 		this.sectionsContainer.empty();
 
+		// Ensure all enabled modules are in the layout (append missing ones)
+		for (const id of this.settings.enabledModules) {
+			if (!this.data.layout.includes(id) && this.registry.get(id)) {
+				this.data.layout.push(id);
+			}
+		}
+
 		const activeLayout = this.data.layout.filter(
 			id => this.settings.enabledModules.includes(id)
 		);
@@ -273,7 +324,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 				collapsible.getBodyEl(),
 				() => this.save(),
 				this.settings,
-				(event) => this.plugin.emitTrackerEvent(event)
+				(event) => this.plugin.emitTrackerEvent(event),
+				this.plugin.app
 			);
 		}
 
@@ -285,19 +337,56 @@ export class TrackerWidget extends MarkdownRenderChild {
 		const allActions = [];
 		for (const module of this.registry.getAll()) {
 			if (!this.settings.enabledModules.includes(module.id)) continue;
-			allActions.push(...module.getQuickActions());
+			const actions = module.getQuickActions();
+			// Wrap onClick to auto-expand the module's section (skip scroll in modal mode)
+			for (const action of actions) {
+				const originalOnClick = action.onClick;
+				action.onClick = (ts) => {
+					originalOnClick(ts);
+					if (this.settings.inputMode !== 'modal') {
+						this.scrollToSection(module.id);
+					}
+				};
+			}
+			allActions.push(...actions);
 		}
 		this.quickActions.render(allActions);
 	}
 
 	/** Update the daily summary dashboard with stats from all modules. */
 	private updateDailySummary(): void {
+		if (!this.dailySummary) return;
+
 		const dayStart = getDayStart();
 		const dayEnd = getDayEnd();
 		const cards: SummaryCard[] = [];
 
-		for (const module of this.registry.getAll()) {
-			if (!this.settings.enabledModules.includes(module.id)) continue;
+		// Only show modules the user explicitly opted in to
+		const allowedModules = this.settings.visibleSummaryModules || [];
+		if (allowedModules.length === 0) {
+			this.dailySummary.render([]);
+			return;
+		}
+
+		// Determine module iteration order: summaryOrder first, then remaining allowed
+		const summaryOrder = this.settings.summaryOrder;
+		const orderedIds: string[] = [];
+		if (summaryOrder.length > 0) {
+			for (const id of summaryOrder) {
+				if (allowedModules.includes(id)) orderedIds.push(id);
+			}
+			for (const id of allowedModules) {
+				if (!orderedIds.includes(id)) orderedIds.push(id);
+			}
+		} else {
+			orderedIds.push(...allowedModules);
+		}
+
+		const visibleIds = orderedIds;
+
+		for (const moduleId of visibleIds) {
+			const module = this.registry.get(moduleId);
+			if (!module) continue;
 			const rawEntries = this.data.trackers[module.id];
 			const entries = module.parseEntries(rawEntries);
 			const stats = module.computeStats(entries, dayStart, dayEnd);
@@ -382,10 +471,26 @@ export class TrackerWidget extends MarkdownRenderChild {
 	}
 
 	/** Called every 200ms to update live timer displays. No file writes. */
+	private previousActiveIds: Set<string> = new Set();
+
 	private tick(): void {
+		const currentActiveIds = new Set<string>();
 		for (const module of this.registry.getAll()) {
 			if (!this.settings.enabledModules.includes(module.id)) continue;
 			if (module.tick) module.tick();
+			if (module.getActiveActionIds) {
+				for (const id of module.getActiveActionIds()) currentActiveIds.add(id);
+			}
+		}
+		// Update button highlight states only when they change
+		if (!setsEqual(this.previousActiveIds, currentActiveIds)) {
+			for (const id of this.previousActiveIds) {
+				if (!currentActiveIds.has(id)) this.quickActions.setActive(id, false);
+			}
+			for (const id of currentActiveIds) {
+				if (!this.previousActiveIds.has(id)) this.quickActions.setActive(id, true);
+			}
+			this.previousActiveIds = currentActiveIds;
 		}
 	}
 
@@ -445,12 +550,23 @@ export class TrackerWidget extends MarkdownRenderChild {
 			this.data.trackers[module.id] = module.serializeEntries();
 		}
 
+		// Preserve scroll position across save/re-render to prevent jumps
+		const scroller = this.containerEl.closest('.cm-scroller') || this.containerEl.closest('.markdown-preview-view');
+		const scrollTop = scroller?.scrollTop ?? null;
+
 		try {
 			await this.store.save(this.ctx, this.containerEl, this.data);
 		} catch (e) {
 			console.error('Postpartum Tracker: failed to save', e);
 		} finally {
 			this.saving = false;
+		}
+
+		// Restore scroll position after Obsidian re-renders the code block
+		if (scroller && scrollTop !== null) {
+			requestAnimationFrame(() => {
+				scroller.scrollTop = scrollTop;
+			});
 		}
 	}
 }

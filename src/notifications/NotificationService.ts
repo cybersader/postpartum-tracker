@@ -17,9 +17,11 @@ import type {
 	NotificationItem,
 	NotificationSettings,
 	SimpleTrackerEntry,
+	TrackerEvent,
 } from '../types';
 import { EMPTY_DATA, DEFAULT_MEDICATIONS } from '../types';
 import { TRACKER_LIBRARY } from '../trackers/library';
+import { getDynamicFeedingIntervalHours } from '../data/dateUtils';
 import { ToastNotification } from './ToastNotification';
 
 /** Snoozed notification IDs + when the snooze expires */
@@ -124,9 +126,12 @@ export class NotificationService {
 		const now = Date.now();
 		const notifications: NotificationItem[] = [];
 
-		// Feeding reminder
+		// Feeding reminder (dynamic interval based on baby's age)
 		if (settings.feedingReminderEnabled) {
-			const feedingAlert = this.checkFeedingReminder(data, settings, now);
+			const effectiveHours = settings.feedingReminderOverride > 0
+				? settings.feedingReminderOverride
+				: getDynamicFeedingIntervalHours(data.meta?.birthDate);
+			const feedingAlert = this.checkFeedingReminder(data, effectiveHours, now);
 			if (feedingAlert) notifications.push(feedingAlert);
 		}
 
@@ -188,7 +193,7 @@ export class NotificationService {
 
 	private checkFeedingReminder(
 		data: PostpartumData,
-		settings: NotificationSettings,
+		thresholdHours: number,
 		now: number
 	): NotificationItem | null {
 		const feedings = (data.trackers.feeding || []) as FeedingEntry[];
@@ -206,7 +211,7 @@ export class NotificationService {
 		const lastEndTime = new Date(last.end!).getTime();
 		const hoursSince = (now - lastEndTime) / 3_600_000;
 
-		if (hoursSince >= settings.feedingReminderHours) {
+		if (hoursSince >= thresholdHours) {
 			const hoursStr = hoursSince >= 1
 				? `${Math.floor(hoursSince)}h ${Math.round((hoursSince % 1) * 60)}m`
 				: `${Math.round(hoursSince * 60)}m`;
@@ -214,7 +219,7 @@ export class NotificationService {
 			return {
 				id: 'feeding-overdue',
 				category: 'feeding',
-				level: hoursSince >= 4 ? 'urgent' : 'warning',
+				level: hoursSince >= thresholdHours + 1 ? 'urgent' : 'warning',
 				title: 'Feeding reminder',
 				message: `Last feeding was ${hoursStr} ago (${last.side || 'breast'})`,
 				firedAt: now,
@@ -362,9 +367,13 @@ export class NotificationService {
 			this.fireSystemNotification(notif);
 		}
 
-		// Webhook
-		if (settings.webhookEnabled && settings.webhookUrl) {
-			this.fireWebhook(notif, settings.webhookUrl);
+		// Webhook / Pushover
+		if (settings.webhookEnabled) {
+			if (settings.webhookPreset === 'pushover' && settings.pushoverAppToken && settings.pushoverUserKey) {
+				this.firePushover(notif, settings);
+			} else if (settings.webhookUrl) {
+				this.fireWebhook(notif, settings.webhookUrl);
+			}
 		}
 
 		// Todoist: create alert task
@@ -391,13 +400,20 @@ export class NotificationService {
 
 	private async fireWebhook(notif: NotificationItem, url: string): Promise<void> {
 		try {
+			// ntfy.sh priority scale: 1 (min) to 5 (max/urgent)
+			const priorityMap: Record<string, number> = { info: 2, warning: 3, urgent: 5 };
+			const topic = NotificationService.extractNtfyTopic(url);
+			const tags = NotificationService.ntfyTagsForCategory(notif.category, notif.level);
+
 			await fetch(url, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					title: notif.title,
 					message: notif.message,
-					priority: notif.level === 'urgent' ? 8 : notif.level === 'warning' ? 5 : 3,
+					priority: priorityMap[notif.level] ?? 3,
+					...(topic ? { topic } : {}),
+					...(tags.length ? { tags } : {}),
 					extras: {
 						category: notif.category,
 						plugin: 'obsidian-postpartum-tracker',
@@ -406,6 +422,185 @@ export class NotificationService {
 			});
 		} catch (e) {
 			console.warn('Postpartum Tracker: webhook failed', e);
+		}
+	}
+
+	/**
+	 * Send a notification via Pushover API.
+	 * Emergency priority (urgent) retries until acknowledged — works as an alarm on both Android and iOS.
+	 */
+	private async firePushover(notif: NotificationItem, settings: NotificationSettings): Promise<void> {
+		try {
+			// Pushover priority: -2 (silent) to 2 (emergency/retry-until-ack)
+			const priorityMap: Record<string, number> = { info: 0, warning: 1, urgent: 2 };
+			const priority = priorityMap[notif.level] ?? 0;
+
+			const body: Record<string, string | number> = {
+				token: settings.pushoverAppToken,
+				user: settings.pushoverUserKey,
+				title: notif.title,
+				message: notif.message,
+				priority,
+			};
+
+			// Emergency priority requires retry + expire
+			if (priority === 2) {
+				body.retry = 60;   // Retry every 60 seconds
+				body.expire = 3600; // Stop after 1 hour if not acknowledged
+				body.sound = 'persistent'; // Alarm-style sound
+			}
+
+			await fetch('https://api.pushover.net/1/messages.json', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: Object.entries(body).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&'),
+			});
+		} catch (e) {
+			console.warn('Postpartum Tracker: Pushover notification failed', e);
+		}
+	}
+
+	/** Extract ntfy topic from a URL path (e.g., https://ntfy.sh/my-topic → 'my-topic'). */
+	static extractNtfyTopic(url: string): string | undefined {
+		try {
+			const parts = new URL(url).pathname.split('/').filter(Boolean);
+			if (parts.length === 1 && parts[0] !== 'message') return parts[0];
+		} catch { /* invalid URL */ }
+		return undefined;
+	}
+
+	/** Map notification category + level to ntfy emoji tags. */
+	private static ntfyTagsForCategory(category: string, level: string): string[] {
+		const tags: string[] = [];
+		switch (category) {
+			case 'feeding': tags.push('baby_bottle'); break;
+			case 'medication': tags.push('pill'); break;
+			case 'diaper': tags.push('baby'); break;
+			default: tags.push('bell'); break;
+		}
+		if (level === 'urgent') tags.push('warning', 'rotating_light');
+		return tags;
+	}
+
+	// ── Scheduled ntfy (Offline Alarm Support) ──
+
+	/**
+	 * Schedule a future ntfy notification using the `In` header.
+	 * The ntfy server holds the message and delivers it at the specified delay,
+	 * even if Obsidian is no longer running.
+	 */
+	async scheduleNtfyReminder(
+		title: string,
+		message: string,
+		delaySec: number,
+		priority: number,
+		category: string,
+	): Promise<void> {
+		const settings = this.getSettings();
+		if (!settings.webhookEnabled || !settings.webhookUrl || !settings.scheduleNtfyOnLog) return;
+		if (delaySec <= 0) return;
+
+		const url = settings.webhookUrl;
+		const topic = NotificationService.extractNtfyTopic(url);
+		const tags = NotificationService.ntfyTagsForCategory(category, priority >= 5 ? 'urgent' : 'warning');
+
+		try {
+			await fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'In': `${Math.round(delaySec)}s`,
+				},
+				body: JSON.stringify({
+					title,
+					message,
+					priority,
+					...(topic ? { topic } : {}),
+					...(tags.length ? { tags } : {}),
+					extras: {
+						category,
+						plugin: 'obsidian-postpartum-tracker',
+						scheduled: true,
+					},
+				}),
+			});
+		} catch (e) {
+			console.warn('Postpartum Tracker: scheduled ntfy failed', e);
+		}
+	}
+
+	/**
+	 * Called when a tracker event is logged. Schedules a future ntfy reminder
+	 * based on the event type and the user's notification settings.
+	 */
+	async scheduleFollowUpFromEvent(event: TrackerEvent & { module?: string }): Promise<void> {
+		const settings = this.getSettings();
+		if (!settings.webhookEnabled) return;
+
+		// Pushover emergency priority already retries until acknowledged,
+		// but it triggers immediately (no server-side delay). For Pushover we
+		// schedule via in-process setTimeout so the alert fires at the right future time.
+		const isPushover = settings.webhookPreset === 'pushover';
+		const isNtfy = settings.webhookPreset === 'ntfy' || !settings.webhookPreset;
+
+		// Determine what to schedule
+		let title = '';
+		let message = '';
+		let delaySec = 0;
+		let priority = 4;
+		let category = '';
+
+		if (event.type === 'feeding-logged' && settings.feedingReminderEnabled) {
+			const effectiveHours = settings.feedingReminderOverride > 0
+				? settings.feedingReminderOverride
+				: getDynamicFeedingIntervalHours(undefined);
+			title = 'Time to feed';
+			message = `It has been ${effectiveHours}h since the last feeding`;
+			delaySec = effectiveHours * 3600;
+			priority = 5;
+			category = 'feeding';
+		} else if (event.type === 'medication-logged') {
+			const config = event.config as MedicationConfig | undefined;
+			if (config && config.minIntervalHours > 0 && settings.medDoseReadyEnabled) {
+				title = `Safe to take ${config.name}`;
+				message = `${config.minIntervalHours}h have passed since your last dose of ${config.name}`;
+				delaySec = config.minIntervalHours * 3600;
+				priority = 4;
+				category = 'medication';
+			}
+		} else if (event.type === 'simple-logged' && event.module) {
+			const def = TRACKER_LIBRARY.find(d => d.id === event.module);
+			if (def?.notificationConfig?.reminderEnabled) {
+				const hours = def.notificationConfig.reminderIntervalHours;
+				title = def.notificationConfig.reminderMessage;
+				message = `Last logged ${hours}h ago`;
+				delaySec = hours * 3600;
+				priority = 4;
+				category = event.module;
+			}
+		}
+
+		if (!title || delaySec <= 0) return;
+
+		// ntfy: schedule server-side (works offline)
+		if (isNtfy && settings.scheduleNtfyOnLog) {
+			await this.scheduleNtfyReminder(title, message, delaySec, priority, category);
+		}
+
+		// Pushover: schedule in-process (only works while Obsidian is open;
+		// for offline coverage, user should also enable Todoist with due dates)
+		if (isPushover && settings.pushoverAppToken && settings.pushoverUserKey) {
+			window.setTimeout(() => {
+				const notif: NotificationItem = {
+					id: `scheduled-${category}-${Date.now()}`,
+					category,
+					level: priority >= 5 ? 'urgent' : priority >= 4 ? 'warning' : 'info',
+					title,
+					message,
+					firedAt: Date.now(),
+				};
+				this.firePushover(notif, this.getSettings());
+			}, delaySec * 1000);
 		}
 	}
 

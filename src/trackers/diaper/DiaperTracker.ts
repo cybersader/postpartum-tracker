@@ -1,3 +1,4 @@
+import type { App } from 'obsidian';
 import type { TrackerModule } from '../BaseTracker';
 import type { DiaperEntry, DiaperColor, PostpartumTrackerSettings, QuickAction, HealthAlert, TrackerEvent } from '../../types';
 import { DiaperStats, computeDiaperStats, getDiaperAlerts } from './diaperStats';
@@ -6,6 +7,7 @@ import { div, span } from '../../utils/dom';
 import { filterToday } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
+import { TrackerEditModal } from '../../ui/TrackerEditModal';
 
 const DIAPER_COLORS: { value: DiaperColor; label: string; cssColor: string }[] = [
 	{ value: 'meconium', label: 'Meconium', cssColor: '#1a1a2e' },
@@ -26,6 +28,7 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 	private save: (() => Promise<void>) | null = null;
 	private settings: PostpartumTrackerSettings | null = null;
 	private emitEvent: ((event: TrackerEvent) => void) | null = null;
+	private app: App | null = null;
 
 	// UI
 	private bodyEl: HTMLElement | null = null;
@@ -58,11 +61,13 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 		bodyEl: HTMLElement,
 		save: () => Promise<void>,
 		settings: PostpartumTrackerSettings,
-		emitEvent?: (event: TrackerEvent) => void
+		emitEvent?: (event: TrackerEvent) => void,
+		app?: App
 	): void {
 		this.save = save;
 		this.settings = settings;
 		this.emitEvent = emitEvent || null;
+		this.app = app || null;
 		this.bodyEl = bodyEl;
 
 		// Container for edit panels (always at top)
@@ -73,12 +78,15 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 		this.colorPickerEl.createDiv({ cls: 'pt-color-picker-label', text: 'Stool color:' });
 		const swatchRow = this.colorPickerEl.createDiv({ cls: 'pt-color-swatches' });
 		for (const color of DIAPER_COLORS) {
-			const swatch = swatchRow.createEl('button', {
+			const wrap = swatchRow.createDiv({ cls: 'pt-color-swatch-wrap' });
+			const swatch = wrap.createEl('button', {
 				cls: 'pt-color-swatch',
 				title: color.label,
 			});
 			swatch.style.backgroundColor = color.cssColor;
+			wrap.createDiv({ cls: 'pt-color-swatch-label', text: color.label });
 			swatch.addEventListener('click', () => this.selectColor(color.value));
+			wrap.addEventListener('click', () => this.selectColor(color.value));
 		}
 		// Skip color button
 		const skipBtn = this.colorPickerEl.createEl('button', {
@@ -150,12 +158,7 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 	}
 
 	getAlerts(entries: DiaperEntry[], dayStart: Date, birthDate?: string): HealthAlert[] {
-		return getDiaperAlerts(
-			entries,
-			dayStart,
-			birthDate,
-			this.settings?.diaper.alertThreshold
-		);
+		return getDiaperAlerts(entries, dayStart, birthDate);
 	}
 
 	// ── Actions ──
@@ -234,7 +237,6 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 		if (!entry) return;
 
 		this.dismissEditPanel();
-		if (!this.editPanelContainer) return;
 
 		const colorOptions = [
 			{ value: '', label: 'None' },
@@ -247,7 +249,6 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 			{ key: 'notes', label: 'Notes', type: 'text', value: entry.notes || '', placeholder: 'Optional' },
 		];
 
-		// Add color selector if dirty
 		if (entry.dirty) {
 			fields.splice(1, 0, {
 				key: 'color', label: 'Stool color', type: 'select',
@@ -256,23 +257,27 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 			});
 		}
 
-		this.currentEditPanel = new InlineEditPanel(
-			this.editPanelContainer,
-			'Edit diaper change',
-			fields,
-			async (values) => {
-				entry.timestamp = values.time;
-				if (values.color !== undefined) entry.color = (values.color || undefined) as DiaperColor | undefined;
-				entry.description = values.description || '';
-				entry.notes = values.notes || '';
+		const onSave = async (values: Record<string, string>) => {
+			entry.timestamp = values.time;
+			if (values.color !== undefined) entry.color = (values.color || undefined) as DiaperColor | undefined;
+			entry.description = values.description || '';
+			entry.notes = values.notes || '';
 
-				this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-				this.dismissEditPanel();
-				this.refreshUI();
-				if (this.save) await this.save();
-			},
-			() => this.dismissEditPanel()
-		);
+			this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Edit diaper change', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Edit diaper change', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
 	}
 
 	private dismissEditPanel(): void {
