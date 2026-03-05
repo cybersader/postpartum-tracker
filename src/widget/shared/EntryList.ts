@@ -10,6 +10,8 @@ export interface EntryListItem {
 	text: string;
 	subtext?: string;
 	cls?: string;
+	/** ISO8601 timestamp for day-separator headers. */
+	rawTimestamp?: string;
 }
 
 export class EntryList {
@@ -40,8 +42,20 @@ export class EntryList {
 		this.emptyEl.addClass('pt-hidden');
 		this.listEl.removeClass('pt-hidden');
 
-		// Show most recent first
-		for (const item of [...items].reverse()) {
+		let lastDateKey = '';
+
+		// Render in the order given (callers pass newest-first)
+		for (const item of items) {
+			// Insert day separator when rawTimestamp is provided
+			if (item.rawTimestamp) {
+				const dateKey = toDateKey(item.rawTimestamp);
+				if (dateKey !== lastDateKey) {
+					lastDateKey = dateKey;
+					const label = dayLabel(dateKey);
+					this.listEl.createDiv({ cls: 'pt-entry-day-sep', text: label });
+				}
+			}
+
 			const row = this.listEl.createDiv({ cls: `pt-entry-row ${item.cls || ''}` });
 
 			row.createSpan({ cls: 'pt-entry-time', text: item.time });
@@ -111,4 +125,27 @@ export class EntryList {
 	getEl(): HTMLElement {
 		return this.el;
 	}
+}
+
+/** Local YYYY-MM-DD key for a given ISO timestamp. */
+function toDateKey(iso: string): string {
+	const d = new Date(iso);
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Human-friendly label: "Today", "Yesterday", or "Mon, Mar 3". */
+function dayLabel(dateKey: string): string {
+	const now = new Date();
+	const todayKey = toDateKey(now.toISOString());
+	if (dateKey === todayKey) return 'Today';
+
+	const yesterday = new Date(now);
+	yesterday.setDate(yesterday.getDate() - 1);
+	if (dateKey === toDateKey(yesterday.toISOString())) return 'Yesterday';
+
+	const d = new Date(dateKey + 'T12:00:00');
+	const weekday = d.toLocaleDateString(undefined, { weekday: 'short' });
+	const month = d.toLocaleDateString(undefined, { month: 'short' });
+	const day = d.getDate();
+	return `${weekday}, ${month} ${day}`;
 }

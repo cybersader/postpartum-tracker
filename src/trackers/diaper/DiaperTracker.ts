@@ -412,8 +412,9 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 					icon,
 					text: parts.join(' + ') + colorLabel,
 					subtext: e.description || e.notes || undefined,
+					rawTimestamp: e.timestamp,
 				};
-			});
+			}).reverse();
 			this.entryList.update(items);
 		}
 	}

@@ -912,8 +912,9 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 						icon: this.def.icon,
 						text,
 						subtext,
+						rawTimestamp: e.timestamp,
 					};
-				});
+				}).reverse();
 			this.entryList.update(items);
 		}
 	}

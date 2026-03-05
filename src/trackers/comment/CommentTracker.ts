@@ -209,8 +209,9 @@ export class CommentTracker implements TrackerModule<LogNoteEntry, CommentStats>
 				icon: '\uD83D\uDCDD',
 				text: e.text,
 				subtext: catLabel || undefined,
+				rawTimestamp: e.timestamp,
 			};
-		});
+		}).reverse();
 		this.entryList.update(items);
 	}
 

@@ -626,6 +626,7 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 							text: 'Bottle' + (vol ? ` ${vol}` : ''),
 							subtext: e.notes || undefined,
 							cls: 'pt-entry--feeding-bottle',
+							rawTimestamp: e.start,
 						};
 					}
 					return {
@@ -635,8 +636,9 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 						text: `${e.side || 'breast'}`,
 						subtext: e.durationSec ? formatDurationShort(e.durationSec) : '',
 						cls: `pt-entry--feeding-${e.side || 'breast'}`,
+						rawTimestamp: e.start,
 					};
-				});
+				}).reverse();
 			this.entryList.update(items);
 		}
 	}

@@ -929,6 +929,20 @@
 	text-align: center;
 	padding: 12px;
 }
+.pt-entry-day-sep {
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 6px 8px 2px;
+	border-top: 1px solid var(--background-modifier-border);
+	margin-top: 2px;
+}
+.pt-entry-day-sep:first-child {
+	border-top: none;
+	margin-top: 0;
+}
 
 .pt-entry-list-items {
 	display: flex;

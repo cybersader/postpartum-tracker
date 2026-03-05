@@ -345,7 +345,8 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 			icon: '\uD83D\uDC8A',
 			text: e.name,
 			subtext: e.dosage || undefined,
-		}));
+			rawTimestamp: e.timestamp,
+		})).reverse();
 		this.entryList.update(items);
 	}
 

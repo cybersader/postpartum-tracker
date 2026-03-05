@@ -78,6 +78,7 @@ export class EventHistorySection {
 			icon: e.moduleIcon,
 			text: e.text,
 			subtext: e.subtext,
+			rawTimestamp: e.timestamp,
 		}));
 
 		this.entryList.update(items);
