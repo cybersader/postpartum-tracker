@@ -1082,6 +1082,17 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(el)
+			.setName('Show event history')
+			.setDesc('Show a unified chronological feed of all recent entries below the tracker sections.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showEventHistory)
+				.onChange(async (value) => {
+					this.plugin.settings.showEventHistory = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Haptic feedback')
 			.setDesc('Vibrate on button presses (mobile only).')
 			.addToggle(toggle => toggle

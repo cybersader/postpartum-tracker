@@ -94,6 +94,18 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 	getAlerts?(entries: TEntry[], dayStart: Date, birthDate?: string): HealthAlert[];
 
 	/**
+	 * Edit an entry by ID. Opens the module's edit form/modal.
+	 * Used by the unified event history section.
+	 */
+	editEntry?(id: string): void;
+
+	/**
+	 * Delete an entry by ID.
+	 * Used by the unified event history section.
+	 */
+	deleteEntry?(id: string): Promise<void>;
+
+	/**
 	 * Clean up any resources (timers, event listeners).
 	 */
 	destroy?(): void;

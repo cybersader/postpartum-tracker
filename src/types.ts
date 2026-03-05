@@ -377,6 +377,8 @@ export interface PostpartumTrackerSettings {
 	enableDebugLog: boolean;
 	/** Rolling window (hours) for the entry list. 0 = today only (midnight cutoff). */
 	entryWindowHours: number;
+	/** Show the unified event history feed below the module sections. */
+	showEventHistory: boolean;
 
 	/** Which module IDs are enabled */
 	enabledModules: string[];
@@ -445,6 +447,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	visibleSummaryModules: [],
 	enableDebugLog: false,
 	entryWindowHours: 24,
+	showEventHistory: true,
 	activeLogicPacks: [],
 	libraryTrackerOverrides: {},
 	customTrackers: [],

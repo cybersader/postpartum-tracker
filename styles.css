@@ -1780,6 +1780,40 @@
 }
 
 /* --- History modal --- */
+/* --- Event History Section (inline feed) --- */
+.pt-event-history {
+	margin-top: 12px;
+	padding-top: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+.pt-event-history-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+.pt-event-history-title {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+.pt-event-history-undo {
+	font-size: 0.75rem;
+	padding: 2px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+.pt-event-history-undo:hover {
+	border-color: var(--text-error);
+	color: var(--text-error);
+}
+
+/* --- History Modal --- */
 .pt-history-modal {
 	max-height: 70vh;
 	overflow-y: auto;

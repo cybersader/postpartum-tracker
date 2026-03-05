@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-05
+
+### Added
+
+- **Event history feed**: Unified chronological feed of all recent entries from all modules, shown below the tracker sections. Displays entries newest-first with edit and delete buttons that route to the owning module.
+- **Undo last button**: One-tap undo for the most recent entry (e.g., accidental button presses).
+- **Show event history** toggle in General > Display settings (on by default).
+
 ## [0.9.0] - 2026-03-05
 
 ### Added
@@ -247,7 +255,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/cybersader/postpartum-tracker/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...0.8.0
 [0.7.5]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...0.7.5

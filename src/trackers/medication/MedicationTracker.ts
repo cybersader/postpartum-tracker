@@ -142,7 +142,7 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		if (this.save) await this.save();
 	}
 
-	private async editEntry(id: string): Promise<void> {
+	async editEntry(id: string): Promise<void> {
 		const entry = this.entries.find(e => e.id === id);
 		if (!entry) return;
 
@@ -192,7 +192,7 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		}
 	}
 
-	private async deleteEntry(id: string): Promise<void> {
+	async deleteEntry(id: string): Promise<void> {
 		this.entries = this.entries.filter(e => e.id !== id);
 		this.refreshUI();
 		if (this.save) await this.save();

@@ -8,6 +8,7 @@ import { CollapsibleSection } from './CollapsibleSection';
 import { QuickActions } from './QuickActions';
 import { DailySummary, type SummaryCard } from './DailySummary';
 import { AlertsPanel } from './AlertsPanel';
+import { EventHistorySection } from './EventHistorySection';
 import { InlineEditPanel, type EditField } from './shared/InlineEditPanel';
 import { deepMerge } from '../utils/deepMerge';
 import { evaluateMilestones } from '../trackers/milestoneEvaluator';
@@ -38,6 +39,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 	private dailySummary: DailySummary | null = null;
 	private quickActions!: QuickActions;
 	private alertsPanel!: AlertsPanel;
+	private eventHistory: EventHistorySection | null = null;
 	private sectionsContainer!: HTMLElement;
 	private sectionCollapsibles: Map<string, CollapsibleSection> = new Map();
 
@@ -138,12 +140,21 @@ export class TrackerWidget extends MarkdownRenderChild {
 			this.dailySummary = new DailySummary(root);
 		}
 
+		// 5. Event history feed (after sections)
+		this.eventHistory = null;
+		if (this.settings.showEventHistory) {
+			this.eventHistory = new EventHistorySection(
+				root, this.registry, this.settings, () => this.save()
+			);
+		}
+
 		// Initialize all modules with their data and build UI
 		this.initializeModules();
 		this.buildSections();
 		this.collectQuickActions();
 		this.updateDailySummary();
 		this.updateAlerts();
+		this.updateEventHistory();
 	}
 
 	/** Render the baby info bar at the top of the widget. */
@@ -468,6 +479,11 @@ export class TrackerWidget extends MarkdownRenderChild {
 		}
 
 		this.alertsPanel.render(allAlerts);
+	}
+
+	/** Refresh the event history feed. */
+	private updateEventHistory(): void {
+		if (this.eventHistory) this.eventHistory.refresh();
 	}
 
 	/** Called every 200ms to update live timer displays. No file writes. */
