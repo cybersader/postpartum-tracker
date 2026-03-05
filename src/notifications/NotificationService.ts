@@ -372,7 +372,7 @@ export class NotificationService {
 			// ntfy
 			if (this.isNtfyActive(settings)) {
 				const url = `https://ntfy.sh/${settings.ntfyTopic}`;
-				this.fireWebhook(notif, url);
+				this.fireNtfy(notif, url);
 			}
 
 			// Pushover
@@ -382,7 +382,7 @@ export class NotificationService {
 
 			// Gotify
 			if (settings.gotifyEnabled && settings.gotifyUrl) {
-				this.fireWebhook(notif, settings.gotifyUrl);
+				this.fireGotify(notif, settings.gotifyUrl);
 			}
 
 			// Custom webhook
@@ -424,11 +424,14 @@ export class NotificationService {
 		}
 	}
 
-	private async fireWebhook(notif: NotificationItem, url: string): Promise<void> {
+	/**
+	 * Send notification via ntfy.sh.
+	 * Uses ntfy's JSON publishing API with only the fields ntfy understands.
+	 * Topic is in the URL path, so we do NOT duplicate it in the body.
+	 */
+	private async fireNtfy(notif: NotificationItem, url: string): Promise<void> {
 		try {
-			// ntfy.sh priority scale: 1 (min) to 5 (max/urgent)
 			const priorityMap: Record<string, number> = { info: 2, warning: 3, urgent: 5 };
-			const topic = NotificationService.extractNtfyTopic(url);
 			const tags = NotificationService.ntfyTagsForCategory(notif.category, notif.level);
 
 			await fetch(url, {
@@ -438,12 +441,52 @@ export class NotificationService {
 					title: notif.title,
 					message: notif.message,
 					priority: priorityMap[notif.level] ?? 3,
-					...(topic ? { topic } : {}),
 					...(tags.length ? { tags } : {}),
-					extras: {
-						category: notif.category,
-						plugin: 'obsidian-postpartum-tracker',
-					},
+				}),
+			});
+		} catch (e) {
+			console.warn('Postpartum Tracker: ntfy notification failed', e);
+		}
+	}
+
+	/**
+	 * Send notification via Gotify.
+	 * Gotify expects { title, message, priority } at <server>/message.
+	 */
+	private async fireGotify(notif: NotificationItem, url: string): Promise<void> {
+		try {
+			const priorityMap: Record<string, number> = { info: 2, warning: 5, urgent: 8 };
+			// Gotify URL should end in /message; append if missing
+			const endpoint = url.endsWith('/message') ? url : url.replace(/\/?$/, '/message');
+
+			await fetch(endpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: notif.title,
+					message: notif.message,
+					priority: priorityMap[notif.level] ?? 2,
+				}),
+			});
+		} catch (e) {
+			console.warn('Postpartum Tracker: Gotify notification failed', e);
+		}
+	}
+
+	/**
+	 * Send notification via custom webhook (generic JSON payload).
+	 */
+	private async fireWebhook(notif: NotificationItem, url: string): Promise<void> {
+		try {
+			await fetch(url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					title: notif.title,
+					message: notif.message,
+					level: notif.level,
+					category: notif.category,
+					plugin: 'obsidian-postpartum-tracker',
 				}),
 			});
 		} catch (e) {
@@ -541,7 +584,6 @@ export class NotificationService {
 			? `https://ntfy.sh/${settings.ntfyTopic}`
 			: settings.webhookUrl;
 		if (!url) return;
-		const topic = settings.ntfyTopic || NotificationService.extractNtfyTopic(url);
 		const tags = NotificationService.ntfyTagsForCategory(category, priority >= 5 ? 'urgent' : 'warning');
 
 		try {
@@ -555,13 +597,7 @@ export class NotificationService {
 					title,
 					message,
 					priority,
-					...(topic ? { topic } : {}),
 					...(tags.length ? { tags } : {}),
-					extras: {
-						category,
-						plugin: 'obsidian-postpartum-tracker',
-						scheduled: true,
-					},
 				}),
 			});
 		} catch (e) {
