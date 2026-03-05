@@ -63,7 +63,8 @@ export class CodeBlockStore {
 					? parsed.settingsOverrides
 					: undefined,
 			};
-		} catch {
+		} catch (e) {
+			console.error('Postpartum Tracker: failed to parse code block JSON. Data may be corrupted.', e);
 			return this.makeEmpty();
 		}
 	}

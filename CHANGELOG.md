@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-03-05
+
+### Fixed
+
+- **Data corruption race condition**: Todoist entry injection (`writeEntryToVault`) now uses atomic `vault.process()` instead of non-atomic `cachedRead` + `vault.modify`. Previously, if a Todoist task completed at the same time as a timer stopped, the two concurrent writes could produce malformed JSON, breaking all data loading.
+- **Parse error logging**: Corrupted code block JSON now logs an error to the console instead of silently returning empty data.
+
 ## [0.15.2] - 2026-03-05
 
 ### Fixed

@@ -295,15 +295,26 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		if (!moduleId) return;
 
 		try {
+			// Find the file containing the tracker code block
 			const files = this.app.vault.getMarkdownFiles();
+			let targetFile: TFile | null = null;
 			for (const file of files) {
 				const content = await this.app.vault.cachedRead(file);
+				if (/```postpartum-tracker\n/.test(content)) {
+					targetFile = file;
+					break;
+				}
+			}
+			if (!targetFile) return;
+
+			// Use vault.process() for atomic read-modify-write (same as CodeBlockStore.save)
+			await this.app.vault.process(targetFile, (content) => {
 				const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
-				if (!match?.[1]) continue;
+				if (!match?.[1]) return content;
 
 				const data = this.store.parse(match[1]);
 				const entries = data.trackers[moduleId];
-				if (!Array.isArray(entries)) continue;
+				if (!Array.isArray(entries)) return content;
 
 				entries.push(event.entry as never);
 
@@ -315,14 +326,11 @@ export default class PostpartumTrackerPlugin extends Plugin {
 				});
 
 				const json = JSON.stringify(data);
-				const newContent = content.replace(
+				return content.replace(
 					/```postpartum-tracker\n[\s\S]*?\n```/,
 					`\`\`\`postpartum-tracker\n${json}\n\`\`\``
 				);
-
-				await this.app.vault.modify(file, newContent);
-				return; // Only modify the first matching file
-			}
+			});
 		} catch (e) {
 			console.warn('Postpartum Tracker: failed to write Todoist entry to vault', e);
 		}
