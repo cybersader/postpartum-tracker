@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type PostpartumTrackerPlugin from './main';
-import type { NotificationType, TrackerCategory, LibraryTrackerOverride } from './types';
+import type { NotificationType, TrackerCategory, LibraryTrackerOverride, TimerAnimation } from './types';
 import { TRACKER_LIBRARY, TRACKER_CATEGORIES, BUILTIN_MODULE_IDS } from './trackers/library';
 import { LOGIC_PACKS } from './trackers/logicPacks';
 import { EmojiPickerModal } from './ui/EmojiPickerModal';
@@ -1154,11 +1154,13 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			.addDropdown(dd => dd
 				.addOption('pulse', 'Pulse (glow fades in/out)')
 				.addOption('blink', 'Blink (opacity flashes)')
+				.addOption('flash', 'Flash (hard on/off toggle)')
+				.addOption('bounce', 'Bounce (scale + glow pulse)')
 				.addOption('glow', 'Glow (steady glow ring)')
 				.addOption('solid', 'Solid (no animation)')
 				.setValue(this.plugin.settings.timerAnimation)
 				.onChange(async (value) => {
-					this.plugin.settings.timerAnimation = value as 'pulse' | 'blink' | 'glow' | 'solid';
+					this.plugin.settings.timerAnimation = value as TimerAnimation;
 					await this.plugin.saveSettings();
 				})
 			);

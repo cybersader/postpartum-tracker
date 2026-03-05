@@ -353,7 +353,7 @@ export interface TrackerEvent {
 // ── Plugin Settings ──────────────────────────────────────────
 
 export type ButtonSize = 'compact' | 'normal' | 'large';
-export type TimerAnimation = 'pulse' | 'blink' | 'glow' | 'solid';
+export type TimerAnimation = 'pulse' | 'blink' | 'glow' | 'solid' | 'flash' | 'bounce';
 
 export interface PostpartumTrackerSettings {
 	timeFormat: '12h' | '24h';

@@ -7,6 +7,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-05
+
+### Fixed
+
+- **Past-clock with duration trackers**: Tapping a duration-based simple tracker (e.g., Sleep, Tummy time) while the past clock is active now opens a completed-entry form with a duration field instead of starting a live timer from the past time.
+- **Past-clock with quick-select duration trackers**: Same fix for quick-select option buttons on duration trackers — routes to a pre-filled form instead of a live timer.
+
+### Added
+
+- **Flash timer animation**: Hard on/off color toggle (0.8s cycle) — very obvious active-timer indicator.
+- **Bounce timer animation**: Scale pulse with glow (1s cycle) — attention-grabbing active-timer indicator.
+- Timer animation dropdown now has 6 options: pulse, blink, glow, solid, flash, bounce.
+
 ## [0.10.0] - 2026-03-05
 
 ### Added
@@ -255,7 +268,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.10.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.11.0...HEAD
+[0.11.0]: https://github.com/cybersader/postpartum-tracker/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/cybersader/postpartum-tracker/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...0.8.0

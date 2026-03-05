@@ -282,6 +282,13 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 				await this.stopTimer();
 				return;
 			}
+
+			// Past timestamp → log completed entry with the select value pre-filled
+			if (timestamp) {
+				this.showLogFormWithPreset(fieldKey, optionValue, timestamp);
+				return;
+			}
+
 			// Check for other start-phase fields (excluding the pre-filled one)
 			const otherStartFields = this.getFieldsForPhase('start').filter(f => f.key !== fieldKey);
 			if (otherStartFields.length > 0) {
@@ -340,6 +347,12 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 		const active = this.entries.find(e => e.end === null);
 		if (active) {
 			await this.stopTimer();
+			return;
+		}
+
+		// Past timestamp → log a completed entry with duration, don't start live timer
+		if (timestamp) {
+			this.showLogForm(timestamp);
 			return;
 		}
 
@@ -532,6 +545,17 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			return ef;
 		});
 
+		if (this.def.hasDuration && timestamp) {
+			editFields.push({
+				key: '_duration',
+				label: 'Duration (minutes)',
+				type: 'number',
+				value: '15',
+				min: '1',
+				placeholder: '15',
+			});
+		}
+
 		editFields.push({
 			key: '_notes',
 			label: 'Notes',
@@ -550,6 +574,14 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 				fields,
 				notes,
 			};
+
+			if (this.def.hasDuration && values._duration) {
+				const durationMin = parseInt(values._duration, 10) || 15;
+				entry.durationSec = durationMin * 60;
+				entry.end = new Date(
+					new Date(entry.timestamp).getTime() + durationMin * 60_000
+				).toISOString();
+			}
 
 			this.entries.push(entry);
 			this.entries.sort(

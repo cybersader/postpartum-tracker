@@ -252,6 +252,37 @@
 	/* Just the base color, no effects */
 }
 
+/* Flash — hard on/off color toggle, very obvious */
+[data-timer-anim="flash"] .pt-quick-btn--active {
+	animation: pt-flash 0.8s step-end infinite;
+}
+@keyframes pt-flash {
+	0%, 100% {
+		background: var(--interactive-accent);
+		color: var(--text-on-accent);
+	}
+	50% {
+		background: var(--background-primary);
+		color: var(--text-normal);
+		border-color: var(--interactive-accent);
+	}
+}
+
+/* Bounce — scale bounce with glow, very attention-grabbing */
+[data-timer-anim="bounce"] .pt-quick-btn--active {
+	animation: pt-bounce 1s ease-in-out infinite;
+}
+@keyframes pt-bounce {
+	0%, 100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 var(--interactive-accent);
+	}
+	50% {
+		transform: scale(1.08);
+		box-shadow: 0 0 12px 4px var(--interactive-accent);
+	}
+}
+
 .pt-quick-btn-icon {
 	font-size: 1.4rem;
 	flex-shrink: 0;
