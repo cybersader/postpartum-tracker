@@ -106,6 +106,12 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 	deleteEntry?(id: string): Promise<void>;
 
 	/**
+	 * Programmatically add an entry from parsed NLP data.
+	 * Used by the quick entry section.
+	 */
+	addEntry?(data: Record<string, unknown>): void;
+
+	/**
 	 * Clean up any resources (timers, event listeners).
 	 */
 	destroy?(): void;

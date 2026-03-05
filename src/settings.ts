@@ -1126,6 +1126,17 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		new Setting(el).setName('Display').setHeading();
 
 		new Setting(el)
+			.setName('Quick entry')
+			.setDesc('Show a text input for natural language logging (e.g. "fed left 20 min", "wet diaper").')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showQuickEntry)
+				.onChange(async (value) => {
+					this.plugin.settings.showQuickEntry = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Time format')
 			.setDesc('How times are displayed throughout the tracker.')
 			.addDropdown(dd => dd

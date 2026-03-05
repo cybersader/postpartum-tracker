@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-03-05
+
+### Added
+
+- **NLP quick entry**: Optional text input at top of the widget for natural language logging. Type phrases like "fed left 20 min", "wet diaper", "took ibuprofen at 3pm", or "napped 45m" and the parser shows a preview before confirming.
+- Rules-based parser with zero dependencies — matches feeding, diaper, medication, sleep, and 10+ simple tracker types by keyword.
+- Extracts duration ("20 min", "1.5 hours"), volume ("4oz", "120ml"), time modifiers ("at 3pm", "30 min ago"), and medication names.
+- Confidence indicator: green (high), yellow (medium), red (low) border on preview.
+- Unmatched text falls back to the comments tracker when enabled.
+- `addEntry()` method on all tracker modules for programmatic entry creation.
+- Enable via Settings > General > Display > "Quick entry".
+
 ## [0.14.0] - 2026-03-05
 
 ### Added

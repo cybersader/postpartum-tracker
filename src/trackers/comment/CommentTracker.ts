@@ -213,4 +213,21 @@ export class CommentTracker implements TrackerModule<LogNoteEntry, CommentStats>
 		});
 		this.entryList.update(items);
 	}
+
+	addEntry(data: Record<string, unknown>): void {
+		const entry: LogNoteEntry = {
+			id: generateId(),
+			timestamp: (data.timestamp as string) || new Date().toISOString(),
+			category: (data.category as string) || 'general',
+			text: (data.text as string) || '',
+		};
+
+		if (!entry.text) return;
+
+		this.entries.push(entry);
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+		this.emitEvent?.({ type: 'comment-logged', entry });
+		this.refreshUI();
+		this.save?.();
+	}
 }

@@ -942,4 +942,31 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			if (!handledByPointer) handler();
 		});
 	}
+
+	addEntry(data: Record<string, unknown>): void {
+		const ts = (data.timestamp as string) || new Date().toISOString();
+		const entry: SimpleTrackerEntry = {
+			id: generateId(),
+			timestamp: ts,
+			fields: {},
+			notes: (data.notes as string) || '',
+		};
+
+		// Map duration if provided
+		if (data.durationMs) {
+			entry.end = new Date(new Date(ts).getTime() + (data.durationMs as number)).toISOString();
+		}
+
+		// Map value/unit to first matching field
+		if (data.value !== undefined) {
+			const numField = this.def.fields?.find(f => f.type === 'number');
+			if (numField) entry.fields[numField.key] = Number(data.value);
+		}
+
+		this.entries.push(entry);
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+		this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
+		this.refreshUI();
+		this.save?.();
+	}
 }

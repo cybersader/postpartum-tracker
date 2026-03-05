@@ -9,6 +9,7 @@ import { QuickActions } from './QuickActions';
 import { DailySummary, type SummaryCard } from './DailySummary';
 import { AlertsPanel } from './AlertsPanel';
 import { EventHistorySection } from './EventHistorySection';
+import { QuickEntrySection } from './QuickEntrySection';
 import { InlineEditPanel, type EditField } from './shared/InlineEditPanel';
 import { deepMerge } from '../utils/deepMerge';
 import { evaluateMilestones } from '../trackers/milestoneEvaluator';
@@ -132,6 +133,19 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		// 3. Health alerts
 		this.alertsPanel = new AlertsPanel(root);
+
+		// 3.5. Quick entry (NLP text input)
+		if (this.settings.showQuickEntry) {
+			const medNames = this.settings.medication.medications
+				.filter(m => m.enabled)
+				.map(m => m.name);
+			new QuickEntrySection(
+				root, this.registry, this.settings,
+				() => this.save(),
+				(event) => this.plugin.emitTrackerEvent(event),
+				medNames
+			);
+		}
 
 		// 4. Module sections (collapsible, reorderable)
 		this.sectionsContainer = root.createDiv({ cls: 'pt-sections' });

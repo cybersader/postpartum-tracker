@@ -421,6 +421,8 @@ export interface PostpartumTrackerSettings {
 	timerAnimationCustomColor: string;
 	/** How data entry forms are shown: modal popup or inline panel. */
 	inputMode: 'modal' | 'inline';
+	/** Show NLP quick entry text input at top of widget. */
+	showQuickEntry: boolean;
 	/** Status bar display mode. */
 	statusBarMode: 'badge' | 'live' | 'off';
 	/** Whether to show the daily summary stats bar at all. Default: off. */
@@ -502,6 +504,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	timerAnimationColor: 'accent',
 	timerAnimationCustomColor: '#ff4444',
 	inputMode: 'modal',
+	showQuickEntry: false,
 	statusBarMode: 'live',
 	showSummaryBar: false,
 	summaryPosition: 'top',

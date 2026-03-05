@@ -682,4 +682,30 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			if (!handledByPointer && !longPressed) handler();
 		});
 	}
+
+	addEntry(data: Record<string, unknown>): void {
+		const start = (data.timestamp as string) || new Date().toISOString();
+		const end = data.durationMs
+			? new Date(new Date(start).getTime() + (data.durationMs as number)).toISOString()
+			: start;
+		const entry: FeedingEntry = {
+			id: generateId(),
+			start,
+			end,
+			side: (data.side as 'left' | 'right' | 'both') || undefined,
+			type: (data.type as 'breast' | 'bottle') || 'breast',
+			notes: (data.notes as string) || '',
+			volumeMl: data.volume && (data.volumeUnit as string) === 'ml'
+				? Number(data.volume)
+				: data.volume && (data.volumeUnit as string) === 'oz'
+					? Math.round(Number(data.volume) * 29.5735)
+					: undefined,
+		};
+
+		this.entries.push(entry);
+		this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+		this.emitEvent?.({ type: 'feeding-logged', entry });
+		this.refreshUI();
+		this.save?.();
+	}
 }

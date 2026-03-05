@@ -348,4 +348,23 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		}));
 		this.entryList.update(items);
 	}
+
+	addEntry(data: Record<string, unknown>): void {
+		const name = (data.name as string) || '';
+		const config = this.configs.find(c => c.name.toLowerCase() === name.toLowerCase());
+
+		const entry: MedicationEntry = {
+			id: generateId(),
+			name: config?.name || name,
+			dosage: config?.dosage || (data.dosage as string) || undefined,
+			timestamp: (data.timestamp as string) || new Date().toISOString(),
+			notes: (data.notes as string) || '',
+		};
+
+		this.entries.push(entry);
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+		this.emitEvent?.({ type: 'medication-logged', entry, config });
+		this.refreshUI();
+		this.save?.();
+	}
 }

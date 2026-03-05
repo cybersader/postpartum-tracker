@@ -417,4 +417,22 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 			this.entryList.update(items);
 		}
 	}
+
+	addEntry(data: Record<string, unknown>): void {
+		const entry: DiaperEntry = {
+			id: generateId(),
+			timestamp: (data.timestamp as string) || new Date().toISOString(),
+			wet: Boolean(data.wet),
+			dirty: Boolean(data.dirty),
+			color: (data.color as DiaperColor) || undefined,
+			description: (data.description as string) || '',
+			notes: (data.notes as string) || '',
+		};
+
+		this.entries.push(entry);
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+		this.emitEvent?.({ type: 'diaper-logged', entry });
+		this.refreshUI();
+		this.save?.();
+	}
 }

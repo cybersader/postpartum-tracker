@@ -1894,3 +1894,68 @@
 	text-align: center;
 	padding: 2rem;
 }
+
+/* ── Quick Entry (NLP) ── */
+.pt-quick-entry {
+	padding: 0.5rem 0.75rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+.pt-quick-entry-input-row {
+	display: flex;
+}
+.pt-quick-entry-input {
+	flex: 1;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 0.95rem;
+}
+.pt-quick-entry-input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+.pt-quick-entry-preview {
+	margin-top: 0.4rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+	border-left: 3px solid var(--text-muted);
+	background: var(--background-secondary);
+	font-size: 0.9rem;
+}
+.pt-quick-entry-confidence--high {
+	border-left-color: var(--color-green, #22c55e);
+}
+.pt-quick-entry-confidence--medium {
+	border-left-color: var(--color-yellow, #eab308);
+}
+.pt-quick-entry-confidence--low {
+	border-left-color: var(--color-red, #ef4444);
+}
+.pt-quick-entry-preview-module {
+	font-weight: 600;
+}
+.pt-quick-entry-buttons {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.4rem;
+}
+.pt-quick-entry-confirm {
+	flex: 1;
+	padding: 0.4rem 0.75rem;
+	border-radius: 6px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	font-weight: 600;
+	cursor: pointer;
+}
+.pt-quick-entry-clear {
+	padding: 0.4rem 0.75rem;
+	border-radius: 6px;
+	background: var(--background-modifier-border);
+	color: var(--text-normal);
+	border: none;
+	cursor: pointer;
+}
