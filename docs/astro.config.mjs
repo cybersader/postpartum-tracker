@@ -38,6 +38,8 @@ export default defineConfig({
               slug: 'guides/todoist-integration',
             },
             { label: 'Mobile tips', slug: 'guides/mobile-tips' },
+            { label: 'Quick entry', slug: 'guides/quick-entry' },
+            { label: 'Customization', slug: 'guides/customization' },
             { label: 'Alarm setup', slug: 'guides/alarm-setup' },
           ],
         },

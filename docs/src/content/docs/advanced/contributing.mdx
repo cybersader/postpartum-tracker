@@ -38,15 +38,55 @@ The plugin source lives in `src/`. Build output (`main.js`) is generated in the 
 
 ```
 src/
-  main.ts              Plugin entry point
-  types.ts             All interfaces and defaults
-  settings.ts          Settings tab
-  data/                Data persistence
-  trackers/            Core + library tracker modules
-  widget/              UI components
-  integrations/        Todoist service
-  notifications/       Notification service + toast UI
-  utils/               Helpers
+  main.ts                           Plugin entry point
+  types.ts                          All interfaces and defaults
+  settings.ts                       Settings tab
+  StatusBarManager.ts               Status bar display
+  data/
+    CodeBlockStore.ts               JSON persistence
+    TrackerRegistry.ts              Module registration
+    dateUtils.ts                    Day boundary helpers
+  nlp/
+    QuickEntryParser.ts             Rules-based NLP parser
+  trackers/
+    BaseTracker.ts                  TrackerModule interface
+    library.ts                      SimpleTrackerDef catalog
+    logicPacks.ts                   Logic pack milestone definitions
+    milestoneEvaluator.ts           Milestone rule engine
+    feeding/FeedingTracker.ts       Core: feeding
+    feeding/feedingStats.ts
+    diaper/DiaperTracker.ts         Core: diapers
+    diaper/diaperStats.ts
+    medication/MedicationTracker.ts Core: medication
+    medication/medicationStats.ts
+    comment/CommentTracker.ts       Core: notes & comments
+    simple/SimpleTrackerModule.ts   Library: generic module class
+    simple/simpleTrackerStats.ts
+  widget/
+    TrackerWidget.ts                Main widget (MarkdownRenderChild)
+    CollapsibleSection.ts           Reorderable sections
+    QuickActions.ts                 Button grid
+    QuickEntrySection.ts            NLP quick entry UI
+    DailySummary.ts                 Summary strip
+    AlertsPanel.ts                  Health alerts
+    EventHistorySection.ts          Unified event feed
+    shared/
+      BigButton.ts                  Touch-friendly buttons
+      TimerDisplay.ts               Live timer component
+      EntryList.ts                  Scrollable entry list
+      InlineEditPanel.ts            Inline edit forms
+      FieldRenderer.ts              Dynamic field rendering
+  ui/
+    TrackerEditModal.ts             Modal edit dialog
+  integrations/
+    TodoistService.ts               Todoist API v1
+  notifications/
+    NotificationService.ts          Periodic scanner + dispatch
+    ToastNotification.ts            In-app toast UI
+  utils/
+    dom.ts                          DOM helpers
+    formatters.ts                   Time/date formatting
+    deepMerge.ts                    Settings merge utility
 ```
 
 See [Architecture](/postpartum-tracker/advanced/architecture/) for a detailed breakdown.

@@ -97,18 +97,55 @@ To configure:
 
 #### ntfy payload format
 
+The plugin sends JSON to the ntfy **server root URL** (e.g., `https://ntfy.sh`) with the topic in the body:
+
+```json
+{
+  "topic": "my-baby-alerts-abc123",
+  "title": "Feeding reminder",
+  "message": "Last feeding was 3.5 hours ago",
+  "priority": 5,
+  "tags": ["baby_bottle"]
+}
+```
+
+:::caution[ntfy URL format]
+The plugin POSTs to the server root (`https://ntfy.sh`), **not** to the topic URL (`https://ntfy.sh/topic`). This is required for ntfy's JSON publishing API. Posting JSON to a topic URL causes ntfy to display raw JSON text instead of a formatted notification.
+:::
+
+| Alert level | ntfy priority | Behavior |
+|-------------|--------------|----------|
+| Info | 2 (low) | Silent notification |
+| Warning | 3 (default) | Normal sound |
+| Urgent | 5 (max) | Overrides DND (Android) |
+
+#### Gotify payload format
+
 ```json
 {
   "title": "Feeding reminder",
   "message": "Last feeding was 3.5 hours ago",
-  "priority": 5,
-  "tags": ["baby_bottle"],
-  "extras": {
-    "category": "feeding",
-    "plugin": "postpartum-tracker"
-  }
+  "priority": 5
 }
 ```
+
+The plugin auto-appends `/message` to your Gotify server URL if not already present.
+
+| Alert level | Gotify priority |
+|-------------|----------------|
+| Info | 2 |
+| Warning | 5 |
+| Urgent | 8 |
+
+#### Pushover payload format
+
+Pushover uses URL-encoded form data with your app token and user key:
+
+| Alert level | Pushover priority | Behavior |
+|-------------|------------------|----------|
+| Info | 0 (normal) | Standard notification |
+| Warning | 1 (high) | Bypasses quiet hours |
+| Urgent | 2 (emergency) | Retries every 60s until acknowledged |
 
 #### Scheduled reminders
 

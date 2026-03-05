@@ -12,14 +12,17 @@ Plugin (main.ts)
   ├── TrackerRegistry          Map<string, TrackerModule>
   ├── NotificationService      Periodic vault scanner + multi-channel dispatch
   ├── TodoistService           Todoist API v1 integration
+  ├── StatusBarManager         Status bar display (badge/live/off)
   └── Code block processor
         └── TrackerWidget      MarkdownRenderChild
               ├── BabyInfoBar
               ├── DailySummary
               ├── QuickActions
               ├── AlertsPanel
-              └── CollapsibleSection[] (one per module)
-                    └── module.buildUI()
+              ├── QuickEntrySection     NLP text input + preview
+              ├── CollapsibleSection[]  (one per module, reorderable)
+              │     └── module.buildUI()
+              └── EventHistorySection   Unified chronological feed (in layout)
 ```
 
 ## Plugin lifecycle
@@ -64,6 +67,9 @@ interface TrackerModule<E, S> {
   // Optional
   tick?(): void;
   getAlerts?(): HealthAlert[];
+  editEntry?(id: string): void;
+  deleteEntry?(id: string): Promise<void>;
+  addEntry?(data: Record<string, unknown>): void;  // NLP quick entry
 
   // Library metadata (optional)
   category?: TrackerCategory;
@@ -103,7 +109,7 @@ A simple `Map`-based event bus on the plugin instance:
 - `emitTrackerEvent(event)` -- Fires to all listeners for `event.type`
 - `onTrackerEvent(type, listener)` -- Registers a listener
 
-Event types: `feeding-logged`, `medication-logged`, `diaper-logged`, `simple-logged`, `todoist-entry-created`
+Event types: `feeding-logged`, `medication-logged`, `diaper-logged`, `simple-logged`, `comment-logged`, `todoist-entry-created`
 
 Events are used by:
 - **TodoistService** -- Creates proactive tasks after logging
@@ -126,9 +132,9 @@ CodeMirror 6 (Live Preview mode) intercepts standard `click` events on elements 
 
 Every save rewrites the code block JSON, which causes Obsidian to destroy the current widget and create a new one. Modules must not hold references to DOM elements across saves.
 
-### Entry sorting
+### Entry sorting and display
 
-Entries are always sorted by timestamp after adding or editing, so they display chronologically.
+Entries are always sorted by timestamp after adding or editing. Entry lists display **newest first** with day-separator headers ("Today", "Yesterday", "Mon, Mar 3").
 
 ## File structure
 
@@ -137,35 +143,47 @@ src/
   main.ts                           Plugin entry, code block processor
   types.ts                          All interfaces and defaults
   settings.ts                       Settings tab
+  StatusBarManager.ts               Status bar display
   data/
     CodeBlockStore.ts               JSON persistence
     TrackerRegistry.ts              Module registration
     dateUtils.ts                    Day boundary helpers
+  nlp/
+    QuickEntryParser.ts             Rules-based NLP parser
   trackers/
     BaseTracker.ts                  TrackerModule interface
     library.ts                      SimpleTrackerDef catalog
+    logicPacks.ts                   Logic pack milestone definitions
+    milestoneEvaluator.ts           Milestone rule engine
     feeding/FeedingTracker.ts       Core: feeding
     feeding/feedingStats.ts
     diaper/DiaperTracker.ts         Core: diapers
     diaper/diaperStats.ts
     medication/MedicationTracker.ts Core: medication
     medication/medicationStats.ts
+    comment/CommentTracker.ts       Core: notes & comments
     simple/SimpleTrackerModule.ts   Library: generic module class
     simple/simpleTrackerStats.ts
   widget/
     TrackerWidget.ts                Main widget (MarkdownRenderChild)
     CollapsibleSection.ts           Reorderable sections
     QuickActions.ts                 Button grid
+    QuickEntrySection.ts            NLP quick entry UI
     DailySummary.ts                 Summary strip
     AlertsPanel.ts                  Health alerts
+    EventHistorySection.ts          Unified event feed
     shared/
       BigButton.ts                  Touch-friendly buttons
       TimerDisplay.ts               Live timer component
       EntryList.ts                  Scrollable entry list
+      InlineEditPanel.ts            Inline edit forms
+      FieldRenderer.ts              Dynamic field rendering
+  ui/
+    TrackerEditModal.ts             Modal edit dialog
   integrations/
     TodoistService.ts               Todoist API v1
   notifications/
-    NotificationService.ts          Periodic scanner
+    NotificationService.ts          Periodic scanner + multi-channel dispatch
     ToastNotification.ts            In-app toast UI
   utils/
     dom.ts                          DOM helpers

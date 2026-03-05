@@ -29,8 +29,9 @@ interface PostpartumData {
     diaper?: DiaperEntry[];
     medication?: MedicationEntry[];
     medicationConfig?: MedicationConfig[];
+    comments?: LogNoteEntry[];   // Notes & comments tracker
     logNotes?: LogNoteEntry[];
-    [key: string]: unknown;   // Library tracker entries
+    [key: string]: unknown;      // Library tracker entries
   };
 
   /** Optional per-code-block settings overrides */
@@ -50,6 +51,7 @@ interface FeedingEntry {
   id: string;
   type: 'breast' | 'bottle' | 'solid';
   side?: 'left' | 'right' | 'both';
+  position?: 'cradle' | 'cross-cradle' | 'football' | 'side-lying' | 'laid-back';
   start: string;              // ISO 8601
   end: string | null;         // null = actively feeding
   durationSec?: number;       // Cached for completed entries
@@ -105,9 +107,11 @@ interface MedicationConfig {
   maxDailyDoses: number;      // Max per 24h (0 = unlimited)
   enabled: boolean;
   icon: string;
-  category?: 'medication' | 'remedy';
+  category?: 'medication' | 'remedy';  // Remedy = topical (cream, spray, ice)
 }
 ```
+
+The `category` field distinguishes oral medications (`medication`) from topical treatments (`remedy`). Remedies like nipple cream or ice packs may have no max daily limit and are excluded from alternating schedule logic.
 
 ## SimpleTrackerEntry
 
@@ -128,7 +132,7 @@ The `fields` object contains key-value pairs matching the field definitions in t
 
 ## LogNoteEntry
 
-General-purpose notes:
+General-purpose notes. Used by both the legacy `logNotes` slot and the comments tracker (`trackers.comments`):
 
 ```typescript
 interface LogNoteEntry {
@@ -144,10 +148,12 @@ interface LogNoteEntry {
 The `layout` array controls the order of sections in the widget:
 
 ```json
-["feeding", "diaper", "medication", "sleep", "mood"]
+["feeding", "diaper", "medication", "sleep", "mood", "event-history"]
 ```
 
 Module IDs not in the layout array appear after the listed ones, sorted by `defaultOrder`. Module IDs in the layout that aren't enabled are silently skipped.
+
+The special ID `event-history` controls the position of the unified event history feed. It can be reordered among module sections like any other entry. If not present in the array, the event history section appears at the end (if enabled in settings).
 
 ## Logic packs
 

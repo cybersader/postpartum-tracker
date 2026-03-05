@@ -87,3 +87,5 @@ Both options are in the Todoist settings section under **Cleanup**.
 - API calls go through Obsidian's `requestUrl` (CORS-friendly, no external fetch needed)
 - Task map stored in `localStorage` under `pt-todoist-tasks`
 - Stale entries (completed, older than 48 hours) are cleaned automatically
+- Two-way sync writes use **atomic saves** (`app.vault.process()`) to prevent data corruption from concurrent writes
+- Medications with category `remedy` (topical treatments) create tasks with appropriate wording (e.g., "Apply Dermoplast" vs "Take Tylenol")

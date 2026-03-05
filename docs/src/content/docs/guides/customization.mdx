@@ -1,0 +1,230 @@
+---
+title: Customization
+description: Configure button appearance, timer animations, section ordering, hold-for-details, display preferences, and logic packs.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+The plugin offers extensive customization for buttons, timers, display preferences, and milestone tracking. All settings are in **Settings > Postpartum Tracker**.
+
+## Per-button configuration
+
+Each quick-action button can be individually configured with a visibility toggle, custom label, and custom icon.
+
+### Feeding buttons
+
+Open **Settings > Postpartum Tracker > Feeding** to configure:
+
+| Button | Default label | Default icon | Configurable |
+|--------|--------------|--------------|-------------|
+| Left breast | Breast L | L | Visible, label, icon |
+| Right breast | Breast R | R | Visible, label, icon |
+| Both breasts | Both | B | Visible, label, icon |
+| Bottle | Bottle | 🍼 | Visible, label, icon |
+
+Additional feeding toggles:
+
+- **Hold for details** -- when enabled, long-pressing a feeding button opens a form for notes and other fields before starting the timer.
+- **Show position field** -- adds a breastfeeding position selector (cradle, cross-cradle, football, side-lying, laid-back) to the details form.
+
+### Diaper buttons
+
+Open **Settings > Postpartum Tracker > Diapers** to configure:
+
+| Button | Default label | Configurable |
+|--------|--------------|-------------|
+| Wet | Wet | Visible, label, icon |
+| Dirty | Dirty | Visible, label, icon |
+| Both | Both | Visible, label, icon |
+
+Toggle: **Hold for details** -- long-press opens a form for stool color, description, and notes.
+
+### Medication buttons
+
+Open **Settings > Postpartum Tracker > Medication**:
+
+Toggle: **Hold for details** -- long-press opens a form with notes field before logging the dose.
+
+:::tip[Hiding unused buttons]
+If you only breastfeed and never use a bottle, hide the Bottle button. If you prefer logging "Both" diapers with one tap instead of choosing Wet vs Dirty, hide the individual buttons and keep only Both. The fewer buttons visible, the faster your workflow.
+:::
+
+## Hold-for-details
+
+Hold-for-details is a long-press gesture (~500ms) that opens a form with optional fields before logging an entry.
+
+**How it works:**
+- **Quick tap** -- logs the entry immediately with default values. Fastest workflow.
+- **Long press** (~500ms hold) -- opens a form for notes, position, color, or other optional fields.
+
+Buttons that support long-press show a subtle visual indicator.
+
+**Available on:**
+- Feeding buttons (notes, position)
+- Diaper buttons (stool color, description, notes)
+- Medication buttons (notes)
+- Simple tracker buttons with optional fields (notes, select fields)
+- Timer stop buttons (edit duration, side, notes on feeding stop)
+
+:::note
+Hold-for-details is configurable per tracker type. You can enable it for feeding but disable it for diapers, or vice versa.
+:::
+
+## Timer animation
+
+When a feeding timer is running, the active button animates to draw attention.
+
+### Animation styles
+
+Open **Settings > Postpartum Tracker > Display > Timer button animation**:
+
+| Style | Description |
+|-------|-------------|
+| Pulse (default) | Gentle scale + glow effect |
+| Blink | Opacity flashing |
+| Glow | Steady glow ring |
+| Solid | Static highlight (no animation) |
+| Flash | Rapid opacity flash |
+| Bounce | Subtle vertical bounce |
+
+### Animation colors
+
+Open **Settings > Postpartum Tracker > Display > Timer animation color**:
+
+| Preset | Color | Description |
+|--------|-------|-------------|
+| Accent (default) | Theme color | Uses your Obsidian theme's accent color |
+| Red alert | `#ef4444` | Warm red for urgency |
+| Green glow | `#22c55e` | Calming green |
+| Blue pulse | `#3b82f6` | Cool blue |
+| Custom | Any hex | Opens a color picker |
+
+The chosen color applies to all animation styles (pulse glow, blink flash, bounce shadow, etc.).
+
+## Section reordering
+
+Every collapsible section in the widget can be moved up or down:
+
+- **Arrow buttons** -- tap the ▲/▼ arrows in each section header.
+- **Drag handle** -- on desktop, drag the ⠇ handle to reorder.
+
+Section order is saved per code block in the `layout` array. Different notes can have different layouts.
+
+:::tip[Event history is moveable]
+The "Recent activity" feed (v0.15.4) is now a first-class section. You can move it above your feeding or diaper sections if you prefer seeing the event timeline first.
+:::
+
+## Display settings
+
+| Setting | Options | Default | Description |
+|---------|---------|---------|-------------|
+| Time format | 12h / 24h | 12h | How timestamps display |
+| Haptic feedback | On / Off | On | Vibration on button press (mobile) |
+| Show button labels | On / Off | On | Text labels under button icons |
+| Button size | Compact / Normal / Large | Normal | Quick-action button dimensions |
+| Button columns | Auto / 2-6 | Auto | Grid columns for buttons |
+| Input mode | Modal / Inline | Modal | How edit forms are presented |
+| Entry window | Hours (0 = today) | 24 | How far back entry lists show |
+| Summary bar | On / Off | Off | Show daily summary dashboard |
+| Summary position | Top / After buttons / Bottom | Top | Where the summary bar appears |
+| Show event history | On / Off | On | Unified activity feed |
+| Show quick entry | On / Off | Off | NLP text input ([guide](/postpartum-tracker/guides/quick-entry/)) |
+| Status bar | Badge / Live / Off | Off | Obsidian status bar display |
+
+## Entry list ordering
+
+All entry lists display **newest entries first** with day-separator headers:
+
+- **Today** -- entries from today
+- **Yesterday** -- entries from yesterday
+- **Mon, Mar 3** -- older entries show weekday, month, and day
+
+This makes it easy to see the most recent entries at a glance without scrolling.
+
+## Logic packs
+
+Logic packs are rule sets that define "what's normal" for your baby's age. They evaluate your tracker data against medical guidelines and surface progress in the daily summary and health alerts.
+
+### Enabling logic packs
+
+<Steps>
+
+1. Open **Settings > Postpartum Tracker > Logic packs**.
+
+2. Toggle on the packs relevant to your situation.
+
+3. Milestones appear in the **daily summary** (as a progress card) and as **health alerts** when expectations are not met.
+
+</Steps>
+
+### Built-in packs
+
+#### First week newborn
+
+Based on AAP and lactation consultant guidelines. Evaluates day-by-day expectations for the first 7 days:
+
+<details>
+<summary>Day-by-day expectations</summary>
+
+| Day | Wet diapers | Stools | Stool color | Feedings |
+|-----|------------|--------|-------------|----------|
+| 0-1 | 1+ | 1+ | Meconium | 8+ |
+| 2 | 2+ | 2+ | -- | 8+ |
+| 3 | 3+ | 3+ | Transitional/yellow | 8-12 |
+| 4 | 4+ | 3+ | Yellow-seedy | 8-12 |
+| 5-7 | 6+ | 3-4+ | Yellow-seedy | 8-12 |
+
+</details>
+
+**Recommended modules**: Feeding, Diapers
+
+#### Postpartum recovery
+
+Recovery milestones for the mother across the first 6 weeks:
+
+<details>
+<summary>Recovery milestones</summary>
+
+| Period | Milestone | Alert level |
+|--------|-----------|-------------|
+| Day 0-3 | Log pain at least once daily | Info |
+| Day 0-3 | Stay on medication schedule | Info |
+| Day 1-3 | Walk at least once daily | Info |
+| Day 0-3 | First bowel movement | Warning |
+| Day 4-7 | Increase to 2+ walks daily | Info |
+| Day 3-7 | Daily mood check-in (baby blues peak) | Info |
+| Week 2-6 | Continue daily mood monitoring | Warning |
+| Week 2-6 | Maintain regular walking | Info |
+
+</details>
+
+**Recommended modules**: Medication, Bowel movements, Walking, Pain, Mood
+
+#### Breastfeeding establishment
+
+Feeding frequency and duration targets for the first 8 weeks:
+
+<details>
+<summary>Weekly targets</summary>
+
+| Period | Feedings/day | Avg duration | Notes |
+|--------|-------------|--------------|-------|
+| Week 1 | 8-12 | 10+ min | Establishing supply |
+| Week 2-4 | 8-12 | 15+ min | Building supply |
+| Week 5-8 | 7-10 | 15+ min | Efficiency improving |
+
+</details>
+
+**Recommended modules**: Feeding
+
+### How milestones work
+
+- **Green (on track)**: The milestone's expectation is met. A positive message displays in alerts.
+- **Yellow (warning)**: The expectation is not met. An alert appears with guidance.
+- **Red (urgent)**: A critical expectation is missed. An urgent alert fires through all notification channels.
+
+The **daily summary** shows a milestone progress card (e.g., "3/5 milestones met") when logic packs are active.
+
+:::caution[Logic packs require birth date]
+Set your baby's birth date in the baby info bar or settings. Logic packs use the day-of-life calculation to determine which milestones apply.
+:::

@@ -21,7 +21,7 @@ Understanding the split between per-code-block data and global settings is impor
 
 ### Per code block (inside the JSON)
 
-- All tracker entries (feedings, diapers, medications, library tracker data)
+- All tracker entries (feedings, diapers, medications, comments, library tracker data)
 - Baby metadata (name, birth date, weight)
 - Layout order (which sections appear in what order)
 - Medication configurations (copied from settings on first creation)
@@ -56,7 +56,7 @@ Each code block stores a `layout` array that controls the order of sections. You
 - Drag handles (on desktop)
 - Up/down arrow buttons in each section header
 
-The order is saved per code block, so different notes can have different layouts.
+The order is saved per code block, so different notes can have different layouts. The special ID `event-history` controls the position of the unified activity feed -- it can be reordered among the tracker sections just like any module.
 
 ## Data format
 
@@ -71,13 +71,14 @@ The code block JSON follows this schema:
     "birthWeight": 3200,
     "unitSystem": "metric"
   },
-  "layout": ["feeding", "diaper", "medication", "sleep", "mood"],
+  "layout": ["feeding", "diaper", "medication", "sleep", "mood", "event-history"],
   "trackers": {
     "feeding": [{ "id": "...", "type": "breast", "side": "left", ... }],
     "diaper": [{ "id": "...", "wet": true, "dirty": false, ... }],
     "medication": [{ "id": "...", "name": "Tylenol", ... }],
     "sleep": [{ "id": "...", "fields": { "type": "nap", ... }, ... }],
     "medicationConfig": [{ "name": "Tylenol", "dosage": "500mg", ... }],
+    "comments": [],
     "logNotes": []
   }
 }

@@ -34,6 +34,20 @@ The quick action buttons at the top of the widget are designed for rapid logging
 - **Medications**: Each enabled medication has its own button.
 - **Library trackers**: Each enabled module adds buttons. Modules with select fields (like sleep type) show per-option buttons.
 
+:::tip[Hold for details]
+Long-press any quick-action button for ~500ms to open a form with optional fields (notes, feeding position, stool color, etc.). Quick tap logs with defaults. See [Customization](/postpartum-tracker/guides/customization/) for per-tracker settings.
+:::
+
+## Quick entry
+
+Enable **Show quick entry** in Settings > Display for a text input at the top of the widget. Type phrases like `fed left 20 min` or `wet diaper` -- useful when one-handed typing is easier than finding buttons.
+
+See the [Quick entry guide](/postpartum-tracker/guides/quick-entry/) for the full keyword reference.
+
+## Reorder sections
+
+Move sections up or down using the ▲/▼ arrows in each section header. The "Recent activity" event feed can also be reordered -- move it above your feeding section if you prefer seeing the timeline first. Layout is saved per code block.
+
 ## Past-time logging
 
 Missed logging something in the moment? Tap the clock icon in the quick actions bar to set a past timestamp. All subsequent entries will use that time until you clear it.
@@ -59,4 +73,4 @@ The plugin is lightweight by design:
 - Atomic saves via Obsidian's vault API
 - Library trackers share a single `SimpleTrackerModule` class -- no per-tracker code bloat
 
-Even with all 14+ modules enabled, the widget renders quickly on mobile devices.
+Even with all 20+ modules enabled, the widget renders quickly on mobile devices.

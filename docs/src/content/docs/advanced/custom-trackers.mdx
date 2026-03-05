@@ -21,6 +21,19 @@ The easiest way to add a tracker is directly from the plugin settings -- no code
    - **Select** -- dropdown with predefined options (e.g., mild/moderate/severe)
    - **Boolean** -- yes/no toggle (e.g., "With food?")
    - **Rating** -- numeric scale (e.g., 1-5 or 1-10)
+
+   Each field also has these options:
+   - **Optional** -- when enabled, the field is skipped on quick-tap and only shown on long-press (hold-for-details). Useful for fields you don't need every time.
+   - **Collect on** -- controls *when* the field is prompted:
+     - `log` -- collected on a single log action (default for non-duration trackers)
+     - `start` -- collected when starting a timer
+     - `stop` -- collected when stopping a timer
+     - `always` -- collected on every action (start, stop, log)
+
+   :::tip
+   For duration trackers, set "Collect on" to `stop` for fields like mood or notes that make more sense after the activity ends. Use `start` for fields you want captured before the timer begins.
+   :::
+
 5. Click **Save**.
 
 Your custom tracker immediately appears in the library with a `[custom]` badge. Enable it and it works just like any built-in library tracker -- with quick-action buttons, entry list, daily summary, and Todoist integration.

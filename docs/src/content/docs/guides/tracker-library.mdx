@@ -3,7 +3,7 @@ title: Tracker library
 description: Browse and enable additional tracking modules for sleep, pumping, pain, mood, and more.
 ---
 
-The tracker library lets you enable additional tracking modules beyond the three core trackers (feeding, diapers, medication). Each module adds a new section to your widget with its own quick-action buttons, entry list, and daily summary.
+The tracker library lets you enable additional tracking modules beyond the four core trackers (feeding, diapers, medication, notes & comments). Each module adds a new section to your widget with its own quick-action buttons, entry list, and daily summary.
 
 ## Enabling modules
 
@@ -35,6 +35,7 @@ These are the built-in modules with dedicated UIs, deep notification integration
 | **Feeding** | Breast (left/right/both) with live timer, bottle feeding, side tracking, time-since-last display |
 | **Diapers** | Wet/dirty/both quick buttons, stool color picker, daily count alerts |
 | **Medication** | Configurable medication list, dose timers, risk bars, daily limits, alternating schedule alerts |
+| **Notes & comments** | Free-text timestamped notes with categories (general, concern, milestone, reminder). Acts as catch-all for [quick entry](/postpartum-tracker/guides/quick-entry/) |
 
 ### Baby care (library)
 
@@ -120,6 +121,12 @@ Some modules with a `select` field that has 4 or fewer options show individual q
 - **Bleeding** shows buttons for **Light**, **Moderate**, and **Heavy**
 
 This reduces the number of taps needed to log common entries.
+
+## Hold-for-details
+
+Buttons with hold-for-details enabled support a long-press gesture (~500ms) that opens a form for optional fields like notes, stool color, or feeding position. Quick tap logs with defaults immediately.
+
+Hold-for-details is configurable per tracker type. See [Customization](/postpartum-tracker/guides/customization/) for details.
 
 ## Data storage
 

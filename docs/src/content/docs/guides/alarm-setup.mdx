@@ -176,6 +176,7 @@ Set webhook URL to `http://your-server:8080/your-topic`.
 - Test with `[Dev] Force notification check` command in Obsidian.
 
 **Webhook errors?**
-- The plugin sends JSON: `{ title, message, priority, topic?, extras }`.
-- Priority uses ntfy scale: 1-5 (not the old 3/5/8 scale).
+- **ntfy**: JSON is sent to the server root with `{ topic, title, message, priority, tags }`. Priority uses ntfy scale: 1-5.
+- **Gotify**: JSON is sent to `<server>/message` with `{ title, message, priority }`. Priority scale: 1-10.
+- **Pushover**: URL-encoded form with `{ token, user, title, message, priority }`.
 - Check the developer console (Ctrl+Shift+I) for error details.

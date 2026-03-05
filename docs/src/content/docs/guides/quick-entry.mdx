@@ -1,0 +1,183 @@
+---
+title: Quick entry
+description: Log feedings, diapers, and more by typing natural language like "fed left 20 min" or "wet diaper".
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+The quick entry feature lets you type free-form text to log entries instead of tapping buttons. A rules-based parser (zero dependencies) interprets your input and routes it to the correct tracker module.
+
+## Enable quick entry
+
+<Steps>
+
+1. Open **Settings > Postpartum Tracker > Display**.
+
+2. Toggle **Show quick entry** on.
+
+3. A text input appears at the top of the tracker widget, above the module sections.
+
+</Steps>
+
+## How it works
+
+1. Type a phrase describing what happened (e.g., `fed left 20 min`).
+2. A **live preview** appears below the input showing the matched module, a summary, and a confidence indicator.
+3. Press **Enter** or tap **Log entry** to confirm. Press **Escape** or tap **Clear** to discard.
+
+The preview updates as you type (150ms debounce for responsiveness).
+
+## Confidence levels
+
+The preview border color indicates how confident the parser is:
+
+| Color | Level | Meaning |
+|-------|-------|---------|
+| Green | High | Keyword matched **plus** specific data extracted (duration, volume, medication name) |
+| Yellow | Medium | Keyword matched but no additional detail |
+| Red | Low | No tracker matched — routed to comments as a free-text note |
+
+:::tip
+The **comments tracker** acts as a catch-all. If enabled, any text that doesn't match a tracker keyword becomes a timestamped note. If comments are disabled, unrecognized text returns no match.
+:::
+
+## Supported modules and keywords
+
+Only **enabled** modules are matched. If a module is disabled in Settings > Trackers, its keywords are ignored.
+
+:::caution
+Medication names are matched against your **configured medication list** in settings. If you add a new medication, the parser will recognize it immediately.
+:::
+
+### Feeding
+
+**Keywords**: `fed`, `feed`, `nurse`, `nursed`, `breastfed`, `breastfeed`, `bottle`, `formula`
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `fed left 20 min` | Breast feeding, left side, 20 minute duration |
+| `bottle 4oz` | Bottle feeding, 4 oz volume |
+| `nursed right 15m` | Breast feeding, right side, 15 minutes |
+| `breastfed both` | Breast feeding, both sides |
+| `formula 120ml` | Bottle feeding, 120 ml volume |
+
+<details>
+<summary>Extracted data fields</summary>
+
+- **Side**: `left`, `right`, `both` (from text)
+- **Type**: `bottle`/`formula` keywords → bottle; everything else → breast
+- **Duration**: see [Duration extraction](#duration-extraction)
+- **Volume**: see [Volume extraction](#volume-extraction)
+- **Time**: see [Time modifiers](#time-modifiers)
+
+</details>
+
+### Diaper
+
+**Keywords**: `wet`, `dirty`, `poop`, `poo`, `poopy`, `stool`, `diaper`, `nappy`, `both`
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `wet diaper` | Wet diaper |
+| `dirty green` | Dirty diaper, green stool color |
+| `both diaper` | Wet + dirty |
+| `poop yellow` | Dirty diaper, yellow-seedy color |
+
+<details>
+<summary>Color keywords</summary>
+
+The parser recognizes stool colors in the text: `meconium`, `transitional`, `yellow` (mapped to yellow-seedy), `green`, `brown`.
+
+</details>
+
+### Medication
+
+**Keywords**: `took`, `take`, `med`, `meds`, `medication`, `dose`, `dosed` — plus your configured medication names
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `took tylenol` | Tylenol dose (high confidence) |
+| `ibuprofen dose` | Ibuprofen dose (high confidence) |
+| `took meds` | Generic medication dose (low confidence — no specific med matched) |
+
+### Sleep
+
+**Keywords**: `slept`, `sleep`, `nap`, `napped`, `asleep`
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `nap 45 min` | Sleep entry, 45 minute duration |
+| `slept 2h` | Sleep entry, 2 hour duration |
+| `napped 1h 30m` | Sleep entry, 1 hour 30 minutes |
+
+### Simple trackers
+
+Each library module has its own keywords. The parser checks these in order:
+
+| Module | Keywords |
+|--------|----------|
+| Tummy time | `tummy`, `tummy time` |
+| Pumping | `pumped`, `pump`, `pumping` |
+| Temperature | `temp`, `temperature`, `fever` |
+| Weight | `weight`, `weighed` |
+| Pain | `pain`, `hurts`, `ache`, `cramp`, `cramping` |
+| Mood | `mood`, `feeling`, `felt` |
+| Walking | `walked`, `walk`, `walking` |
+| Skin-to-skin | `skin to skin`, `kangaroo` |
+| Hiccups | `hiccups`, `hiccup` |
+| Bowel movements | `bowel`, `bm` |
+| Bleeding | `bleeding`, `spotting` |
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `tummy time 10 min` | Tummy time, 10 min duration |
+| `pumped 120ml` | Pumping session, 120 ml |
+| `pain level 7` | Pain entry (fields parsed from context) |
+| `walked 20 min` | Walking/activity, 20 minutes |
+
+### Comments (fallback)
+
+Any text that doesn't match the above modules routes to the **comments** tracker as a general note with `low` confidence.
+
+| Phrase | Parsed as |
+|--------|-----------|
+| `Baby smiled for the first time!` | Comment note (general category) |
+| `Doctor appointment tomorrow` | Comment note (general category) |
+
+## Duration extraction
+
+The parser recognizes duration in several formats:
+
+| Format | Example |
+|--------|---------|
+| Minutes | `20 min`, `20m`, `20 minutes` |
+| Hours | `2h`, `2 hours`, `2hr` |
+| Decimal hours | `1.5 hours`, `1.5h` |
+| Combined | `1h 30m`, `1h 30 min` |
+
+## Volume extraction
+
+For bottle feeding and pumping:
+
+| Format | Example |
+|--------|---------|
+| Ounces | `4oz`, `4 oz` |
+| Milliliters | `120ml`, `120 ml` |
+
+## Time modifiers
+
+You can specify when an event happened:
+
+| Format | Example | Meaning |
+|--------|---------|---------|
+| Specific time | `at 3pm`, `at 3:30pm`, `at 14:30` | Sets the entry to that time today |
+| Relative time | `30 min ago`, `2 hours ago` | Subtracts from now |
+
+Time modifiers work with any module. For example: `fed left 20 min at 3pm` or `wet diaper 30 min ago`.
+
+## Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| **Enter** | Confirm and log the parsed entry |
+| **Escape** | Clear the input |
