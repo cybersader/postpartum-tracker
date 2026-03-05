@@ -488,27 +488,70 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			headRow.createEl('th', { text: h });
 		}
 		const tbody = table.createEl('tbody');
-		const rows = [
+
+		// Section: While Obsidian is open
+		const openHeader = tbody.createEl('tr', { cls: 'pt-table-section-header' });
+		const openTh = openHeader.createEl('td', { text: 'While Obsidian is open', attr: { colspan: '4' } });
+		openTh.style.fontWeight = 'bold';
+		openTh.style.paddingTop = '8px';
+		const openRows = [
 			['In-app toast', 'Yes', 'Yes', 'Yes'],
 			['System notification', 'Yes', 'No*', 'No*'],
-			['ntfy push notification', 'Yes', 'Yes', 'Yes'],
-			['ntfy alarm (loops until dismissed)', 'n/a', 'Yes', 'No'],
-			['ntfy bypass Do Not Disturb', 'n/a', 'Yes', 'No'],
-			['Pushover push notification', 'Yes', 'Yes', 'Yes'],
-			['Pushover alarm (retry until acknowledged)', 'n/a', 'Yes', 'Yes'],
-			['Pushover bypass DND (Critical Alerts)', 'n/a', 'Yes', 'Yes'],
-			['Todoist push reminder', 'Yes', 'Yes', 'Yes'],
-			['Works with Obsidian closed', 'ntfy/Pushover + Todoist', '', ''],
+			['ntfy push', 'Yes', 'Yes', 'Yes'],
+			['ntfy alarm (loops until dismiss)', 'n/a', 'Yes', 'No'],
+			['ntfy bypass DND', 'n/a', 'Yes', 'No'],
+			['Pushover push', 'Yes', 'Yes', 'Yes'],
+			['Pushover alarm (retry until ack)', 'n/a', 'Yes', 'Yes'],
+			['Pushover bypass DND (Critical)', 'n/a', 'Yes', 'Yes'],
+			['Todoist task + reminder', 'Yes', 'Yes', 'Yes'],
 		];
-		for (const row of rows) {
+		for (const row of openRows) {
 			const tr = tbody.createEl('tr');
-			for (const cell of row) {
-				tr.createEl('td', { text: cell });
-			}
+			for (const cell of row) tr.createEl('td', { text: cell });
 		}
+
+		// Section: Obsidian in background
+		const bgHeader = tbody.createEl('tr', { cls: 'pt-table-section-header' });
+		const bgTh = bgHeader.createEl('td', { text: 'Obsidian in background', attr: { colspan: '4' } });
+		bgTh.style.fontWeight = 'bold';
+		bgTh.style.paddingTop = '8px';
+		const bgRows = [
+			['In-app toast', 'No', 'No', 'No'],
+			['ntfy scheduled reminder', 'Yes', 'Yes', 'Yes'],
+			['Pushover scheduled reminder', 'Maybe\u2020', 'Maybe\u2020', 'Maybe\u2020'],
+			['Todoist reminder', 'Yes', 'Yes', 'Yes'],
+		];
+		for (const row of bgRows) {
+			const tr = tbody.createEl('tr');
+			for (const cell of row) tr.createEl('td', { text: cell });
+		}
+
+		// Section: Obsidian closed
+		const closedHeader = tbody.createEl('tr', { cls: 'pt-table-section-header' });
+		const closedTh = closedHeader.createEl('td', { text: 'Obsidian fully closed', attr: { colspan: '4' } });
+		closedTh.style.fontWeight = 'bold';
+		closedTh.style.paddingTop = '8px';
+		const closedRows = [
+			['ntfy scheduled reminder', 'Yes', 'Yes', 'Yes'],
+			['Pushover scheduled reminder', 'No', 'No', 'No'],
+			['Todoist reminder', 'Yes', 'Yes', 'Yes'],
+		];
+		for (const row of closedRows) {
+			const tr = tbody.createEl('tr');
+			for (const cell of row) tr.createEl('td', { text: cell });
+		}
+
 		howItWorks.createEl('p', {
 			cls: 'pt-webhook-guide-note',
-			text: '* Obsidian mobile uses Capacitor which blocks the Web Notification API. Use ntfy or Todoist for mobile push notifications.',
+			text: '* Mobile uses Capacitor which blocks the Web Notification API.',
+		});
+		howItWorks.createEl('p', {
+			cls: 'pt-webhook-guide-note',
+			text: '\u2020 Pushover reminders use in-process timers \u2014 they fire if Obsidian stays alive in background, but the OS may kill it.',
+		});
+		howItWorks.createEl('p', {
+			cls: 'pt-webhook-guide-note',
+			text: 'ntfy scheduled reminders are stored server-side and arrive regardless of Obsidian state. Todoist tasks sync independently.',
 		});
 
 		// ── Alert settings ──
@@ -688,32 +731,25 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				// ntfy setup guide
 				const guideEl = el.createDiv({ cls: 'pt-webhook-guide' });
 
-				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Basic setup:' });
 				const basicSteps = guideEl.createEl('ol', { cls: 'pt-webhook-guide-steps' });
-				basicSteps.createEl('li', { text: 'Install the ntfy app on your phone (iOS App Store / Google Play).' });
-				basicSteps.createEl('li', { text: `Open the app and subscribe to topic: ${notif.ntfyTopic}` });
-				basicSteps.createEl('li', { text: 'Tap "Send test" below to verify it works.' });
+				basicSteps.createEl('li', { text: 'Install ntfy app (iOS App Store / Google Play)' });
+				basicSteps.createEl('li', { text: `Subscribe to topic: ${notif.ntfyTopic}` });
+				basicSteps.createEl('li', { text: 'Tap "Send test" below to verify' });
 
-				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android: Enable alarm-style alerts' });
-				guideEl.createEl('p', {
-					cls: 'pt-webhook-guide-note',
-					text: 'These steps make urgent alerts ring continuously until you dismiss them, even when your phone is on silent or Do Not Disturb.',
-				});
+				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android alarm setup' });
 				const alarmSteps = guideEl.createEl('ol', { cls: 'pt-webhook-guide-steps' });
-				alarmSteps.createEl('li', { text: 'In the ntfy app, long-press your subscription \u2192 Notification settings' });
-				alarmSteps.createEl('li', { text: 'Enable "Insistent notification" (keeps ringing until dismissed)' });
+				alarmSteps.createEl('li', { text: 'Long-press subscription \u2192 Notification settings' });
+				alarmSteps.createEl('li', { text: 'Enable "Keep alerting" for max priority' });
 				alarmSteps.createEl('li', { text: 'Enable "Override Do Not Disturb"' });
-				alarmSteps.createEl('li', { text: 'Choose an alarm sound for the "Max priority" channel' });
+				alarmSteps.createEl('li', { text: 'Set an alarm sound for max priority channel' });
 
-				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'iOS limitations' });
-				const iosNotes = guideEl.createEl('ul', { cls: 'pt-webhook-guide-steps' });
-				iosNotes.createEl('li', { text: 'iOS does not support looping notifications via ntfy \u2014 priority 5 maps to "time-sensitive" only' });
-				iosNotes.createEl('li', { text: 'For alarm-loop on iOS, also enable Pushover below' });
-
-				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Offline reliability' });
 				guideEl.createEl('p', {
 					cls: 'pt-webhook-guide-note',
-					text: 'When you log a feeding or medication, the plugin schedules a future ntfy notification. The ntfy server holds it and delivers even after you close Obsidian.',
+					text: 'iOS: ntfy delivers time-sensitive alerts but cannot loop sound. For alarm-loop on iOS, enable Pushover below.',
+				});
+				guideEl.createEl('p', {
+					cls: 'pt-webhook-guide-note',
+					text: 'Scheduled reminders are stored on the ntfy server and arrive even after closing Obsidian.',
 				});
 
 				new Setting(el)

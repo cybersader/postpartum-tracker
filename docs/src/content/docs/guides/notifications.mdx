@@ -68,7 +68,7 @@ System notifications do not work on Obsidian mobile. The Capacitor runtime block
 
 ### Webhooks (push notifications)
 
-Send push notifications to your phone via external services. The plugin supports three presets:
+Send push notifications to your phone via external services. Enable multiple services simultaneously -- each person sharing a vault can use their preferred service.
 
 | Service | Platform | Alarm loop? | DND bypass? | Cost |
 |---------|----------|-------------|-------------|------|
@@ -76,9 +76,22 @@ Send push notifications to your phone via external services. The plugin supports
 | **ntfy.sh** | Android + iOS | Android only | Android only | Free |
 | **Gotify** | Android | No | No | Free (self-hosted) |
 
+#### What works when Obsidian is closed?
+
+| Feature | Obsidian open | Obsidian in background | Obsidian closed |
+|---------|--------------|----------------------|-----------------|
+| In-app toast | Yes | No | No |
+| ntfy push | Yes | Yes | Yes |
+| ntfy scheduled reminder | Yes | Yes | **Yes** (server-side) |
+| Pushover push | Yes | Yes | Yes |
+| Pushover scheduled reminder | Yes | Maybe* | **No** (in-process timer) |
+| Todoist reminder | Yes | Yes | **Yes** (independent) |
+
+\* Pushover reminders use in-process timers. They fire if Obsidian stays alive in background, but the OS may kill it.
+
 To configure:
 1. Enable **Webhook notifications**.
-2. Select a preset (ntfy, Pushover, Gotify, or Custom).
+2. Toggle on the services you want (ntfy, Pushover, Gotify, or Custom).
 3. Fill in the required fields (topic name, API keys, etc.).
 4. Click **Send test** to verify connectivity.
 

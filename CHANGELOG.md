@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-03-05
+
+### Changed
+
+- **Notification platform table**: Reorganized into three sections — "While Obsidian is open", "Obsidian in background", and "Obsidian fully closed" — so users can see exactly which services work in each state.
+- **ntfy guide streamlined**: Setup instructions shortened and consolidated; removed verbose separate sections for iOS limitations and offline reliability.
+- ntfy setting label corrected to "Keep alerting" (matches actual ntfy app UI).
+
 ## [0.7.1] - 2026-03-05
 
 ### Added
@@ -199,7 +207,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...HEAD
+[0.7.2]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...0.6.0
