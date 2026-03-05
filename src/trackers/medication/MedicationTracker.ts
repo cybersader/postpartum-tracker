@@ -5,7 +5,7 @@ import { DEFAULT_MEDICATIONS } from '../../types';
 import { MedicationStats, computeMedStats, type MedDoseInfo } from './medicationStats';
 import { formatTime, generateId } from '../../utils/formatters';
 import { div, span } from '../../utils/dom';
-import { filterToday } from '../../data/dateUtils';
+import { filterToday, filterRecent } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
 import { TrackerEditModal } from '../../ui/TrackerEditModal';
@@ -298,8 +298,8 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 	private refreshEntryList(): void {
 		if (!this.entryList) return;
 
-		const todayEntries = filterToday(this.entries, e => e.timestamp);
-		const items: EntryListItem[] = todayEntries.map(e => ({
+		const recentEntries = filterRecent(this.entries, e => e.timestamp, this.settings?.entryWindowHours ?? 24);
+		const items: EntryListItem[] = recentEntries.map(e => ({
 			id: e.id,
 			time: formatTime(e.timestamp, this.settings?.timeFormat),
 			icon: '\uD83D\uDC8A',

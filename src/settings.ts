@@ -1056,6 +1056,21 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(el)
+			.setName('Entry list window')
+			.setDesc('How far back the entry list shows. 0 = today only (resets at midnight). Default 24 hours so late-night entries stay visible.')
+			.addDropdown(dd => dd
+				.addOption('0', 'Today only (midnight cutoff)')
+				.addOption('12', 'Last 12 hours')
+				.addOption('24', 'Last 24 hours')
+				.addOption('48', 'Last 48 hours')
+				.setValue(String(this.plugin.settings.entryWindowHours ?? 24))
+				.onChange(async (value) => {
+					this.plugin.settings.entryWindowHours = parseInt(value);
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Haptic feedback')
 			.setDesc('Vibrate on button presses (mobile only).')
 			.addToggle(toggle => toggle

@@ -4,7 +4,7 @@ import type { DiaperEntry, DiaperColor, PostpartumTrackerSettings, QuickAction, 
 import { DiaperStats, computeDiaperStats, getDiaperAlerts } from './diaperStats';
 import { formatTime, generateId } from '../../utils/formatters';
 import { div, span } from '../../utils/dom';
-import { filterToday } from '../../data/dateUtils';
+import { filterToday, filterRecent } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
 import { TrackerEditModal } from '../../ui/TrackerEditModal';
@@ -310,8 +310,8 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 		}
 
 		if (this.entryList) {
-			const todayEntries = filterToday(this.entries, e => e.timestamp);
-			const items: EntryListItem[] = todayEntries.map(e => {
+			const recentEntries = filterRecent(this.entries, e => e.timestamp, this.settings?.entryWindowHours ?? 24);
+			const items: EntryListItem[] = recentEntries.map(e => {
 				const parts: string[] = [];
 				if (e.wet) parts.push('wet');
 				if (e.dirty) parts.push('dirty');

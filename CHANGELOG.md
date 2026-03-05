@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-05
+
+### Added
+
+- **Rolling entry window**: Entry lists now show the last 24 hours by default instead of cutting off at midnight. Late-night feedings, diapers, and meds stay visible after midnight.
+- **Entry list window setting**: Configurable in General > Display. Options: today only (midnight cutoff), 12h, 24h, or 48h rolling window.
+
 ## [0.7.5] - 2026-03-05
 
 ### Fixed
@@ -225,7 +232,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...0.8.0
 [0.7.5]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...0.7.5
 [0.7.4]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...0.7.4
 [0.7.3]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...0.7.3

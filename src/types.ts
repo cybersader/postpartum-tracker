@@ -373,6 +373,8 @@ export interface PostpartumTrackerSettings {
 	/** Module IDs opted-in to appear in the daily summary bar. Empty = nothing shown. */
 	visibleSummaryModules: string[];
 	enableDebugLog: boolean;
+	/** Rolling window (hours) for the entry list. 0 = today only (midnight cutoff). */
+	entryWindowHours: number;
 
 	/** Which module IDs are enabled */
 	enabledModules: string[];
@@ -439,6 +441,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	summaryOrder: [],
 	visibleSummaryModules: [],
 	enableDebugLog: false,
+	entryWindowHours: 24,
 	activeLogicPacks: [],
 	libraryTrackerOverrides: {},
 	customTrackers: [],

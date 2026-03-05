@@ -4,7 +4,7 @@ import type { FeedingEntry, PostpartumTrackerSettings, QuickAction, HealthAlert,
 import { FeedingStats, computeFeedingStats, getActiveElapsed } from './feedingStats';
 import { formatDuration, formatTime, formatDurationShort, generateId } from '../../utils/formatters';
 import { div, span } from '../../utils/dom';
-import { filterToday, timeAgo } from '../../data/dateUtils';
+import { filterToday, filterRecent, timeAgo } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { TimerDisplay } from '../../widget/shared/TimerDisplay';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
@@ -448,10 +448,10 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 			}
 		}
 
-		// Entry list
+		// Entry list (rolling window so recent entries stay visible after midnight)
 		if (this.entryList) {
-			const todayEntries = filterToday(this.entries, e => e.start);
-			const items: EntryListItem[] = todayEntries
+			const recentEntries = filterRecent(this.entries, e => e.start, this.settings?.entryWindowHours ?? 24);
+			const items: EntryListItem[] = recentEntries
 				.filter(e => e.end !== null)
 				.map(e => {
 					if (e.type === 'bottle') {

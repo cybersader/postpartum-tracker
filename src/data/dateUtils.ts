@@ -39,6 +39,35 @@ export function filterToday<T>(
 	});
 }
 
+/**
+ * Filter items to a rolling window: today's entries OR last `hours` hours,
+ * whichever reaches further back.  Right after midnight this keeps
+ * showing the previous evening's entries until new ones accumulate.
+ * Pass 0 for strict today-only (midnight cutoff).
+ */
+export function filterRecent<T>(
+	items: T[],
+	getTimestamp: (item: T) => string,
+	hours = 24,
+): T[] {
+	const now = Date.now();
+	const dayStart = getDayStart().getTime();
+	if (hours <= 0) {
+		// Strict today-only
+		const end = getDayEnd().getTime();
+		return items.filter(item => {
+			const ts = new Date(getTimestamp(item)).getTime();
+			return ts >= dayStart && ts <= end;
+		});
+	}
+	const rolling = now - hours * 60 * 60 * 1000;
+	const cutoff = Math.min(dayStart, rolling);
+	return items.filter(item => {
+		const ts = new Date(getTimestamp(item)).getTime();
+		return ts >= cutoff && ts <= now;
+	});
+}
+
 /** Parse a YYYY-MM-DD string as local midnight (avoids UTC timezone shift). */
 export function parseLocalDate(dateStr: string): Date {
 	const [y, m, d] = dateStr.split('T')[0].split('-').map(Number);

@@ -19,7 +19,7 @@ import type {
 import { SimpleTrackerStats, computeSimpleTrackerStats } from './simpleTrackerStats';
 import { formatTime, formatDuration, formatDurationShort, generateId } from '../../utils/formatters';
 import { div, span } from '../../utils/dom';
-import { filterToday, timeAgo } from '../../data/dateUtils';
+import { filterToday, filterRecent, timeAgo } from '../../data/dateUtils';
 import { EntryList, type EntryListItem } from '../../widget/shared/EntryList';
 import { TimerDisplay } from '../../widget/shared/TimerDisplay';
 import { InlineEditPanel, type EditField } from '../../widget/shared/InlineEditPanel';
@@ -740,10 +740,10 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			}
 		}
 
-		// Entry list
+		// Entry list (rolling window so recent entries stay visible after midnight)
 		if (this.entryList) {
-			const todayEntries = filterToday(this.entries, e => e.timestamp);
-			const items: EntryListItem[] = todayEntries
+			const recentEntries = filterRecent(this.entries, e => e.timestamp, this.settings?.entryWindowHours ?? 24);
+			const items: EntryListItem[] = recentEntries
 				.filter(e => e.end !== null || !this.def.hasDuration) // Hide active timer entries
 				.map(e => {
 					const parts: string[] = [];
