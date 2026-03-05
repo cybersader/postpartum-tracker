@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type PostpartumTrackerPlugin from './main';
-import type { NotificationType, TrackerCategory, LibraryTrackerOverride, TimerAnimation } from './types';
+import type { NotificationType, TrackerCategory, LibraryTrackerOverride, TimerAnimation, TimerAnimationColorPreset } from './types';
 import { TRACKER_LIBRARY, TRACKER_CATEGORIES, BUILTIN_MODULE_IDS } from './trackers/library';
 import { LOGIC_PACKS } from './trackers/logicPacks';
 import { EmojiPickerModal } from './ui/EmojiPickerModal';
@@ -1164,6 +1164,35 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
+
+		new Setting(el)
+			.setName('Timer animation color')
+			.setDesc('Color used for all timer animation styles.')
+			.addDropdown(dd => dd
+				.addOption('accent', 'Accent color (theme default)')
+				.addOption('red', 'Red alert')
+				.addOption('green', 'Green glow')
+				.addOption('blue', 'Blue pulse')
+				.addOption('custom', 'Custom color...')
+				.setValue(this.plugin.settings.timerAnimationColor)
+				.onChange(async (value) => {
+					this.plugin.settings.timerAnimationColor = value as TimerAnimationColorPreset;
+					await this.plugin.saveSettings();
+					this.display(); // Re-render to show/hide color picker
+				})
+			);
+
+		if (this.plugin.settings.timerAnimationColor === 'custom') {
+			new Setting(el)
+				.setName('Custom timer color')
+				.addColorPicker(picker => picker
+					.setValue(this.plugin.settings.timerAnimationCustomColor)
+					.onChange(async (value) => {
+						this.plugin.settings.timerAnimationCustomColor = value;
+						await this.plugin.saveSettings();
+					})
+				);
+		}
 
 		new Setting(el)
 			.setName('Input mode')

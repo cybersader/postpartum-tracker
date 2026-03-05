@@ -7,6 +7,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-05
+
+### Added
+
+- **Timer animation color**: Choose the color for all timer animations — accent (theme default), red alert, green glow, blue pulse, or a custom color via color picker.
+- Custom color picker appears when "Custom color" is selected.
+
+### Changed
+
+- **Pulse animation strengthened**: Pulse now includes a visible scale transform (1.06x) and larger glow (16px spread) in addition to opacity fade. Much more noticeable on mobile.
+- All timer animations (pulse, blink, flash, bounce, glow) now use the configured timer color instead of always using the theme accent color.
+- Fixed duplicate `@keyframes pt-pulse` that was overriding the enhanced version with a simpler opacity-only variant.
+
 ## [0.11.0] - 2026-03-05
 
 ### Fixed
@@ -268,7 +281,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/cybersader/postpartum-tracker/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/cybersader/postpartum-tracker/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/cybersader/postpartum-tracker/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...0.9.0

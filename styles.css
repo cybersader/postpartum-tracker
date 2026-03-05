@@ -211,25 +211,32 @@
 	cursor: not-allowed;
 }
 
+/* Timer color — defaults to accent, overridden by JS when custom color is set */
+.pt-quick-actions-buttons {
+	--pt-timer-color: var(--interactive-accent);
+}
+
 /* Active timer button base */
 .pt-quick-btn--active {
-	border-color: var(--interactive-accent);
-	background: var(--interactive-accent);
+	border-color: var(--pt-timer-color);
+	background: var(--pt-timer-color);
 	color: var(--text-on-accent);
 }
 
-/* Pulse animation (default) */
+/* Pulse animation (default) — strong scale + glow */
 [data-timer-anim="pulse"] .pt-quick-btn--active {
 	animation: pt-pulse 1.5s ease-in-out infinite;
 }
 @keyframes pt-pulse {
 	0%, 100% {
-		box-shadow: 0 0 0 0 var(--interactive-accent);
+		box-shadow: 0 0 0 0 var(--pt-timer-color);
 		opacity: 1;
+		transform: scale(1);
 	}
 	50% {
-		box-shadow: 0 0 12px 4px var(--interactive-accent);
-		opacity: 0.8;
+		box-shadow: 0 0 16px 8px var(--pt-timer-color);
+		opacity: 0.85;
+		transform: scale(1.06);
 	}
 }
 
@@ -244,7 +251,7 @@
 
 /* Steady glow */
 [data-timer-anim="glow"] .pt-quick-btn--active {
-	box-shadow: 0 0 14px 5px var(--interactive-accent);
+	box-shadow: 0 0 14px 5px var(--pt-timer-color);
 }
 
 /* Solid (no animation) */
@@ -258,13 +265,13 @@
 }
 @keyframes pt-flash {
 	0%, 100% {
-		background: var(--interactive-accent);
+		background: var(--pt-timer-color);
 		color: var(--text-on-accent);
 	}
 	50% {
 		background: var(--background-primary);
 		color: var(--text-normal);
-		border-color: var(--interactive-accent);
+		border-color: var(--pt-timer-color);
 	}
 }
 
@@ -275,11 +282,11 @@
 @keyframes pt-bounce {
 	0%, 100% {
 		transform: scale(1);
-		box-shadow: 0 0 0 0 var(--interactive-accent);
+		box-shadow: 0 0 0 0 var(--pt-timer-color);
 	}
 	50% {
 		transform: scale(1.08);
-		box-shadow: 0 0 12px 4px var(--interactive-accent);
+		box-shadow: 0 0 12px 4px var(--pt-timer-color);
 	}
 }
 
@@ -663,7 +670,7 @@
 }
 
 .pt-big-button--active {
-	animation: pt-pulse 1.5s ease-in-out infinite;
+	animation: pt-pulse-soft 1.5s ease-in-out infinite;
 }
 
 .pt-btn-stop {
@@ -696,7 +703,7 @@
 
 .pt-timer-display--active .pt-timer-label {
 	color: var(--interactive-accent);
-	animation: pt-pulse 1.5s ease-in-out infinite;
+	animation: pt-pulse-soft 1.5s ease-in-out infinite;
 }
 
 .pt-timer-display--active .pt-timer-time {
@@ -1346,7 +1353,7 @@
 }
 
 /* --- Animations --- */
-@keyframes pt-pulse {
+@keyframes pt-pulse-soft {
 	0%, 100% { opacity: 1; }
 	50% { opacity: 0.6; }
 }

@@ -13,6 +13,7 @@ export class QuickActions {
 	private buttonSize: ButtonSize;
 	private buttonColumns: number;
 	private timerAnimation: TimerAnimation;
+	private timerColor: string | null;
 	private buttonEls: Map<string, HTMLButtonElement> = new Map();
 	private btnRow: HTMLElement | null = null;
 
@@ -22,13 +23,14 @@ export class QuickActions {
 	private clockToggle: HTMLButtonElement | null = null;
 	private clockRow: HTMLElement | null = null;
 
-	constructor(parent: HTMLElement, hapticEnabled: boolean, showLabels: boolean = true, buttonSize: ButtonSize = 'normal', buttonColumns: number = 0, timerAnimation: TimerAnimation = 'pulse') {
+	constructor(parent: HTMLElement, hapticEnabled: boolean, showLabels: boolean = true, buttonSize: ButtonSize = 'normal', buttonColumns: number = 0, timerAnimation: TimerAnimation = 'pulse', timerColor: string | null = null) {
 		this.el = parent.createDiv({ cls: 'pt-quick-actions' });
 		this.hapticEnabled = hapticEnabled;
 		this.showLabels = showLabels;
 		this.buttonSize = buttonSize;
 		this.buttonColumns = buttonColumns;
 		this.timerAnimation = timerAnimation;
+		this.timerColor = timerColor;
 	}
 
 	/** Render all quick action buttons from the provided actions. */
@@ -60,6 +62,9 @@ export class QuickActions {
 		}
 		// Timer animation variant
 		btnRow.dataset.timerAnim = this.timerAnimation;
+		if (this.timerColor) {
+			btnRow.style.setProperty('--pt-timer-color', this.timerColor);
+		}
 
 		// Clock toggle button
 		this.clockToggle = btnRow.createEl('button', {

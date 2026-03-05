@@ -122,7 +122,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 		}
 
 		// 2. Quick actions area (collected from all modules)
-		this.quickActions = new QuickActions(root, this.settings.hapticFeedback, this.settings.showButtonLabels, this.settings.buttonSize, this.settings.buttonColumns, this.settings.timerAnimation);
+		const timerColor = this.resolveTimerAnimationColor();
+		this.quickActions = new QuickActions(root, this.settings.hapticFeedback, this.settings.showButtonLabels, this.settings.buttonSize, this.settings.buttonColumns, this.settings.timerAnimation, timerColor);
 
 		// Summary after buttons
 		if (showSummary && summaryPos === 'after-buttons') {
@@ -341,6 +342,18 @@ export class TrackerWidget extends MarkdownRenderChild {
 		}
 
 		this.updateMoveButtons();
+	}
+
+	/** Resolve timer animation color from preset to hex, or null for accent. */
+	private resolveTimerAnimationColor(): string | null {
+		const preset = this.settings.timerAnimationColor;
+		switch (preset) {
+			case 'red':    return '#ef4444';
+			case 'green':  return '#22c55e';
+			case 'blue':   return '#3b82f6';
+			case 'custom': return this.settings.timerAnimationCustomColor || '#ff4444';
+			default:       return null; // 'accent' — use CSS var
+		}
 	}
 
 	/** Collect quick-action buttons from all modules and render them. */

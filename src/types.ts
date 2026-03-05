@@ -354,6 +354,7 @@ export interface TrackerEvent {
 
 export type ButtonSize = 'compact' | 'normal' | 'large';
 export type TimerAnimation = 'pulse' | 'blink' | 'glow' | 'solid' | 'flash' | 'bounce';
+export type TimerAnimationColorPreset = 'accent' | 'red' | 'green' | 'blue' | 'custom';
 
 export interface PostpartumTrackerSettings {
 	timeFormat: '12h' | '24h';
@@ -362,6 +363,10 @@ export interface PostpartumTrackerSettings {
 	buttonSize: ButtonSize;
 	buttonColumns: number;   // 0 = auto
 	timerAnimation: TimerAnimation;
+	/** Color preset for timer animation. Default: 'accent' (uses theme --interactive-accent). */
+	timerAnimationColor: TimerAnimationColorPreset;
+	/** Custom hex color when timerAnimationColor === 'custom'. */
+	timerAnimationCustomColor: string;
 	/** How data entry forms are shown: modal popup or inline panel. */
 	inputMode: 'modal' | 'inline';
 	/** Status bar display mode. */
@@ -439,6 +444,8 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	buttonSize: 'normal',
 	buttonColumns: 0,
 	timerAnimation: 'pulse',
+	timerAnimationColor: 'accent',
+	timerAnimationCustomColor: '#ff4444',
 	inputMode: 'modal',
 	statusBarMode: 'live',
 	showSummaryBar: false,
