@@ -900,6 +900,26 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		this.settings = deepMerge(DEFAULT_SETTINGS, await this.loadData());
 		this.reconcileMedications();
+		this.migrateNotificationPreset();
+	}
+
+	/** Migrate old single webhookPreset to per-service toggles. */
+	private migrateNotificationPreset(): void {
+		const notif = this.settings.notifications;
+		// If user has webhookEnabled but no per-service toggle is set, migrate
+		if (notif.webhookEnabled &&
+			!notif.ntfyEnabled && !notif.pushoverEnabled && !notif.gotifyEnabled && !notif.customWebhookEnabled) {
+			if (notif.webhookPreset === 'ntfy' && notif.ntfyTopic) {
+				notif.ntfyEnabled = true;
+			} else if (notif.webhookPreset === 'pushover' && notif.pushoverAppToken) {
+				notif.pushoverEnabled = true;
+			} else if (notif.webhookPreset === 'gotify' && notif.webhookUrl) {
+				notif.gotifyEnabled = true;
+				notif.gotifyUrl = notif.webhookUrl;
+			} else if (notif.webhookPreset === 'custom' && notif.webhookUrl) {
+				notif.customWebhookEnabled = true;
+			}
+		}
 	}
 
 	/** Ensure any new DEFAULT_MEDICATIONS items are added to saved settings. */

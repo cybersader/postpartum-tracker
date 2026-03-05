@@ -7,6 +7,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-03-05
+
+### Added
+
+- **Multi-service notifications**: ntfy, Pushover, Gotify, and custom webhooks can all be enabled simultaneously. Shared vaults can have one user on ntfy (Android) and another on Pushover (iOS) receiving alerts at the same time.
+- Per-service enable toggles with individual test buttons.
+- Auto-migration from old single-preset model to new per-service toggles.
+
+### Changed
+
+- Notification settings reorganized from a single dropdown to collapsible per-service sections.
+- Combo guide updated with shared-vault advice.
+
+### Fixed
+
+- **Button double-fire on mobile**: Quick-action buttons (pain tracking, etc.) no longer fire twice on tap. The `pointerup` + `click` event pattern now guards against double-invocation, preventing inline edit panels from appearing then immediately dismissing.
+
 ## [0.7.0] - 2026-03-05
 
 ### Added
@@ -182,7 +199,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/cybersader/postpartum-tracker/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/cybersader/postpartum-tracker/compare/0.4.1...0.5.0

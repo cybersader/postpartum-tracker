@@ -80,6 +80,8 @@ export class EntryList {
 	 * Uses pointerdown + preventDefault to prevent CM from swallowing events.
 	 */
 	private addButtonHandler(el: HTMLElement, handler: () => void): void {
+		let handledByPointer = false;
+
 		// pointerdown fires before CodeMirror can process the event
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
@@ -92,15 +94,17 @@ export class EntryList {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+			handledByPointer = true;
 			handler();
+			setTimeout(() => { handledByPointer = false; }, 0);
 		});
 
-		// Also handle regular click as fallback (reading mode)
+		// Fallback for non-pointer environments (reading mode, keyboard)
 		el.addEventListener('click', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
-			handler();
+			if (!handledByPointer) handler();
 		});
 	}
 

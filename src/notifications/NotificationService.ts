@@ -367,12 +367,38 @@ export class NotificationService {
 			this.fireSystemNotification(notif);
 		}
 
-		// Webhook / Pushover
+		// Push notification services (multiple can be active simultaneously)
 		if (settings.webhookEnabled) {
-			if (settings.webhookPreset === 'pushover' && settings.pushoverAppToken && settings.pushoverUserKey) {
+			// ntfy
+			if (this.isNtfyActive(settings)) {
+				const url = `https://ntfy.sh/${settings.ntfyTopic}`;
+				this.fireWebhook(notif, url);
+			}
+
+			// Pushover
+			if (this.isPushoverActive(settings)) {
 				this.firePushover(notif, settings);
-			} else if (settings.webhookUrl) {
+			}
+
+			// Gotify
+			if (settings.gotifyEnabled && settings.gotifyUrl) {
+				this.fireWebhook(notif, settings.gotifyUrl);
+			}
+
+			// Custom webhook
+			if (settings.customWebhookEnabled && settings.webhookUrl) {
 				this.fireWebhook(notif, settings.webhookUrl);
+			}
+
+			// Legacy fallback: if no per-service toggles are on but webhookUrl exists,
+			// the user may have upgraded from the old single-preset model
+			if (!settings.ntfyEnabled && !settings.pushoverEnabled && !settings.gotifyEnabled && !settings.customWebhookEnabled) {
+				// Route based on legacy webhookPreset
+				if (settings.webhookPreset === 'pushover' && settings.pushoverAppToken && settings.pushoverUserKey) {
+					this.firePushover(notif, settings);
+				} else if (settings.webhookUrl) {
+					this.fireWebhook(notif, settings.webhookUrl);
+				}
 			}
 		}
 
@@ -460,6 +486,16 @@ export class NotificationService {
 		}
 	}
 
+	/** Check if ntfy is actively configured. */
+	private isNtfyActive(settings: NotificationSettings): boolean {
+		return settings.ntfyEnabled && !!settings.ntfyTopic;
+	}
+
+	/** Check if Pushover is actively configured. */
+	private isPushoverActive(settings: NotificationSettings): boolean {
+		return settings.pushoverEnabled && !!settings.pushoverAppToken && !!settings.pushoverUserKey;
+	}
+
 	/** Extract ntfy topic from a URL path (e.g., https://ntfy.sh/my-topic → 'my-topic'). */
 	static extractNtfyTopic(url: string): string | undefined {
 		try {
@@ -497,11 +533,15 @@ export class NotificationService {
 		category: string,
 	): Promise<void> {
 		const settings = this.getSettings();
-		if (!settings.webhookEnabled || !settings.webhookUrl || !settings.scheduleNtfyOnLog) return;
+		if (!settings.webhookEnabled || !settings.scheduleNtfyOnLog) return;
 		if (delaySec <= 0) return;
 
-		const url = settings.webhookUrl;
-		const topic = NotificationService.extractNtfyTopic(url);
+		// Use ntfyTopic directly if available, fall back to webhookUrl for legacy
+		const url = settings.ntfyTopic
+			? `https://ntfy.sh/${settings.ntfyTopic}`
+			: settings.webhookUrl;
+		if (!url) return;
+		const topic = settings.ntfyTopic || NotificationService.extractNtfyTopic(url);
 		const tags = NotificationService.ntfyTagsForCategory(category, priority >= 5 ? 'urgent' : 'warning');
 
 		try {
@@ -537,11 +577,13 @@ export class NotificationService {
 		const settings = this.getSettings();
 		if (!settings.webhookEnabled) return;
 
-		// Pushover emergency priority already retries until acknowledged,
-		// but it triggers immediately (no server-side delay). For Pushover we
-		// schedule via in-process setTimeout so the alert fires at the right future time.
-		const isPushover = settings.webhookPreset === 'pushover';
-		const isNtfy = settings.webhookPreset === 'ntfy' || !settings.webhookPreset;
+		// Check which services are active (both can be enabled simultaneously)
+		const isNtfy = this.isNtfyActive(settings) ||
+			(!settings.ntfyEnabled && !settings.pushoverEnabled && !settings.gotifyEnabled && !settings.customWebhookEnabled &&
+			 (settings.webhookPreset === 'ntfy' || !settings.webhookPreset) && !!settings.webhookUrl);
+		const isPushover = this.isPushoverActive(settings) ||
+			(!settings.ntfyEnabled && !settings.pushoverEnabled && !settings.gotifyEnabled && !settings.customWebhookEnabled &&
+			 settings.webhookPreset === 'pushover' && !!settings.pushoverAppToken && !!settings.pushoverUserKey);
 
 		// Determine what to schedule
 		let title = '';

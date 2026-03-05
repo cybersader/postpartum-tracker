@@ -154,6 +154,8 @@ export class QuickActions {
 
 	/** Robust button handler for code block context. */
 	private addActionHandler(el: HTMLElement, handler: () => void): void {
+		let handledByPointer = false;
+
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -161,11 +163,15 @@ export class QuickActions {
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
+			handledByPointer = true;
 			handler();
+			// Reset after current event cycle so click doesn't double-fire
+			setTimeout(() => { handledByPointer = false; }, 0);
 		});
+		// Fallback for non-pointer environments (keyboard, accessibility)
 		el.addEventListener('click', (e) => {
 			e.stopPropagation();
-			handler();
+			if (!handledByPointer) handler();
 		});
 	}
 }

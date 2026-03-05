@@ -630,33 +630,46 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		if (notif.webhookEnabled) {
-			// Quick setup preset
+			// Migration: if user had old single-preset model, auto-enable the matching service
+			if (!notif.ntfyEnabled && !notif.pushoverEnabled && !notif.gotifyEnabled && !notif.customWebhookEnabled) {
+				if (notif.webhookPreset === 'ntfy' && notif.ntfyTopic) {
+					notif.ntfyEnabled = true;
+				} else if (notif.webhookPreset === 'pushover' && notif.pushoverAppToken) {
+					notif.pushoverEnabled = true;
+				} else if (notif.webhookPreset === 'gotify' && notif.webhookUrl) {
+					notif.gotifyEnabled = true;
+					notif.gotifyUrl = notif.webhookUrl;
+				} else if (notif.webhookPreset === 'custom' && notif.webhookUrl) {
+					notif.customWebhookEnabled = true;
+				}
+				this.plugin.saveSettings();
+			}
+
+			el.createEl('p', {
+				cls: 'pt-webhook-guide-note',
+				text: 'Enable one or more services below. When sharing a vault, each person can enable the service they prefer \u2014 both will receive notifications simultaneously.',
+			});
+
+			// ═══════════════════════════════════════════════
+			//  ntfy.sh
+			// ═══════════════════════════════════════════════
+			new Setting(el).setName('ntfy.sh (free, Android alarms)').setHeading();
+
 			new Setting(el)
-				.setName('Quick setup')
-				.setDesc('Choose a push notification service.')
-				.addDropdown(dd => {
-					dd.addOption('ntfy', 'ntfy.sh (free, Android alarms)');
-					dd.addOption('pushover', 'Pushover (iOS + Android alarms, $5 one-time)');
-					dd.addOption('gotify', 'Gotify (self-hosted)');
-					dd.addOption('custom', 'Custom webhook URL');
-					dd.setValue(notif.webhookPreset || 'ntfy');
-					dd.onChange(async (value) => {
-						notif.webhookPreset = value as 'ntfy' | 'gotify' | 'pushover' | 'custom';
-						if (value === 'ntfy' && notif.ntfyTopic) {
-							notif.webhookUrl = `https://ntfy.sh/${notif.ntfyTopic}`;
-						} else if (value === 'pushover') {
-							notif.webhookUrl = 'https://api.pushover.net/1/messages.json';
-						}
+				.setName('Enable ntfy')
+				.setDesc('Free, open-source push notifications. Best alarm support on Android.')
+				.addToggle(toggle => toggle
+					.setValue(notif.ntfyEnabled)
+					.onChange(async (value) => {
+						notif.ntfyEnabled = value;
 						await this.plugin.saveSettings();
 						this.display();
-					});
-				});
+					})
+				);
 
-			if (notif.webhookPreset === 'ntfy' || !notif.webhookPreset) {
-				// ntfy.sh setup
+			if (notif.ntfyEnabled) {
 				if (!notif.ntfyTopic) {
 					notif.ntfyTopic = 'pptracker-' + Math.random().toString(36).slice(2, 10);
-					notif.webhookUrl = `https://ntfy.sh/${notif.ntfyTopic}`;
 					this.plugin.saveSettings();
 				}
 
@@ -668,22 +681,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 						.setPlaceholder('pptracker-abc123')
 						.onChange(async (value) => {
 							notif.ntfyTopic = value.trim();
-							notif.webhookUrl = `https://ntfy.sh/${value.trim()}`;
 							await this.plugin.saveSettings();
 						})
 					);
 
-				// ── ntfy setup guide ──
+				// ntfy setup guide
 				const guideEl = el.createDiv({ cls: 'pt-webhook-guide' });
 
-				// Basic setup
 				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Basic setup:' });
 				const basicSteps = guideEl.createEl('ol', { cls: 'pt-webhook-guide-steps' });
 				basicSteps.createEl('li', { text: 'Install the ntfy app on your phone (iOS App Store / Google Play).' });
 				basicSteps.createEl('li', { text: `Open the app and subscribe to topic: ${notif.ntfyTopic}` });
 				basicSteps.createEl('li', { text: 'Tap "Send test" below to verify it works.' });
 
-				// Android alarm setup
 				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android: Enable alarm-style alerts' });
 				guideEl.createEl('p', {
 					cls: 'pt-webhook-guide-note',
@@ -694,26 +704,21 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				alarmSteps.createEl('li', { text: 'Enable "Insistent notification" (keeps ringing until dismissed)' });
 				alarmSteps.createEl('li', { text: 'Enable "Override Do Not Disturb"' });
 				alarmSteps.createEl('li', { text: 'Choose an alarm sound for the "Max priority" channel' });
-				alarmSteps.createEl('li', { text: 'These apply to urgent (priority 5) notifications: feeding reminders, overdue medication' });
 
-				// iOS limitations
 				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'iOS limitations' });
 				const iosNotes = guideEl.createEl('ul', { cls: 'pt-webhook-guide-steps' });
-				iosNotes.createEl('li', { text: 'iOS does not support insistent/looping notifications via ntfy' });
-				iosNotes.createEl('li', { text: 'Priority 5 maps to "time-sensitive" interruption level (no alarm loop)' });
-				iosNotes.createEl('li', { text: 'For alarm-style notifications on iOS, use Pushover instead (select it in the webhook preset above). Pushover emergency priority retries until you tap Acknowledge and supports iOS Critical Alerts that bypass DND and silent mode.' });
+				iosNotes.createEl('li', { text: 'iOS does not support looping notifications via ntfy \u2014 priority 5 maps to "time-sensitive" only' });
+				iosNotes.createEl('li', { text: 'For alarm-loop on iOS, also enable Pushover below' });
 
-				// Scheduled notifications
 				guideEl.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Offline reliability' });
 				guideEl.createEl('p', {
 					cls: 'pt-webhook-guide-note',
-					text: 'When you log a feeding or take a medication, the plugin immediately schedules a future ntfy notification at the expected reminder time. The ntfy server holds the message and delivers it even after you close Obsidian.',
+					text: 'When you log a feeding or medication, the plugin schedules a future ntfy notification. The ntfy server holds it and delivers even after you close Obsidian.',
 				});
 
-				// Scheduled toggle
 				new Setting(el)
 					.setName('Schedule reminders on log')
-					.setDesc('When you log an entry, immediately schedule a future push notification for the next reminder. Works even after closing Obsidian.')
+					.setDesc('Immediately schedule a future push notification when you log an entry. Works even after closing Obsidian.')
 					.addToggle(toggle => toggle
 						.setValue(notif.scheduleNtfyOnLog)
 						.onChange(async (value) => {
@@ -722,8 +727,53 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 						})
 					);
 
-			} else if (notif.webhookPreset === 'pushover') {
-				// Pushover setup
+				// ntfy test button
+				if (notif.ntfyTopic) {
+					new Setting(el)
+						.setName('Test ntfy')
+						.addButton(btn => btn
+							.setButtonText('Send test')
+							.onClick(async () => {
+								try {
+									const resp = await fetch(`https://ntfy.sh/${notif.ntfyTopic}`, {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify({
+											title: 'Postpartum Tracker',
+											message: 'Test notification \u2014 ntfy is working!',
+											priority: 3,
+											tags: ['white_check_mark'],
+											topic: notif.ntfyTopic,
+										}),
+									});
+									if (resp.ok) new Notice('ntfy test sent! Check your phone.');
+									else new Notice(`ntfy test failed: ${resp.status} ${await resp.text()}`);
+								} catch (e) {
+									new Notice(`Error: ${(e as Error).message}`);
+								}
+							})
+						);
+				}
+			}
+
+			// ═══════════════════════════════════════════════
+			//  Pushover
+			// ═══════════════════════════════════════════════
+			new Setting(el).setName('Pushover (iOS + Android alarms, $5 one-time)').setHeading();
+
+			new Setting(el)
+				.setName('Enable Pushover')
+				.setDesc('Alarm-style notifications on iOS and Android. Emergency priority retries until acknowledged.')
+				.addToggle(toggle => toggle
+					.setValue(notif.pushoverEnabled)
+					.onChange(async (value) => {
+						notif.pushoverEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+				);
+
+			if (notif.pushoverEnabled) {
 				new Setting(el)
 					.setName('App API token')
 					.setDesc('From pushover.net/apps \u2014 create an application to get a token.')
@@ -748,7 +798,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 						})
 					);
 
-				// Pushover setup guide
 				const pushGuide = el.createDiv({ cls: 'pt-webhook-guide' });
 
 				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Setup instructions:' });
@@ -758,51 +807,129 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				pushSteps.createEl('li', { text: 'Go to pushover.net/apps and create a new application \u2014 copy the API Token.' });
 				pushSteps.createEl('li', { text: 'Paste both values above, then tap "Send test" to verify.' });
 
-				// iOS Critical Alerts
 				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'iOS: Enable Critical Alerts (alarm that bypasses silent/DND)' });
 				const iosSteps = pushGuide.createEl('ol', { cls: 'pt-webhook-guide-steps' });
 				iosSteps.createEl('li', { text: 'In the Pushover iOS app, go to Settings.' });
-				iosSteps.createEl('li', { text: 'Enable "Critical Alerts" \u2014 this lets urgent notifications play sound even on silent mode and bypass Do Not Disturb.' });
-				iosSteps.createEl('li', { text: 'Urgent alerts (feeding reminders, overdue meds) use emergency priority \u2014 they repeat every 60 seconds until you tap "Acknowledge" in the app.' });
+				iosSteps.createEl('li', { text: 'Enable "Critical Alerts" \u2014 plays sound even on silent mode and bypasses Do Not Disturb.' });
+				iosSteps.createEl('li', { text: 'Urgent alerts use emergency priority \u2014 they repeat every 60 seconds until you tap "Acknowledge".' });
 
-				// Android
 				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Android: Alarm behavior' });
 				pushGuide.createEl('p', {
 					cls: 'pt-webhook-guide-note',
-					text: 'On Android, emergency-priority notifications also loop until acknowledged. You can customize the notification sound and DND override in Android notification settings for the Pushover app.',
+					text: 'Emergency-priority notifications also loop until acknowledged on Android. Customize sound and DND override in Android notification settings for Pushover.',
 				});
 
-				// Pricing note
-				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Pricing' });
+				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Pricing and offline' });
 				pushGuide.createEl('p', {
 					cls: 'pt-webhook-guide-note',
-					text: 'Pushover costs $4.99 one-time (not a subscription). Includes 7,500 messages/month free. This is the only option that provides true alarm-style notifications on iOS.',
+					text: '$4.99 one-time (not subscription), 7,500 messages/month free. Pushover has no server-side delay \u2014 scheduled reminders only fire while Obsidian is open. For offline, pair with Todoist or ntfy.',
 				});
 
-				// Offline note
-				pushGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Offline behavior' });
-				pushGuide.createEl('p', {
-					cls: 'pt-webhook-guide-note',
-					text: 'Pushover does not support server-side delayed delivery. Scheduled reminders only fire while Obsidian is open. For offline reminders, also enable Todoist integration (below) with due dates set to "Date + time" \u2014 Todoist sends its own push reminder independently.',
-				});
+				// Pushover test button
+				if (notif.pushoverAppToken && notif.pushoverUserKey) {
+					new Setting(el)
+						.setName('Test Pushover')
+						.addButton(btn => btn
+							.setButtonText('Send test')
+							.onClick(async () => {
+								try {
+									const resp = await fetch('https://api.pushover.net/1/messages.json', {
+										method: 'POST',
+										body: new URLSearchParams({
+											token: notif.pushoverAppToken,
+											user: notif.pushoverUserKey,
+											title: 'Postpartum Tracker',
+											message: 'Test notification \u2014 Pushover is working!',
+											priority: '0',
+										}),
+									});
+									if (resp.ok) new Notice('Pushover test sent! Check your phone.');
+									else new Notice(`Pushover test failed: ${resp.status} ${await resp.text()}`);
+								} catch (e) {
+									new Notice(`Error: ${(e as Error).message}`);
+								}
+							})
+						);
+				}
+			}
 
-			} else if (notif.webhookPreset === 'gotify') {
+			// ═══════════════════════════════════════════════
+			//  Gotify
+			// ═══════════════════════════════════════════════
+			new Setting(el).setName('Gotify (self-hosted)').setHeading();
+
+			new Setting(el)
+				.setName('Enable Gotify')
+				.setDesc('Self-hosted push notification server.')
+				.addToggle(toggle => toggle
+					.setValue(notif.gotifyEnabled)
+					.onChange(async (value) => {
+						notif.gotifyEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+				);
+
+			if (notif.gotifyEnabled) {
 				new Setting(el)
 					.setName('Gotify server URL')
 					.setDesc('Your Gotify server URL with app token (e.g., https://gotify.example.com/message?token=...).')
 					.addText(text => text
-						.setValue(notif.webhookUrl)
+						.setValue(notif.gotifyUrl)
 						.setPlaceholder('https://gotify.example.com/message?token=...')
 						.onChange(async (value) => {
-							notif.webhookUrl = value.trim();
+							notif.gotifyUrl = value.trim();
 							await this.plugin.saveSettings();
 						})
 					);
-			} else {
-				// Custom webhook
+
+				if (notif.gotifyUrl) {
+					new Setting(el)
+						.setName('Test Gotify')
+						.addButton(btn => btn
+							.setButtonText('Send test')
+							.onClick(async () => {
+								try {
+									const resp = await fetch(notif.gotifyUrl, {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify({
+											title: 'Postpartum Tracker',
+											message: 'Test notification \u2014 Gotify is working!',
+											priority: 3,
+										}),
+									});
+									if (resp.ok) new Notice('Gotify test sent!');
+									else new Notice(`Gotify test failed: ${resp.status} ${await resp.text()}`);
+								} catch (e) {
+									new Notice(`Error: ${(e as Error).message}`);
+								}
+							})
+						);
+				}
+			}
+
+			// ═══════════════════════════════════════════════
+			//  Custom webhook
+			// ═══════════════════════════════════════════════
+			new Setting(el).setName('Custom webhook').setHeading();
+
+			new Setting(el)
+				.setName('Enable custom webhook')
+				.setDesc('POST JSON to any URL when an alert fires.')
+				.addToggle(toggle => toggle
+					.setValue(notif.customWebhookEnabled)
+					.onChange(async (value) => {
+						notif.customWebhookEnabled = value;
+						await this.plugin.saveSettings();
+						this.display();
+					})
+				);
+
+			if (notif.customWebhookEnabled) {
 				new Setting(el)
 					.setName('Webhook URL')
-					.setDesc('POST endpoint for notifications. JSON body: { title, message, priority }.')
+					.setDesc('POST endpoint. JSON body: { title, message, priority }.')
 					.addText(text => text
 						.setValue(notif.webhookUrl)
 						.setPlaceholder('https://example.com/webhook')
@@ -811,61 +938,31 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 					);
-			}
 
-			// Test button
-			const canTest = notif.webhookPreset === 'pushover'
-				? (notif.pushoverAppToken && notif.pushoverUserKey)
-				: !!notif.webhookUrl;
-
-			if (canTest) {
-				new Setting(el)
-					.setName('Test notification')
-					.setDesc('Send a test push notification to verify your setup.')
-					.addButton(btn => btn
-						.setButtonText('Send test')
-						.onClick(async () => {
-							try {
-								let resp: Response;
-
-								if (notif.webhookPreset === 'pushover') {
-									// Pushover uses form-encoded POST
-									const body = new URLSearchParams({
-										token: notif.pushoverAppToken,
-										user: notif.pushoverUserKey,
-										title: 'Postpartum Tracker',
-										message: 'Test notification \u2014 your push setup is working!',
-										priority: '0',
-									});
-									resp = await fetch('https://api.pushover.net/1/messages.json', {
-										method: 'POST',
-										body,
-									});
-								} else {
-									resp = await fetch(notif.webhookUrl, {
+				if (notif.webhookUrl) {
+					new Setting(el)
+						.setName('Test webhook')
+						.addButton(btn => btn
+							.setButtonText('Send test')
+							.onClick(async () => {
+								try {
+									const resp = await fetch(notif.webhookUrl, {
 										method: 'POST',
 										headers: { 'Content-Type': 'application/json' },
 										body: JSON.stringify({
 											title: 'Postpartum Tracker',
-											message: 'Test notification \u2014 your push setup is working!',
+											message: 'Test notification \u2014 webhook is working!',
 											priority: 3,
-											tags: ['white_check_mark'],
-											...(notif.webhookPreset === 'ntfy' ? { topic: notif.ntfyTopic } : {}),
 										}),
 									});
+									if (resp.ok) new Notice('Webhook test sent!');
+									else new Notice(`Webhook test failed: ${resp.status} ${await resp.text()}`);
+								} catch (e) {
+									new Notice(`Error: ${(e as Error).message}`);
 								}
-
-								if (resp.ok) {
-									new Notice('Test sent! Check your phone.');
-								} else {
-									const body = await resp.text();
-									new Notice(`Test failed: ${resp.status} ${resp.statusText}\n${body}`);
-								}
-							} catch (e) {
-								new Notice(`Error: ${(e as Error).message}`);
-							}
-						})
-					);
+							})
+						);
+				}
 			}
 		}
 
@@ -874,18 +971,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			const comboGuide = el.createDiv({ cls: 'pt-webhook-guide' });
 			comboGuide.createEl('p', { cls: 'pt-webhook-guide-title', text: 'Best setup for reliable alarms' });
 
-			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'Android users: ntfy with insistent notifications gives you alarm-style alerts that loop until dismissed, plus scheduled delivery when Obsidian is closed.' });
-			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'iOS users: Use Pushover instead of ntfy. Pushover emergency priority retries the notification every 60 seconds until you tap Acknowledge, and supports Critical Alerts that bypass DND and silent mode. This is the only way to get alarm-loop behavior on iOS.' });
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'Shared vault? Enable both ntfy and Pushover above \u2014 Android users subscribe to the ntfy topic, iOS users configure Pushover. Both receive every alert simultaneously.' });
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'Solo user on Android: ntfy alone gives alarm-loop + offline scheduled delivery.' });
+			comboGuide.createEl('p', { cls: 'pt-webhook-guide-note', text: 'Solo user on iOS: Pushover alone gives alarm-loop via Critical Alerts. Add ntfy for offline scheduled delivery as backup.' });
 
 			const comboSteps = comboGuide.createEl('ol', { cls: 'pt-webhook-guide-steps' });
-			comboSteps.createEl('li', { text: 'Choose your push service above: ntfy (Android) or Pushover (iOS + Android)' });
+			comboSteps.createEl('li', { text: 'Enable the push services your household needs above' });
 			comboSteps.createEl('li', { text: 'Enable Todoist integration (below) with due dates set to "Date + time"' });
-			comboSteps.createEl('li', { text: 'With both enabled:' });
+			comboSteps.createEl('li', { text: 'With multiple services enabled:' });
 			const subList = comboSteps.createEl('ul');
-			subList.createEl('li', { text: 'Push service delivers alarm-style alerts to your phone' });
+			subList.createEl('li', { text: 'Every alert fires to ALL enabled services simultaneously' });
 			subList.createEl('li', { text: 'ntfy scheduled delivery works even after closing Obsidian' });
 			subList.createEl('li', { text: 'Todoist creates tasks and sends its own reminder at the due time' });
-			subList.createEl('li', { text: 'If one service is down, the other still works' });
+			subList.createEl('li', { text: 'Redundancy: if one service is down, the others still work' });
 		}
 
 		// --- Todoist Integration ---

@@ -213,20 +213,35 @@ export interface NotificationSettings {
 	/** Medication: alert for alternating pain med schedule */
 	medAlternatingEnabled: boolean;
 
-	/** Webhook URL for external notifications (Gotify, ntfy.sh, etc.) */
+	/** Webhook URL for external notifications (Gotify, custom, etc.) */
 	webhookUrl: string;
 	/** Whether to send webhooks */
 	webhookEnabled: boolean;
-	/** Webhook quick-setup preset */
+	/** Legacy single-preset selector (kept for migration). @deprecated Use per-service toggles. */
 	webhookPreset: 'ntfy' | 'gotify' | 'pushover' | 'custom';
-	/** ntfy.sh topic name (used when preset = 'ntfy') */
+
+	// ── Per-service toggles (multiple can be enabled simultaneously) ──
+	/** Enable ntfy.sh push notifications */
+	ntfyEnabled: boolean;
+	/** ntfy.sh topic name */
 	ntfyTopic: string;
 	/** Schedule future ntfy notifications when logging entries (works offline). */
 	scheduleNtfyOnLog: boolean;
+
+	/** Enable Pushover push notifications */
+	pushoverEnabled: boolean;
 	/** Pushover app API token */
 	pushoverAppToken: string;
 	/** Pushover user/group key */
 	pushoverUserKey: string;
+
+	/** Enable Gotify push notifications */
+	gotifyEnabled: boolean;
+	/** Gotify server URL */
+	gotifyUrl: string;
+
+	/** Enable custom webhook */
+	customWebhookEnabled: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -241,10 +256,15 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 	webhookUrl: '',
 	webhookEnabled: false,
 	webhookPreset: 'ntfy',
+	ntfyEnabled: false,
 	ntfyTopic: '',
 	scheduleNtfyOnLog: true,
+	pushoverEnabled: false,
 	pushoverAppToken: '',
 	pushoverUserKey: '',
+	gotifyEnabled: false,
+	gotifyUrl: '',
+	customWebhookEnabled: false,
 };
 
 export interface NotificationItem {
