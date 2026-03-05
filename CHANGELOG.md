@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-03-05
+
+### Fixed
+
+- **Double-fire on all module buttons**: Extended the `handledByPointer` guard to SimpleTrackerModule, InlineEditPanel, and FieldRenderer. Feeding position, pain rating, and all other simple tracker modals no longer pop in and immediately dismiss on mobile tap.
+
 ## [0.7.2] - 2026-03-05
 
 ### Changed
@@ -207,7 +213,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...HEAD
+[0.7.3]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...0.7.3
 [0.7.2]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/cybersader/postpartum-tracker/compare/0.6.0...0.7.0

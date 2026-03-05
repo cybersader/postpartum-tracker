@@ -780,6 +780,7 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 	// ── Event helpers ──
 
 	private addButtonHandler(el: HTMLElement, handler: () => void): void {
+		let handledByPointer = false;
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -789,13 +790,15 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
+			handledByPointer = true;
 			handler();
+			setTimeout(() => { handledByPointer = false; }, 0);
 		});
 		el.addEventListener('click', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
-			handler();
+			if (!handledByPointer) handler();
 		});
 	}
 }

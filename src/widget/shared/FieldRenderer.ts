@@ -341,6 +341,7 @@ function renderText(
 // ── Tap handler (prevents CodeMirror stealing events) ──
 
 function addTapHandler(el: HTMLElement, handler: () => void): void {
+	let handledByPointer = false;
 	el.addEventListener('pointerdown', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -350,12 +351,14 @@ function addTapHandler(el: HTMLElement, handler: () => void): void {
 		e.preventDefault();
 		e.stopPropagation();
 		e.stopImmediatePropagation();
+		handledByPointer = true;
 		handler();
+		setTimeout(() => { handledByPointer = false; }, 0);
 	});
 	el.addEventListener('click', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		e.stopImmediatePropagation();
-		handler();
+		if (!handledByPointer) handler();
 	});
 }
