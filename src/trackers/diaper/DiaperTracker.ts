@@ -118,32 +118,32 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 	}
 
 	getQuickActions(): QuickAction[] {
-		return [
-			{
-				id: 'diaper-wet',
-				label: 'Wet',
-				icon: '\uD83D\uDCA7',
-				cls: 'pt-quick-btn--diaper-wet',
-				onClick: (ts) => this.logDiaper(true, false, ts),
-				onLongPress: (ts) => this.logDiaperWithDetails(true, false, ts),
-			},
-			{
-				id: 'diaper-dirty',
-				label: 'Dirty',
-				icon: '\uD83D\uDCA9',
-				cls: 'pt-quick-btn--diaper-dirty',
-				onClick: (ts) => this.logDiaper(false, true, ts),
-				onLongPress: (ts) => this.logDiaperWithDetails(false, true, ts),
-			},
-			{
-				id: 'diaper-both',
-				label: 'Both',
-				icon: '\uD83D\uDCA7\uD83D\uDCA9',
-				cls: 'pt-quick-btn--diaper-both',
-				onClick: (ts) => this.logDiaper(true, true, ts),
-				onLongPress: (ts) => this.logDiaperWithDetails(true, true, ts),
-			},
-		];
+		const cfg = this.settings?.diaper?.buttons;
+		const holdForDetails = cfg?.holdForDetails ?? true;
+		const actions: QuickAction[] = [];
+
+		const mkBtn = (
+			id: string, key: 'wet' | 'dirty' | 'both',
+			defLabel: string, defIcon: string, cls: string,
+			wet: boolean, dirty: boolean
+		) => {
+			const btnCfg = cfg?.[key];
+			if (btnCfg && !btnCfg.visible) return;
+			actions.push({
+				id,
+				label: btnCfg?.label || defLabel,
+				icon: btnCfg?.icon || defIcon,
+				cls,
+				onClick: (ts) => this.logDiaper(wet, dirty, ts),
+				onLongPress: holdForDetails ? (ts) => this.logDiaperWithDetails(wet, dirty, ts) : undefined,
+			});
+		};
+
+		mkBtn('diaper-wet', 'wet', 'Wet', '\uD83D\uDCA7', 'pt-quick-btn--diaper-wet', true, false);
+		mkBtn('diaper-dirty', 'dirty', 'Dirty', '\uD83D\uDCA9', 'pt-quick-btn--diaper-dirty', false, true);
+		mkBtn('diaper-both', 'both', 'Both', '\uD83D\uDCA7\uD83D\uDCA9', 'pt-quick-btn--diaper-both', true, true);
+
+		return actions;
 	}
 
 	computeStats(entries: DiaperEntry[], dayStart: Date): DiaperStats {

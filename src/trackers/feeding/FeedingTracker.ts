@@ -69,14 +69,21 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		// Timer section (visible when feeding is active)
 		this.timerSection = bodyEl.createDiv({ cls: 'pt-feeding-timer-section pt-hidden' });
 		this.timerDisplay = new TimerDisplay(this.timerSection);
+		const holdDetails = settings?.feeding?.buttons?.holdForDetails ?? true;
 		this.stopBtn = this.timerSection.createEl('button', {
-			cls: 'pt-big-button pt-btn-stop pt-has-longpress',
+			cls: `pt-big-button pt-btn-stop${holdDetails ? ' pt-has-longpress' : ''}`,
 			text: 'Stop feeding',
 		});
-		this.addButtonHandlerWithLongPress(this.stopBtn,
-			() => this.stopFeeding(),
-			() => this.stopFeedingWithDetails()
-		);
+		if (holdDetails) {
+			this.addButtonHandlerWithLongPress(this.stopBtn,
+				() => this.stopFeeding(),
+				() => this.stopFeedingWithDetails()
+			);
+		} else {
+			this.stopBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); });
+			this.stopBtn.addEventListener('pointerup', (e) => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); this.stopFeeding(); });
+			this.stopBtn.addEventListener('click', (e) => { e.stopPropagation(); });
+		}
 
 		// Stats line
 		this.statsEl = bodyEl.createDiv({ cls: 'pt-feeding-stats' });
@@ -92,39 +99,59 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 	}
 
 	getQuickActions(): QuickAction[] {
-		return [
-			{
-				id: 'feeding-left',
-				label: 'Left',
-				icon: 'L',
-				cls: 'pt-quick-btn--feeding-left',
+		const cfg = this.settings?.feeding?.buttons;
+		const holdForDetails = cfg?.holdForDetails ?? true;
+		const actions: QuickAction[] = [];
+
+		const mkBtn = (
+			id: string, key: 'left' | 'right' | 'both' | 'bottle',
+			defLabel: string, defIcon: string, cls: string
+		) => {
+			const btnCfg = cfg?.[key];
+			if (btnCfg && !btnCfg.visible) return null;
+			return {
+				id,
+				label: btnCfg?.label || defLabel,
+				icon: btnCfg?.icon || defIcon,
+				cls,
+			};
+		};
+
+		// Breast side buttons
+		if (this.settings?.feeding?.trackSide !== false) {
+			const left = mkBtn('feeding-left', 'left', 'Left', 'L', 'pt-quick-btn--feeding-left');
+			if (left) actions.push({
+				...left,
 				onClick: (ts) => this.startFeeding('left', ts),
-				onLongPress: (ts) => this.startFeedingWithDetails('left', ts),
-			},
-			{
-				id: 'feeding-right',
-				label: 'Right',
-				icon: 'R',
-				cls: 'pt-quick-btn--feeding-right',
+				onLongPress: holdForDetails ? (ts) => this.startFeedingWithDetails('left', ts) : undefined,
+			});
+
+			const right = mkBtn('feeding-right', 'right', 'Right', 'R', 'pt-quick-btn--feeding-right');
+			if (right) actions.push({
+				...right,
 				onClick: (ts) => this.startFeeding('right', ts),
-				onLongPress: (ts) => this.startFeedingWithDetails('right', ts),
-			},
-			{
-				id: 'feeding-both',
-				label: 'Both',
-				icon: 'B',
-				cls: 'pt-quick-btn--feeding-both',
-				onClick: (ts) => this.startFeeding('both', ts),
-				onLongPress: (ts) => this.startFeedingWithDetails('both', ts),
-			},
-			...(this.settings?.feeding?.showBottle !== false ? [{
-				id: 'feeding-bottle',
-				label: 'Bottle',
-				icon: '\uD83C\uDF7C',
-				cls: 'pt-quick-btn--feeding-bottle',
+				onLongPress: holdForDetails ? (ts) => this.startFeedingWithDetails('right', ts) : undefined,
+			});
+		}
+
+		const both = mkBtn('feeding-both', 'both', 'Both', 'B', 'pt-quick-btn--feeding-both');
+		if (both) actions.push({
+			...both,
+			onClick: (ts) => this.startFeeding('both', ts),
+			onLongPress: holdForDetails ? (ts) => this.startFeedingWithDetails('both', ts) : undefined,
+		});
+
+		// Bottle button — respect both legacy showBottle and new buttons config
+		const bottleVisible = (cfg?.bottle?.visible ?? true) && (this.settings?.feeding?.showBottle !== false);
+		if (bottleVisible) {
+			const bottle = mkBtn('feeding-bottle', 'bottle', 'Bottle', '\uD83C\uDF7C', 'pt-quick-btn--feeding-bottle');
+			if (bottle) actions.push({
+				...bottle,
 				onClick: (ts?: string) => this.logBottle(ts),
-			}] : []),
-		];
+			});
+		}
+
+		return actions;
 	}
 
 	getActiveActionIds(): string[] {
@@ -214,14 +241,30 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 					{ value: 'both', label: 'Both' },
 				],
 			},
-			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Latch quality, position, etc.' },
 		];
+
+		if (this.settings?.feeding?.buttons?.showPositionField) {
+			fields.push({
+				key: 'position', label: 'Position', type: 'select', value: '',
+				options: [
+					{ value: '', label: 'Skip' },
+					{ value: 'cradle', label: 'Cradle' },
+					{ value: 'cross-cradle', label: 'Cross-cradle' },
+					{ value: 'football', label: 'Football' },
+					{ value: 'side-lying', label: 'Side-lying' },
+					{ value: 'laid-back', label: 'Laid-back' },
+				],
+			});
+		}
+
+		fields.push({ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Latch quality, etc.' });
 
 		const onSave = async (values: Record<string, string>) => {
 			const entry: FeedingEntry = {
 				id: generateId(),
 				type: 'breast',
 				side: (values.side as 'left' | 'right' | 'both') || side,
+				position: (values.position as FeedingEntry['position']) || undefined,
 				start: timestamp || new Date().toISOString(),
 				end: null,
 				notes: values.notes || '',

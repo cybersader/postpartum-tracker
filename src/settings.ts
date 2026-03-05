@@ -1,6 +1,7 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import type PostpartumTrackerPlugin from './main';
-import type { NotificationType, TrackerCategory, LibraryTrackerOverride, TimerAnimation, TimerAnimationColorPreset } from './types';
+import type { NotificationType, TrackerCategory, LibraryTrackerOverride, TimerAnimation, TimerAnimationColorPreset, CoreButtonConfig, FeedingButtonsConfig, DiaperButtonsConfig } from './types';
+import { DEFAULT_FEEDING_BUTTONS, DEFAULT_DIAPER_BUTTONS, DEFAULT_MEDICATION_BUTTONS } from './types';
 import { TRACKER_LIBRARY, TRACKER_CATEGORIES, BUILTIN_MODULE_IDS } from './trackers/library';
 import { LOGIC_PACKS } from './trackers/logicPacks';
 import { EmojiPickerModal } from './ui/EmojiPickerModal';
@@ -359,6 +360,39 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		// Ensure buttons config exists (migration)
+		if (!this.plugin.settings.feeding.buttons) {
+			this.plugin.settings.feeding.buttons = { ...DEFAULT_FEEDING_BUTTONS };
+		}
+		const fCfg = this.plugin.settings.feeding.buttons;
+
+		new Setting(el)
+			.setName('Hold for details')
+			.setDesc('Long-press feeding buttons to open a form before starting the timer.')
+			.addToggle(toggle => toggle
+				.setValue(fCfg.holdForDetails)
+				.onChange(async (value) => {
+					fCfg.holdForDetails = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Show position field')
+			.setDesc('Include a breastfeeding position selector in the detail form.')
+			.addToggle(toggle => toggle
+				.setValue(fCfg.showPositionField)
+				.onChange(async (value) => {
+					fCfg.showPositionField = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		this.buildButtonConfig(el, 'Left button', fCfg.left);
+		this.buildButtonConfig(el, 'Right button', fCfg.right);
+		this.buildButtonConfig(el, 'Both button', fCfg.both);
+		this.buildButtonConfig(el, 'Bottle button', fCfg.bottle);
+
 		// --- Diapers ---
 		new Setting(el).setName('Diapers').setHeading();
 
@@ -373,8 +407,46 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		// Ensure buttons config exists (migration)
+		if (!this.plugin.settings.diaper.buttons) {
+			this.plugin.settings.diaper.buttons = { ...DEFAULT_DIAPER_BUTTONS };
+		}
+		const dCfg = this.plugin.settings.diaper.buttons;
+
+		new Setting(el)
+			.setName('Hold for details')
+			.setDesc('Long-press diaper buttons to open a form before logging.')
+			.addToggle(toggle => toggle
+				.setValue(dCfg.holdForDetails)
+				.onChange(async (value) => {
+					dCfg.holdForDetails = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		this.buildButtonConfig(el, 'Wet button', dCfg.wet);
+		this.buildButtonConfig(el, 'Dirty button', dCfg.dirty);
+		this.buildButtonConfig(el, 'Both button', dCfg.both);
+
 		// --- Medication ---
 		new Setting(el).setName('Medication').setHeading();
+
+		// Ensure buttons config exists (migration)
+		if (!this.plugin.settings.medication.buttons) {
+			this.plugin.settings.medication.buttons = { ...DEFAULT_MEDICATION_BUTTONS };
+		}
+		const mCfg = this.plugin.settings.medication.buttons;
+
+		new Setting(el)
+			.setName('Hold for details')
+			.setDesc('Long-press medication buttons to open a notes form before logging the dose.')
+			.addToggle(toggle => toggle
+				.setValue(mCfg.holdForDetails)
+				.onChange(async (value) => {
+					mCfg.holdForDetails = value;
+					await this.plugin.saveSettings();
+				})
+			);
 
 		const meds = this.plugin.settings.medication.medications;
 		const medications = meds.map((m, i) => ({ med: m, idx: i })).filter(x => (x.med.category || 'medication') === 'medication');
@@ -2372,5 +2444,37 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					this.display();
 				})
 			);
+	}
+
+	private buildButtonConfig(el: HTMLElement, name: string, config: CoreButtonConfig): void {
+		new Setting(el)
+			.setName(name)
+			.addToggle(toggle => toggle
+				.setTooltip('Visible')
+				.setValue(config.visible)
+				.onChange(async (value) => {
+					config.visible = value;
+					await this.plugin.saveSettings();
+				})
+			)
+			.addText(text => text
+				.setPlaceholder('Custom label')
+				.setValue(config.label)
+				.onChange(async (value) => {
+					config.label = value.trim();
+					await this.plugin.saveSettings();
+				})
+			)
+			.addText(text => {
+				text.setPlaceholder('Icon')
+					.setValue(config.icon)
+					.onChange(async (value) => {
+						config.icon = value.trim();
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = '50px';
+				text.inputEl.style.textAlign = 'center';
+				text.inputEl.style.fontSize = '1.2rem';
+			});
 	}
 }

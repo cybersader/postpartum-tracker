@@ -10,6 +10,7 @@ export interface FeedingEntry {
 	id: string;
 	type: 'breast' | 'bottle' | 'solid';
 	side?: 'left' | 'right' | 'both';
+	position?: 'cradle' | 'cross-cradle' | 'football' | 'side-lying' | 'laid-back';
 	start: string;            // ISO8601
 	end: string | null;       // null = actively feeding (timer running)
 	durationSec?: number;     // Cached for completed entries
@@ -356,6 +357,57 @@ export type ButtonSize = 'compact' | 'normal' | 'large';
 export type TimerAnimation = 'pulse' | 'blink' | 'glow' | 'solid' | 'flash' | 'bounce';
 export type TimerAnimationColorPreset = 'accent' | 'red' | 'green' | 'blue' | 'custom';
 
+// ── Core Tracker Button Configuration ────────────────────────
+
+/** Per-button configuration for core tracker quick-action buttons. */
+export interface CoreButtonConfig {
+	visible: boolean;
+	label: string;        // empty = use default
+	icon: string;         // empty = use default
+}
+
+export interface FeedingButtonsConfig {
+	left: CoreButtonConfig;
+	right: CoreButtonConfig;
+	both: CoreButtonConfig;
+	bottle: CoreButtonConfig;
+	holdForDetails: boolean;
+	showPositionField: boolean;
+}
+
+export interface DiaperButtonsConfig {
+	wet: CoreButtonConfig;
+	dirty: CoreButtonConfig;
+	both: CoreButtonConfig;
+	holdForDetails: boolean;
+}
+
+export interface MedicationButtonsConfig {
+	holdForDetails: boolean;
+}
+
+export const DEFAULT_CORE_BUTTON: CoreButtonConfig = { visible: true, label: '', icon: '' };
+
+export const DEFAULT_FEEDING_BUTTONS: FeedingButtonsConfig = {
+	left: { ...DEFAULT_CORE_BUTTON },
+	right: { ...DEFAULT_CORE_BUTTON },
+	both: { ...DEFAULT_CORE_BUTTON },
+	bottle: { ...DEFAULT_CORE_BUTTON },
+	holdForDetails: true,
+	showPositionField: false,
+};
+
+export const DEFAULT_DIAPER_BUTTONS: DiaperButtonsConfig = {
+	wet: { ...DEFAULT_CORE_BUTTON },
+	dirty: { ...DEFAULT_CORE_BUTTON },
+	both: { ...DEFAULT_CORE_BUTTON },
+	holdForDetails: true,
+};
+
+export const DEFAULT_MEDICATION_BUTTONS: MedicationButtonsConfig = {
+	holdForDetails: false,
+};
+
 export interface PostpartumTrackerSettings {
 	timeFormat: '12h' | '24h';
 	hapticFeedback: boolean;
@@ -394,6 +446,7 @@ export interface PostpartumTrackerSettings {
 		defaultType: 'breast' | 'bottle';
 		trackSide: boolean;
 		showBottle: boolean;
+		buttons: FeedingButtonsConfig;
 	};
 
 	/** Diaper-specific */
@@ -401,11 +454,13 @@ export interface PostpartumTrackerSettings {
 		showColorPicker: boolean;
 		/** @deprecated Dynamic threshold based on day-of-life is now used. Kept for data.json compat. */
 		alertThreshold: number;
+		buttons: DiaperButtonsConfig;
 	};
 
 	/** Medication-specific */
 	medication: {
 		medications: MedicationConfig[];
+		buttons: MedicationButtonsConfig;
 	};
 
 	/** Notifications */
@@ -464,13 +519,16 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 		defaultType: 'breast',
 		trackSide: true,
 		showBottle: true,
+		buttons: { ...DEFAULT_FEEDING_BUTTONS },
 	},
 	diaper: {
 		showColorPicker: true,
 		alertThreshold: 6,
+		buttons: { ...DEFAULT_DIAPER_BUTTONS },
 	},
 	medication: {
 		medications: [...DEFAULT_MEDICATIONS],
+		buttons: { ...DEFAULT_MEDICATION_BUTTONS },
 	},
 	notifications: { ...DEFAULT_NOTIFICATION_SETTINGS },
 	todoist: { ...DEFAULT_TODOIST_SETTINGS },

@@ -96,12 +96,14 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 
 	getQuickActions(): QuickAction[] {
 		const enabledMeds = this.configs.filter(c => c.enabled);
+		const holdForDetails = this.settings?.medication?.buttons?.holdForDetails ?? false;
 		return enabledMeds.map(med => ({
 			id: `med-${med.name.toLowerCase().replace(/\s+/g, '-')}`,
 			label: med.technicalName ? `${med.name}\n${med.technicalName}` : med.name,
 			icon: med.icon,
 			cls: `pt-quick-btn--med`,
 			onClick: (ts) => this.logDose(med.name, med.dosage, ts),
+			onLongPress: holdForDetails ? (ts) => this.logDoseWithDetails(med.name, med.dosage, ts) : undefined,
 			labelEssential: true,
 		}));
 	}
@@ -122,6 +124,44 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 	}
 
 	// ── Actions ──
+
+	/** Long-press: open a notes form before logging the dose. */
+	private logDoseWithDetails(name: string, dosage?: string, timestamp?: string): void {
+		this.dismissEditPanel();
+
+		const fields: EditField[] = [
+			{ key: 'time', label: 'Time', type: 'datetime', value: timestamp || new Date().toISOString() },
+			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Taken with food, side effects, etc.' },
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			const entry: MedicationEntry = {
+				id: generateId(),
+				name,
+				dosage: dosage || undefined,
+				timestamp: values.time,
+				notes: values.notes || '',
+			};
+
+			this.entries.push(entry);
+			this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			const config = this.configs.find(c => c.name.toLowerCase() === name.toLowerCase());
+			this.emitEvent?.({ type: 'medication-logged', entry, config });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, `Log ${name}`, fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, `Log ${name}`, fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
 
 	private async logDose(name: string, dosage?: string, timestamp?: string): Promise<void> {
 		const entry: MedicationEntry = {

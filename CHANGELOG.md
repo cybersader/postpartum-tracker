@@ -7,6 +7,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-03-05
+
+### Added
+
+- **Core tracker button configurability**: Per-button visibility toggle, custom label, and custom icon for all feeding (left/right/both/bottle), diaper (wet/dirty/both), and medication buttons.
+- **Hold-for-details toggle**: Each core tracker (feeding, diaper, medication) now has a setting to enable/disable the long-press detail form. Medication long-press opens a notes form when enabled.
+- **Feeding position field**: Optional breastfeeding position selector (cradle, cross-cradle, football, side-lying, laid-back) shown in the long-press detail form when enabled.
+- Settings UI sections for button customization under each tracker heading.
+
 ## [0.12.0] - 2026-03-05
 
 ### Added
