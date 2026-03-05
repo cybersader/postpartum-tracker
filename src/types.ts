@@ -344,8 +344,8 @@ export const DEFAULT_TODOIST_SETTINGS: TodoistSettings = {
 // ── Tracker Events (for integrations) ───────────────────────
 
 export interface TrackerEvent {
-	type: 'feeding-logged' | 'medication-logged' | 'diaper-logged' | 'simple-logged' | 'todoist-entry-created';
-	entry: FeedingEntry | MedicationEntry | DiaperEntry | SimpleTrackerEntry;
+	type: 'feeding-logged' | 'medication-logged' | 'diaper-logged' | 'simple-logged' | 'comment-logged' | 'todoist-entry-created';
+	entry: FeedingEntry | MedicationEntry | DiaperEntry | SimpleTrackerEntry | LogNoteEntry;
 	config?: MedicationConfig;
 	/** Module ID (for todoist-entry-created and simple-logged events) */
 	module?: string;
@@ -559,6 +559,7 @@ export interface PostpartumData {
 		medication?: MedicationEntry[];
 		medicationConfig?: MedicationConfig[];
 		logNotes?: LogNoteEntry[];
+		comments?: LogNoteEntry[];
 		[key: string]: unknown;
 	};
 
@@ -581,6 +582,7 @@ export const EMPTY_DATA: PostpartumData = {
 		medication: [],
 		medicationConfig: [...DEFAULT_MEDICATIONS],
 		logNotes: [],
+		comments: [],
 	},
 };
 

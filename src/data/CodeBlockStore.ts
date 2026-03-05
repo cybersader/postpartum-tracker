@@ -47,7 +47,7 @@ export class CodeBlockStore {
 			};
 
 			// Preserve arbitrary tracker keys (library trackers like sleep, pain, etc.)
-			const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes']);
+			const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes', 'comments']);
 			for (const key of Object.keys(trackers)) {
 				if (!knownKeys.has(key)) {
 					trackerData[key] = Array.isArray(trackers[key]) ? trackers[key] : [];

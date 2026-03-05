@@ -7,6 +7,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-03-05
+
+### Added
+
+- **Notes & comments tracker**: New built-in module for free-text timestamped notes with category support (general, concern, milestone, reminder). Enable it from the tracker library.
+- "Add note" quick-action button opens a form with time, category, and text fields.
+- Edit and delete support for comment entries.
+- Library browser now shows module-specific icons and descriptions for all built-in modules.
+
 ## [0.13.0] - 2026-03-05
 
 ### Added

@@ -10,6 +10,7 @@ import { FeedingTracker } from './trackers/feeding/FeedingTracker';
 import { DiaperTracker } from './trackers/diaper/DiaperTracker';
 import { MedicationTracker } from './trackers/medication/MedicationTracker';
 import { SimpleTrackerModule } from './trackers/simple/SimpleTrackerModule';
+import { CommentTracker } from './trackers/comment/CommentTracker';
 import { TRACKER_LIBRARY } from './trackers/library';
 import { NotificationService } from './notifications/NotificationService';
 import { TodoistService } from './integrations/TodoistService';
@@ -65,6 +66,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.registry.register(new FeedingTracker());
 		this.registry.register(new DiaperTracker());
 		this.registry.register(new MedicationTracker());
+		this.registry.register(new CommentTracker());
 
 		// Register simple (library) tracker modules for enabled IDs
 		for (const def of TRACKER_LIBRARY) {
@@ -877,6 +879,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.registry.register(new FeedingTracker());
 		this.registry.register(new DiaperTracker());
 		this.registry.register(new MedicationTracker());
+		this.registry.register(new CommentTracker());
 
 		// Library modules
 		for (const def of TRACKER_LIBRARY) {

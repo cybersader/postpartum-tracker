@@ -149,9 +149,9 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			allTrackers.push({
 				id,
 				displayName: module.displayName,
-				icon: '',
-				description: 'Core module with built-in notifications and Todoist integration.',
-				category: 'baby-care',
+				icon: module.icon || '',
+				description: module.description || 'Core module with built-in notifications and Todoist integration.',
+				category: module.category || 'baby-care',
 				badges,
 				isCore: true,
 				isCustom: false,

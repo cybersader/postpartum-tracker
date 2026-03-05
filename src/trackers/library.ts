@@ -9,7 +9,7 @@
 import type { SimpleTrackerDef, TrackerCategory } from '../types';
 
 /** IDs of built-in modules with dedicated TrackerModule classes. */
-export const BUILTIN_MODULE_IDS = ['feeding', 'diaper', 'medication'] as const;
+export const BUILTIN_MODULE_IDS = ['feeding', 'diaper', 'medication', 'comments'] as const;
 
 /** Category display metadata for the settings UI. */
 export const TRACKER_CATEGORIES: Record<TrackerCategory, { label: string; description: string }> = {
