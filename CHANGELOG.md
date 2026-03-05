@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-03-05
+
+### Fixed
+
+- **ntfy JSON publishing**: POST to ntfy server root (`https://ntfy.sh`) with `topic` in JSON body instead of posting JSON to the topic URL. ntfy was interpreting the JSON body as a plain text message, causing raw JSON to display as the notification content. Affects both immediate and scheduled (delayed) notifications.
+
 ## [0.15.1] - 2026-03-05
 
 ### Fixed
