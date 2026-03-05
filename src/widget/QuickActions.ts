@@ -184,13 +184,18 @@ export class QuickActions {
 				}, LONG_PRESS_MS);
 			}
 		});
+		el.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 			handledByPointer = true;
 			if (!longPressed) handler();
-			setTimeout(() => { handledByPointer = false; longPressed = false; }, 0);
+			setTimeout(() => { handledByPointer = false; longPressed = false; }, 400);
 		});
 		el.addEventListener('pointercancel', () => {
 			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }

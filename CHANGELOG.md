@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.15.5] - 2026-03-05
+
+### Fixed
+
+- **Edit/action buttons firing twice on mobile**: Modal edit panels (and other button actions) would "pop up and then go away" on mobile due to the browser's 300ms tap-to-click delay causing a double-fire. The `handledByPointer` flag now stays active for 400ms, and a `mousedown` handler blocks the delayed synthetic event from propagating to document-level listeners (e.g., Obsidian's modal backdrop close). Fixed across all 9 button handler files.
+
 ## [0.15.4] - 2026-03-05
 
 ### Changed

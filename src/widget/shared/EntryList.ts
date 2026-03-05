@@ -103,6 +103,14 @@ export class EntryList {
 			e.stopImmediatePropagation();
 		});
 
+		// Block delayed synthetic mousedown (mobile 300ms tap delay) from
+		// propagating to document-level listeners (e.g. modal backdrop close)
+		el.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+
 		// Actual action on pointerup (natural "click" feel)
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
@@ -110,7 +118,8 @@ export class EntryList {
 			e.stopImmediatePropagation();
 			handledByPointer = true;
 			handler();
-			setTimeout(() => { handledByPointer = false; }, 0);
+			// 400ms covers the mobile 300ms tap-to-click delay
+			setTimeout(() => { handledByPointer = false; }, 400);
 		});
 
 		// Fallback for non-pointer environments (reading mode, keyboard)

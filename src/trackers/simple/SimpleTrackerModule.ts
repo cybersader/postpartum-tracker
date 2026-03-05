@@ -928,13 +928,18 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 		});
+		el.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			e.stopImmediatePropagation();
 			handledByPointer = true;
 			handler();
-			setTimeout(() => { handledByPointer = false; }, 0);
+			setTimeout(() => { handledByPointer = false; }, 400);
 		});
 		el.addEventListener('click', (e) => {
 			e.preventDefault();

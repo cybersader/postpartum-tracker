@@ -57,6 +57,16 @@ export class CollapsibleSection {
 			e.stopImmediatePropagation();
 		});
 
+		// Block delayed synthetic mousedown (mobile 300ms tap delay)
+		this.headerEl.addEventListener('mousedown', (e) => {
+			const target = e.target as HTMLElement;
+			if (target.closest('.pt-move-controls')) return;
+			if (target.closest('.pt-drag-handle')) return;
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+
 		this.headerEl.addEventListener('pointerup', (e) => {
 			const target = e.target as HTMLElement;
 			if (target.closest('.pt-move-controls')) return;
@@ -66,7 +76,7 @@ export class CollapsibleSection {
 			e.stopImmediatePropagation();
 			this.handledByPointer = true;
 			this.toggle();
-			setTimeout(() => { this.handledByPointer = false; }, 0);
+			setTimeout(() => { this.handledByPointer = false; }, 400);
 		});
 
 		// Fallback for reading mode (skip if pointerup already handled)
