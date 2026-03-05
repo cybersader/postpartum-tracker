@@ -553,6 +553,14 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			cls: 'pt-webhook-guide-note',
 			text: 'ntfy scheduled reminders are stored server-side and arrive regardless of Obsidian state. Todoist tasks sync independently.',
 		});
+		howItWorks.createEl('p', {
+			cls: 'pt-webhook-guide-note pt-webhook-guide-warning',
+			text: 'iOS alarm gap: ntfy can schedule notifications server-side (works after closing Obsidian), but iOS limits ntfy to a single alert — no looping alarm. Pushover can loop alarms on iOS via Critical Alerts, but only fires while Obsidian is running. No current service combines both: scheduled offline delivery AND alarm-loop on iOS. For overnight medication reminders on iOS, keep Obsidian open with Pushover enabled, or set a separate phone alarm as backup.',
+		});
+		howItWorks.createEl('p', {
+			cls: 'pt-webhook-guide-note',
+			text: 'Android does not have this limitation — ntfy supports both scheduled delivery and alarm-loop with DND bypass.',
+		});
 
 		// ── Alert settings ──
 		new Setting(el).setName('Alert settings').setHeading();

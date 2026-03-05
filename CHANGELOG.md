@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-03-05
+
+### Added
+
+- **iOS alarm gap callout**: Notification settings now explain that no current service combines scheduled offline delivery AND alarm-loop on iOS, with workaround guidance.
+
 ## [0.7.3] - 2026-03-05
 
 ### Fixed
@@ -213,7 +219,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...HEAD
+[0.7.4]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...0.7.4
 [0.7.3]: https://github.com/cybersader/postpartum-tracker/compare/0.7.2...0.7.3
 [0.7.2]: https://github.com/cybersader/postpartum-tracker/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/cybersader/postpartum-tracker/compare/0.7.0...0.7.1
