@@ -142,12 +142,16 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			: null;
 
 		if (primarySelect && primarySelect.options) {
+			const hasExtra = this.hasOptionalOrExtraFields(primarySelect.key);
 			return primarySelect.options.map(option => ({
 				id: `${this.id}-${option}`,
 				label: `${option}\n${this.def.displayName}`,
 				icon: this.def.icon,
 				cls: `pt-quick-btn--${this.id}`,
 				onClick: (ts) => this.onQuickSelectAction(primarySelect.key, option, ts),
+				onLongPress: hasExtra
+					? (ts) => this.showLogFormWithPreset(primarySelect.key, option, ts)
+					: undefined,
 				labelEssential: true,
 			}));
 		}
@@ -160,12 +164,13 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 					icon: this.def.icon,
 					cls: `pt-quick-btn--${this.id}`,
 					onClick: (ts) => this.onQuickAction(ts),
+					onLongPress: (ts) => this.showLogForm(ts),
 					labelEssential: true,
 				},
 			];
 		}
 
-		// No fields at all: one-tap log
+		// No fields at all: one-tap log, hold for notes
 		if (this.def.fields.length === 0) {
 			return [
 				{
@@ -174,12 +179,13 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 					icon: this.def.icon,
 					cls: `pt-quick-btn--${this.id}`,
 					onClick: (ts) => this.quickLog(ts),
+					onLongPress: (ts) => this.showNotesForm(ts),
 					labelEssential: true,
 				},
 			];
 		}
 
-		// Has fields but no primary select: show form
+		// Has fields but no primary select: show form on tap and hold
 		return [
 			{
 				id: `${this.id}-log`,
@@ -484,6 +490,109 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 					new Date(entry.timestamp).getTime() + durationMin * 60_000
 				).toISOString();
 			}
+
+			this.entries.push(entry);
+			this.entries.sort(
+				(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+			);
+			this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, `Log ${this.def.displayName.toLowerCase()}`, editFields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, `Log ${this.def.displayName.toLowerCase()}`, editFields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
+
+	/** Check if there are optional fields or extra fields beyond the given key. */
+	private hasOptionalOrExtraFields(excludeKey: string): boolean {
+		return this.def.fields.some(f => f.key !== excludeKey && !f.required)
+			|| this.def.fields.some(f => f.optional);
+	}
+
+	/** Show log form with a field pre-filled (for long-press on quick-select). */
+	private showLogFormWithPreset(
+		presetKey: string,
+		presetValue: string,
+		timestamp?: string
+	): void {
+		this.dismissEditPanel();
+
+		const editFields: EditField[] = this.def.fields.map(f => {
+			const ef = this.defFieldToEditField(f);
+			if (f.key === presetKey) ef.value = presetValue;
+			return ef;
+		});
+
+		editFields.push({
+			key: '_notes',
+			label: 'Notes',
+			type: 'text',
+			value: '',
+			placeholder: 'Optional',
+		});
+
+		const onSave = async (values: Record<string, string>) => {
+			const fields = this.editValuesToFields(values);
+			const notes = values._notes || '';
+
+			const entry: SimpleTrackerEntry = {
+				id: generateId(),
+				timestamp: timestamp || new Date().toISOString(),
+				fields,
+				notes,
+			};
+
+			this.entries.push(entry);
+			this.entries.sort(
+				(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+			);
+			this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, `Log ${this.def.displayName.toLowerCase()}`, editFields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, `Log ${this.def.displayName.toLowerCase()}`, editFields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
+
+	/** Show a minimal form with just a notes field (for long-press on no-field trackers). */
+	private showNotesForm(timestamp?: string): void {
+		this.dismissEditPanel();
+
+		const editFields: EditField[] = [
+			{
+				key: '_notes',
+				label: 'Notes',
+				type: 'text',
+				value: '',
+				placeholder: 'Add notes...',
+			},
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			const entry: SimpleTrackerEntry = {
+				id: generateId(),
+				timestamp: timestamp || new Date().toISOString(),
+				fields: {},
+				notes: values._notes || '',
+			};
 
 			this.entries.push(entry);
 			this.entries.sort(

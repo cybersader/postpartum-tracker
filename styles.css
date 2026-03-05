@@ -350,6 +350,23 @@
 .pt-quick-btn--med { border-color: #6baed4; }
 .pt-quick-btn--med:hover { background: #6baed420; }
 
+/* Long-press indicator — subtle bar under buttons that support hold */
+.pt-quick-btn.pt-has-longpress {
+	position: relative;
+}
+.pt-quick-btn.pt-has-longpress::after {
+	content: '';
+	position: absolute;
+	bottom: 4px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 16px;
+	height: 2px;
+	background: var(--text-faint);
+	border-radius: 1px;
+	opacity: 0.4;
+}
+
 /* --- Inline Edit Panel --- */
 .pt-edit-panel-container {
 	/* Container is always present; empty when no panel shown */

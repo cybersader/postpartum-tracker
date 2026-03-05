@@ -125,6 +125,7 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 				icon: '\uD83D\uDCA7',
 				cls: 'pt-quick-btn--diaper-wet',
 				onClick: (ts) => this.logDiaper(true, false, ts),
+				onLongPress: (ts) => this.logDiaperWithDetails(true, false, ts),
 			},
 			{
 				id: 'diaper-dirty',
@@ -132,6 +133,7 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 				icon: '\uD83D\uDCA9',
 				cls: 'pt-quick-btn--diaper-dirty',
 				onClick: (ts) => this.logDiaper(false, true, ts),
+				onLongPress: (ts) => this.logDiaperWithDetails(false, true, ts),
 			},
 			{
 				id: 'diaper-both',
@@ -139,6 +141,7 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 				icon: '\uD83D\uDCA7\uD83D\uDCA9',
 				cls: 'pt-quick-btn--diaper-both',
 				onClick: (ts) => this.logDiaper(true, true, ts),
+				onLongPress: (ts) => this.logDiaperWithDetails(true, true, ts),
 			},
 		];
 	}
@@ -163,6 +166,59 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 
 	// ── Actions ──
 
+	/** Long-press: open a detail form before logging the diaper entry. */
+	private logDiaperWithDetails(wet: boolean, dirty: boolean, timestamp?: string): void {
+		this.dismissEditPanel();
+
+		const fields: EditField[] = [
+			{ key: 'time', label: 'Time', type: 'datetime', value: timestamp || new Date().toISOString() },
+		];
+
+		if (dirty) {
+			fields.push({
+				key: 'color', label: 'Stool color', type: 'select', value: '',
+				options: [
+					{ value: '', label: 'None' },
+					...DIAPER_COLORS.map(c => ({ value: c.value, label: c.label })),
+				],
+			});
+		}
+
+		fields.push(
+			{ key: 'description', label: 'Description', type: 'text', value: '', placeholder: 'Consistency, amount, etc.' },
+			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Optional' },
+		);
+
+		const onSave = async (values: Record<string, string>) => {
+			const entry: DiaperEntry = {
+				id: generateId(),
+				timestamp: values.time,
+				wet,
+				dirty,
+				color: (values.color || undefined) as DiaperColor | undefined,
+				description: values.description || '',
+				notes: values.notes || '',
+			};
+
+			this.entries.push(entry);
+			this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+			this.emitEvent?.({ type: 'diaper-logged', entry });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Log diaper change', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Log diaper change', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
+
 	private async logDiaper(wet: boolean, dirty: boolean, timestamp?: string): Promise<void> {
 		const entry: DiaperEntry = {
 			id: generateId(),
@@ -178,14 +234,47 @@ export class DiaperTracker implements TrackerModule<DiaperEntry, DiaperStats> {
 		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
 		if (dirty && this.settings?.diaper.showColorPicker) {
-			// Show color picker for dirty diapers
-			this.pendingEntryId = entry.id;
-			this.showColorPicker();
+			// In modal mode, show a modal for color + description
+			if (this.settings?.inputMode === 'modal' && this.app) {
+				this.showColorPickerModal(entry);
+			} else {
+				this.pendingEntryId = entry.id;
+				this.showColorPicker();
+			}
 		} else {
 			this.emitEvent?.({ type: 'diaper-logged', entry });
 			this.refreshUI();
 			if (this.save) await this.save();
 		}
+	}
+
+	/** Modal-based color picker for dirty diapers. */
+	private showColorPickerModal(entry: DiaperEntry): void {
+		const fields: EditField[] = [
+			{
+				key: 'color', label: 'Stool color', type: 'select', value: '',
+				options: [
+					{ value: '', label: 'Skip' },
+					...DIAPER_COLORS.map(c => ({ value: c.value, label: c.label })),
+				],
+			},
+			{ key: 'description', label: 'Description', type: 'text', value: '', placeholder: 'Consistency, amount, etc.' },
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			if (values.color) entry.color = values.color as DiaperColor;
+			if (values.description) entry.description = values.description;
+			this.emitEvent?.({ type: 'diaper-logged', entry });
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		new TrackerEditModal(this.app!, 'Stool details', fields, onSave, () => {
+			// On cancel, still save the entry (just without color/desc)
+			this.emitEvent?.({ type: 'diaper-logged', entry });
+			this.refreshUI();
+			this.save?.();
+		}).open();
 	}
 
 	private showColorPicker(): void {

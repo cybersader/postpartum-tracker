@@ -348,6 +348,17 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		new Setting(el)
+			.setName('Show bottle button')
+			.setDesc('Show the bottle feeding quick-action button.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.feeding.showBottle)
+				.onChange(async (value) => {
+					this.plugin.settings.feeding.showBottle = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
 		// --- Diapers ---
 		new Setting(el).setName('Diapers').setHeading();
 

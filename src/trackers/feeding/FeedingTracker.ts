@@ -70,10 +70,13 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		this.timerSection = bodyEl.createDiv({ cls: 'pt-feeding-timer-section pt-hidden' });
 		this.timerDisplay = new TimerDisplay(this.timerSection);
 		this.stopBtn = this.timerSection.createEl('button', {
-			cls: 'pt-big-button pt-btn-stop',
+			cls: 'pt-big-button pt-btn-stop pt-has-longpress',
 			text: 'Stop feeding',
 		});
-		this.stopBtn.addEventListener('click', () => this.stopFeeding());
+		this.addButtonHandlerWithLongPress(this.stopBtn,
+			() => this.stopFeeding(),
+			() => this.stopFeedingWithDetails()
+		);
 
 		// Stats line
 		this.statsEl = bodyEl.createDiv({ cls: 'pt-feeding-stats' });
@@ -96,6 +99,7 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 				icon: 'L',
 				cls: 'pt-quick-btn--feeding-left',
 				onClick: (ts) => this.startFeeding('left', ts),
+				onLongPress: (ts) => this.startFeedingWithDetails('left', ts),
 			},
 			{
 				id: 'feeding-right',
@@ -103,6 +107,7 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 				icon: 'R',
 				cls: 'pt-quick-btn--feeding-right',
 				onClick: (ts) => this.startFeeding('right', ts),
+				onLongPress: (ts) => this.startFeedingWithDetails('right', ts),
 			},
 			{
 				id: 'feeding-both',
@@ -110,14 +115,15 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 				icon: 'B',
 				cls: 'pt-quick-btn--feeding-both',
 				onClick: (ts) => this.startFeeding('both', ts),
+				onLongPress: (ts) => this.startFeedingWithDetails('both', ts),
 			},
-			{
+			...(this.settings?.feeding?.showBottle !== false ? [{
 				id: 'feeding-bottle',
 				label: 'Bottle',
 				icon: '\uD83C\uDF7C',
 				cls: 'pt-quick-btn--feeding-bottle',
-				onClick: (ts) => this.logBottle(ts),
-			},
+				onClick: (ts?: string) => this.logBottle(ts),
+			}] : []),
 		];
 	}
 
@@ -187,6 +193,120 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 	}
 
 	// ── Actions ──
+
+	/** Long-press: open a form with notes before starting the feeding timer. */
+	private startFeedingWithDetails(side: 'left' | 'right' | 'both', timestamp?: string): void {
+		// If there's already an active feeding, stop it first
+		const active = this.entries.find(e => e.end === null);
+		if (active) {
+			this.stopFeedingWithDetails();
+			return;
+		}
+
+		this.dismissEditPanel();
+
+		const fields: EditField[] = [
+			{
+				key: 'side', label: 'Side', type: 'select', value: side,
+				options: [
+					{ value: 'left', label: 'Left' },
+					{ value: 'right', label: 'Right' },
+					{ value: 'both', label: 'Both' },
+				],
+			},
+			{ key: 'notes', label: 'Notes', type: 'text', value: '', placeholder: 'Latch quality, position, etc.' },
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			const entry: FeedingEntry = {
+				id: generateId(),
+				type: 'breast',
+				side: (values.side as 'left' | 'right' | 'both') || side,
+				start: timestamp || new Date().toISOString(),
+				end: null,
+				notes: values.notes || '',
+			};
+
+			this.entries.push(entry);
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Start feeding', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Start feeding', fields, onSave,
+				() => this.dismissEditPanel()
+			);
+		}
+	}
+
+	/** Long-press stop: stop the timer and open a details form for notes. */
+	private stopFeedingWithDetails(): void {
+		const active = this.entries.find(e => e.end === null);
+		if (!active) return;
+
+		active.end = new Date().toISOString();
+		active.durationSec = Math.round(
+			(new Date(active.end).getTime() - new Date(active.start).getTime()) / 1000
+		);
+
+		this.dismissEditPanel();
+
+		const fields: EditField[] = [
+			{
+				key: 'side', label: 'Side', type: 'select', value: active.side || 'left',
+				options: [
+					{ value: 'left', label: 'Left' },
+					{ value: 'right', label: 'Right' },
+					{ value: 'both', label: 'Both' },
+				],
+			},
+			{
+				key: 'duration', label: 'Duration (minutes)', type: 'number',
+				value: String(Math.round((active.durationSec || 0) / 60)), min: '1',
+			},
+			{ key: 'notes', label: 'Notes', type: 'text', value: active.notes || '', placeholder: 'Latch quality, position, etc.' },
+		];
+
+		const onSave = async (values: Record<string, string>) => {
+			if (values.side) active.side = values.side as 'left' | 'right' | 'both';
+			if (values.duration) {
+				const durationMin = parseInt(values.duration, 10);
+				if (!isNaN(durationMin) && durationMin > 0) {
+					active.durationSec = durationMin * 60;
+					active.end = new Date(
+						new Date(active.start).getTime() + durationMin * 60_000
+					).toISOString();
+				}
+			}
+			active.notes = values.notes || '';
+
+			this.emitEvent?.({ type: 'feeding-logged', entry: active });
+			this.dismissEditPanel();
+			this.refreshUI();
+			if (this.save) await this.save();
+		};
+
+		if (this.settings?.inputMode === 'modal' && this.app) {
+			new TrackerEditModal(this.app, 'Finish feeding', fields, onSave).open();
+		} else {
+			if (!this.editPanelContainer) return;
+			this.currentEditPanel = new InlineEditPanel(
+				this.editPanelContainer, 'Finish feeding', fields, onSave,
+				() => {
+					this.dismissEditPanel();
+					// Still save — timer already stopped
+					this.emitEvent?.({ type: 'feeding-logged', entry: active });
+					this.refreshUI();
+					this.save?.();
+				}
+			);
+		}
+	}
 
 	private async startFeeding(side: 'left' | 'right' | 'both', timestamp?: string): Promise<void> {
 		// If a past timestamp is provided, show panel for completed entry
@@ -476,5 +596,47 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 				});
 			this.entryList.update(items);
 		}
+	}
+
+	/** Button handler with long-press support (for stop button). */
+	private addButtonHandlerWithLongPress(
+		el: HTMLElement,
+		handler: () => void,
+		longPressHandler: () => void
+	): void {
+		let handledByPointer = false;
+		let pressTimer: ReturnType<typeof setTimeout> | null = null;
+		let longPressed = false;
+		const LONG_PRESS_MS = 500;
+
+		el.addEventListener('pointerdown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			longPressed = false;
+			pressTimer = setTimeout(() => {
+				longPressed = true;
+				longPressHandler();
+			}, LONG_PRESS_MS);
+		});
+		el.addEventListener('pointerup', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+			handledByPointer = true;
+			if (!longPressed) handler();
+			setTimeout(() => { handledByPointer = false; longPressed = false; }, 0);
+		});
+		el.addEventListener('pointercancel', () => {
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+			longPressed = false;
+		});
+		el.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			if (!handledByPointer && !longPressed) handler();
+		});
 	}
 }

@@ -70,6 +70,8 @@ export interface SimpleTrackerField {
 	max?: number;
 	/** When to collect this field for duration trackers. Default: 'start' for duration, 'log' for non-duration. */
 	collectOn?: 'start' | 'stop' | 'log' | 'always';
+	/** When true, field is skipped on quick-tap but shown on long-press. */
+	optional?: boolean;
 }
 
 /** Definition for a data-driven tracker in the library. */
@@ -384,6 +386,7 @@ export interface PostpartumTrackerSettings {
 		showTimer: boolean;
 		defaultType: 'breast' | 'bottle';
 		trackSide: boolean;
+		showBottle: boolean;
 	};
 
 	/** Diaper-specific */
@@ -450,6 +453,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 		showTimer: true,
 		defaultType: 'breast',
 		trackSide: true,
+		showBottle: true,
 	},
 	diaper: {
 		showColorPicker: true,
@@ -521,6 +525,8 @@ export interface QuickAction {
 	cls: string;
 	/** Called when button is tapped. timestamp is provided when "past time" clock is active. */
 	onClick: (timestamp?: string) => void;
+	/** Called on long-press (~500ms hold). Opens form for optional fields. */
+	onLongPress?: (timestamp?: string) => void;
 	/** When true, label is always shown even when showButtonLabels is off (e.g., medication names). */
 	labelEssential?: boolean;
 }

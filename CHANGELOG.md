@@ -7,6 +7,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-05
+
+### Added
+
+- **Hold-for-details on quick actions**: Long-press (~500ms) any quick-action button to open a detail form before logging. Tap still logs instantly.
+  - **Feeding**: Hold Left/Right/Both to add notes before starting the timer. Hold the Stop button to edit side, duration, and notes on finish.
+  - **Diapers**: Hold Wet/Dirty/Both to open a form with time, stool color, description, and notes.
+  - **Simple trackers**: Hold no-field trackers (e.g., Hiccups) to add notes. Hold quick-select trackers to open the full form with the option pre-filled.
+- **Show bottle button** toggle: New setting under Feeding to show or hide the bottle quick-action button.
+- Visual indicator (subtle bar) on buttons that support long-press.
+
+### Fixed
+
+- **Diaper color picker ignoring modal mode**: Dirty diaper color/description prompt now opens as a modal when input mode is set to modal, instead of always using the inline picker.
+
 ## [0.8.0] - 2026-03-05
 
 ### Added
@@ -232,7 +247,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Data stored as JSON inside markdown code blocks.
 - Mobile-first design with haptic feedback.
 
-[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/cybersader/postpartum-tracker/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/cybersader/postpartum-tracker/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/cybersader/postpartum-tracker/compare/0.7.5...0.8.0
 [0.7.5]: https://github.com/cybersader/postpartum-tracker/compare/0.7.4...0.7.5
 [0.7.4]: https://github.com/cybersader/postpartum-tracker/compare/0.7.3...0.7.4

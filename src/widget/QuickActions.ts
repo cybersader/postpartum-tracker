@@ -98,18 +98,27 @@ export class QuickActions {
 				btn.createSpan({ cls: 'pt-quick-btn-sublabel', text: parts[1] });
 			}
 
-			this.addActionHandler(btn, () => {
-				if (this.hapticEnabled) haptic(50);
-				const ts = this.getSelectedTimestamp();
-				action.onClick(ts);
-
-				// Auto-disable clock after use
+			const afterAction = () => {
 				if (this.clockActive) {
 					this.clockActive = false;
 					this.clockRow!.addClass('pt-hidden');
 					this.clockToggle!.removeClass('pt-quick-btn--active');
 				}
-			});
+			};
+
+			this.addActionHandler(btn, () => {
+				if (this.hapticEnabled) haptic(50);
+				const ts = this.getSelectedTimestamp();
+				action.onClick(ts);
+				afterAction();
+			}, action.onLongPress ? () => {
+				if (this.hapticEnabled) haptic(100);
+				const ts = this.getSelectedTimestamp();
+				action.onLongPress!(ts);
+				afterAction();
+			} : undefined);
+
+			if (action.onLongPress) btn.addClass('pt-has-longpress');
 
 			this.buttonEls.set(action.id, btn);
 		}
@@ -152,26 +161,40 @@ export class QuickActions {
 		return this.el;
 	}
 
-	/** Robust button handler for code block context. */
-	private addActionHandler(el: HTMLElement, handler: () => void): void {
+	/** Robust button handler with optional long-press support. */
+	private addActionHandler(el: HTMLElement, handler: () => void, longPressHandler?: () => void): void {
 		let handledByPointer = false;
+		let pressTimer: ReturnType<typeof setTimeout> | null = null;
+		let longPressed = false;
+		const LONG_PRESS_MS = 500;
 
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
+			longPressed = false;
+			if (longPressHandler) {
+				pressTimer = setTimeout(() => {
+					longPressed = true;
+					longPressHandler();
+				}, LONG_PRESS_MS);
+			}
 		});
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 			handledByPointer = true;
-			handler();
-			// Reset after current event cycle so click doesn't double-fire
-			setTimeout(() => { handledByPointer = false; }, 0);
+			if (!longPressed) handler();
+			setTimeout(() => { handledByPointer = false; longPressed = false; }, 0);
+		});
+		el.addEventListener('pointercancel', () => {
+			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+			longPressed = false;
 		});
 		// Fallback for non-pointer environments (keyboard, accessibility)
 		el.addEventListener('click', (e) => {
 			e.stopPropagation();
-			if (!handledByPointer) handler();
+			if (!handledByPointer && !longPressed) handler();
 		});
 	}
 }
