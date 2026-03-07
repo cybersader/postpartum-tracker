@@ -363,7 +363,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 				this.sectionCollapsibles.set(TrackerWidget.HISTORY_ID, collapsible);
 
 				this.eventHistory = new EventHistorySection(
-					collapsible.getBodyEl(), this.registry, this.settings, () => this.save()
+					collapsible.getBodyEl(), this.registry, this.settings, () => this.save(), this.plugin.app
 				);
 				continue;
 			}

@@ -75,7 +75,8 @@ export class CommentTracker implements TrackerModule<LogNoteEntry, CommentStats>
 		this.entryList = new EntryList(bodyEl, 'No notes yet');
 		this.entryList.setCallbacks(
 			(id) => this.editEntry(id),
-			(id) => this.deleteEntry(id)
+			(id) => this.deleteEntry(id),
+			this.app!
 		);
 
 		this.refreshUI();

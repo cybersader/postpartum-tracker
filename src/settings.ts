@@ -473,6 +473,16 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 			medSetting.addExtraButton(btn => btn
+				.setIcon(med.notificationEnabled !== false ? 'bell' : 'bell-off')
+				.setTooltip(med.notificationEnabled !== false ? 'Notifications on' : 'Notifications off')
+				.onClick(async () => {
+					meds[i].notificationEnabled = !(med.notificationEnabled !== false);
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+			medSetting.addExtraButton(btn => btn
 				.setIcon('pencil')
 				.setTooltip('Edit')
 				.onClick(() => {

@@ -1782,6 +1782,27 @@
 	margin: 0.5rem 0;
 }
 
+/* --- Delete confirmation modal --- */
+.pt-confirm-delete {
+	padding: 0.5rem 0;
+}
+.pt-confirm-delete h3 {
+	margin: 0 0 0.75rem 0;
+	font-size: 1.1rem;
+}
+.pt-confirm-delete-description {
+	padding: 10px 12px;
+	margin-bottom: 1rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	font-size: 0.95rem;
+	line-height: 1.4;
+}
+.pt-confirm-delete .pt-modal-buttons button {
+	min-height: 44px;
+	min-width: 80px;
+}
+
 /* --- Webhook setup guide --- */
 .pt-webhook-guide {
 	padding: 12px 16px;

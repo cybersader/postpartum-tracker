@@ -167,6 +167,8 @@ export interface MedicationConfig {
 	enabled: boolean;
 	icon: string;               // Emoji or character
 	category?: MedicationCategory; // 'medication' (default) or 'remedy' (topical/external)
+	/** Whether this medication triggers dose-ready notifications. Defaults to true. */
+	notificationEnabled?: boolean;
 }
 
 export const DEFAULT_MEDICATIONS: MedicationConfig[] = [

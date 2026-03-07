@@ -88,7 +88,8 @@ export class MedicationTracker implements TrackerModule<MedicationEntry, Medicat
 		this.entryList = new EntryList(bodyEl, 'No medications logged today');
 		this.entryList.setCallbacks(
 			(id) => this.editEntry(id),
-			(id) => this.deleteEntry(id)
+			(id) => this.deleteEntry(id),
+			this.app!
 		);
 
 		this.refreshUI();

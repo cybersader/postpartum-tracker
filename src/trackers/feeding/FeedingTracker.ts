@@ -92,7 +92,8 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		this.entryList = new EntryList(bodyEl, 'No feedings today');
 		this.entryList.setCallbacks(
 			(id) => this.editEntry(id),
-			(id) => this.deleteEntry(id)
+			(id) => this.deleteEntry(id),
+			this.app!
 		);
 
 		this.refreshUI();

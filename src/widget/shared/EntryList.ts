@@ -3,6 +3,8 @@
  * Uses pointerdown events to prevent Obsidian's CodeMirror from
  * intercepting clicks inside rendered code blocks.
  */
+import { ConfirmDeleteModal } from '../../ui/ConfirmDeleteModal';
+
 export interface EntryListItem {
 	id: string;
 	time: string;
@@ -20,6 +22,7 @@ export class EntryList {
 	private emptyEl: HTMLElement;
 	private onEdit?: (id: string) => void;
 	private onDelete?: (id: string) => void;
+	private app: import('obsidian').App | null = null;
 
 	constructor(parent: HTMLElement, emptyText: string = 'No entries yet') {
 		this.el = parent.createDiv({ cls: 'pt-entry-list' });
@@ -27,9 +30,10 @@ export class EntryList {
 		this.listEl = this.el.createDiv({ cls: 'pt-entry-list-items' });
 	}
 
-	setCallbacks(onEdit?: (id: string) => void, onDelete?: (id: string) => void): void {
+	setCallbacks(onEdit?: (id: string) => void, onDelete?: (id: string) => void, app?: import('obsidian').App): void {
 		this.onEdit = onEdit;
 		this.onDelete = onDelete;
+		if (app) this.app = app;
 	}
 
 	update(items: EntryListItem[]): void {
@@ -83,7 +87,14 @@ export class EntryList {
 					title: 'Delete',
 					text: '\u2715',
 				});
-				this.addButtonHandler(deleteBtn, () => this.onDelete!(item.id));
+				this.addButtonHandler(deleteBtn, () => {
+					const desc = `${item.icon} ${item.text} (${item.time})`;
+					if (this.app) {
+						new ConfirmDeleteModal(this.app, desc, () => this.onDelete!(item.id)).open();
+					} else {
+						this.onDelete!(item.id);
+					}
+				});
 			}
 		}
 	}

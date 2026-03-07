@@ -2,11 +2,13 @@
  * Unified chronological event feed showing recent entries from all modules.
  * Supports edit/delete routing back to the owning module, plus undo-last.
  */
+import type { App } from 'obsidian';
 import type { TrackerModule } from '../trackers/BaseTracker';
 import type { PostpartumTrackerSettings } from '../types';
 import type { TrackerRegistry } from '../data/TrackerRegistry';
 import { formatTime, formatDurationShort } from '../utils/formatters';
 import { EntryList, type EntryListItem } from './shared/EntryList';
+import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 
 interface AggregatedEntry {
 	moduleId: string;
@@ -26,16 +28,19 @@ export class EventHistorySection {
 	private settings: PostpartumTrackerSettings;
 	private lastEntry: AggregatedEntry | null = null;
 	private onSave: () => Promise<void>;
+	private app: App;
 
 	constructor(
 		parent: HTMLElement,
 		registry: TrackerRegistry,
 		settings: PostpartumTrackerSettings,
-		onSave: () => Promise<void>
+		onSave: () => Promise<void>,
+		app: App
 	) {
 		this.registry = registry;
 		this.settings = settings;
 		this.onSave = onSave;
+		this.app = app;
 
 		this.el = parent.createDiv({ cls: 'pt-event-history' });
 
@@ -51,7 +56,8 @@ export class EventHistorySection {
 		this.entryList = new EntryList(this.el, 'No recent entries');
 		this.entryList.setCallbacks(
 			(compositeId) => this.routeEdit(compositeId),
-			(compositeId) => this.routeDelete(compositeId)
+			(compositeId) => this.routeDelete(compositeId),
+			this.app
 		);
 	}
 
@@ -177,13 +183,15 @@ export class EventHistorySection {
 		if (module?.deleteEntry) await module.deleteEntry(entryId);
 	}
 
-	/** Undo the most recent entry. */
-	private async undoLast(): Promise<void> {
+	/** Undo the most recent entry (with confirmation). */
+	private undoLast(): void {
 		if (!this.lastEntry) return;
-		const module = this.registry.get(this.lastEntry.moduleId);
-		if (module?.deleteEntry) {
-			await module.deleteEntry(this.lastEntry.entryId);
-		}
+		const entry = this.lastEntry;
+		const desc = `${entry.moduleIcon} ${entry.text}`;
+		new ConfirmDeleteModal(this.app, desc, async () => {
+			const module = this.registry.get(entry.moduleId);
+			if (module?.deleteEntry) await module.deleteEntry(entry.entryId);
+		}).open();
 	}
 
 	getEl(): HTMLElement {

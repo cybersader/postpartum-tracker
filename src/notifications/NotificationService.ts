@@ -240,6 +240,7 @@ export class NotificationService {
 
 		for (const config of configs) {
 			if (!config.enabled) continue;
+			if (config.notificationEnabled === false) continue;
 
 			// Find last dose of this medication
 			const doseEntries = medEntries
@@ -277,7 +278,8 @@ export class NotificationService {
 		const configs = (data.trackers.medicationConfig || DEFAULT_MEDICATIONS) as MedicationConfig[];
 
 		const painMeds = configs.filter(c =>
-			c.enabled && ['tylenol', 'ibuprofen'].includes(c.name.toLowerCase())
+			c.enabled && c.notificationEnabled !== false &&
+			['tylenol', 'ibuprofen'].includes(c.name.toLowerCase())
 		);
 		if (painMeds.length < 2) return null;
 

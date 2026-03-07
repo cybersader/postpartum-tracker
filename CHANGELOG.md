@@ -7,6 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-03-07
+
+### Added
+
+- **Delete confirmation modal**: Tapping the delete button (or undo in event history) now shows a confirmation dialog before removing the entry. Prevents accidental data loss from mis-taps while scrolling on mobile.
+- **Per-medication notification controls**: Each medication now has a bell toggle in settings to enable/disable dose-ready and alternating-schedule notifications individually. Disabling notifications for a specific med (e.g., Hydrocodone) no longer requires disabling all medication alerts.
+
+### Fixed
+
+- **Data corruption from sync conflicts**: Fixed corrupted JSON entries (missing comma/field name, duplicate keys) likely caused by Obsidian Sync auto-merge.
+
 ## [0.15.6] - 2026-03-05
 
 ### Fixed

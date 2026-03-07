@@ -127,7 +127,8 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 		this.entryList = new EntryList(bodyEl, `No ${this.def.displayName.toLowerCase()} entries today`);
 		this.entryList.setCallbacks(
 			(id) => this.editEntry(id),
-			(id) => this.deleteEntry(id)
+			(id) => this.deleteEntry(id),
+			this.app!
 		);
 
 		this.refreshUI();
