@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-03-07
+
+### Fixed
+
+- **Library tracker reminder overrides ignored**: Disabling "Reminder enabled" in a library tracker's settings (e.g., Sleep) had no effect — notifications still fired. The notification service was only checking the library definition's default, not the user's per-tracker override. Now checks `libraryTrackerOverrides[id].notification.reminderEnabled` and also uses the overridden interval if set.
+
 ## [0.16.1] - 2026-03-07
 
 ### Added

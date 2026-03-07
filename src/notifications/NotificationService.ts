@@ -150,8 +150,19 @@ export class NotificationService {
 		for (const def of TRACKER_LIBRARY) {
 			if (!def.notificationConfig?.reminderEnabled) continue;
 			if (!this.plugin.settings.enabledModules.includes(def.id)) continue;
+
+			// Check user override — if explicitly disabled, skip
+			const override = this.plugin.settings.libraryTrackerOverrides[def.id];
+			if (override?.notification?.reminderEnabled === false) continue;
+
+			// Use overridden interval if set
+			const config = {
+				reminderIntervalHours: override?.notification?.reminderIntervalHours ?? def.notificationConfig.reminderIntervalHours,
+				reminderMessage: def.notificationConfig.reminderMessage,
+			};
+
 			const entries = (data.trackers[def.id] || []) as SimpleTrackerEntry[];
-			const alert = this.checkSimpleTrackerReminder(def.id, def.notificationConfig, entries, now);
+			const alert = this.checkSimpleTrackerReminder(def.id, config, entries, now);
 			if (alert) notifications.push(alert);
 		}
 
