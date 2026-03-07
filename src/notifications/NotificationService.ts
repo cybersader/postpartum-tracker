@@ -354,9 +354,14 @@ export class NotificationService {
 	private fireNotification(notif: NotificationItem, settings: NotificationSettings): void {
 		const { type } = settings;
 		const todoistService = this.plugin.todoistService;
-		const suppressToasts = todoistService?.shouldSuppressToasts() ?? false;
+		const todoistSuppresses = todoistService?.shouldSuppressToasts() ?? false;
 
-		// In-app toast (suppressed if Todoist is handling reminders)
+		// Suppress in-app toasts when an external push service is active and user opted in
+		const externalServiceActive = settings.webhookEnabled &&
+			(settings.ntfyEnabled || settings.pushoverEnabled || settings.gotifyEnabled || settings.customWebhookEnabled);
+		const suppressToasts = todoistSuppresses || (settings.suppressToastsWhenExternal && externalServiceActive);
+
+		// In-app toast (suppressed if external service is handling reminders)
 		if (!suppressToasts && (type === 'in-app' || type === 'both')) {
 			this.toast.show(notif, {
 				onDismiss: () => this.dismiss(notif.id),

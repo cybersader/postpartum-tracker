@@ -247,6 +247,9 @@ export interface NotificationSettings {
 
 	/** Enable custom webhook */
 	customWebhookEnabled: boolean;
+
+	/** Suppress in-app toasts when an external push service (ntfy, Pushover, Gotify) is active */
+	suppressToastsWhenExternal: boolean;
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -270,6 +273,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 	gotifyEnabled: false,
 	gotifyUrl: '',
 	customWebhookEnabled: false,
+	suppressToastsWhenExternal: false,
 };
 
 export interface NotificationItem {

@@ -794,6 +794,17 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				text: 'Enable one or more services below. When sharing a vault, each person can enable the service they prefer \u2014 both will receive notifications simultaneously.',
 			});
 
+			new Setting(el)
+				.setName('Suppress in-app toasts')
+				.setDesc('Hide in-app toast popups when a push service (ntfy, Pushover, Gotify) is handling notifications.')
+				.addToggle(toggle => toggle
+					.setValue(notif.suppressToastsWhenExternal)
+					.onChange(async (value) => {
+						notif.suppressToastsWhenExternal = value;
+						await this.plugin.saveSettings();
+					})
+				);
+
 			// ═══════════════════════════════════════════════
 			//  ntfy.sh
 			// ═══════════════════════════════════════════════

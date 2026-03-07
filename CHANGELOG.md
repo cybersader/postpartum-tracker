@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-03-07
+
+### Added
+
+- **Suppress in-app toasts when external push is active**: New toggle under Push notification services. When enabled and any push service (ntfy, Pushover, Gotify, or custom webhook) is active, in-app toast popups are hidden — notifications go only through the external service. Works independently of the Todoist suppress toggle.
+
 ## [0.16.0] - 2026-03-07
 
 ### Added
