@@ -1,0 +1,147 @@
+---
+title: Analytics
+description: Charts, heatmaps, and insights for feeding, sleep, diaper, and medication patterns.
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The analytics dashboard gives you visual insight into your baby's patterns without leaving the tracker. Each module has its own collapsible section with charts, heatmaps, and contextual insights.
+
+## Enabling analytics
+
+<Steps>
+1. Open **Settings > Trackers** tab.
+2. Find the **Analytics** section at the top.
+3. Toggle on the modules you want: Feeding, Sleep, Diaper, or Medication analytics.
+4. Close settings — analytics sections appear in your tracker widget.
+</Steps>
+
+## Time window picker
+
+Each analytics section has inline pill buttons at the top:
+
+| Pill | Window |
+|------|--------|
+| **3d** | Last 3 days |
+| **7d** | Last 7 days |
+| **14d** | Last 14 days |
+
+Tap a pill to change the window for that section only. Your choice is saved per-section in the code block data.
+
+### Smart defaults by baby age
+
+If no window has been chosen yet, the plugin picks a sensible default based on the baby's birth date (set in the code block JSON `meta.birthDate`):
+
+| Baby age | Default window |
+|----------|---------------|
+| < 7 days | 3 days |
+| 7-13 days | 7 days |
+| 14+ days | 14 days |
+| No birth date set | 7 days |
+
+### Fixed-window charts
+
+Some charts always use a fixed window regardless of the pill selection:
+
+- **Timelines** (feeding times, sleep times, diaper times) — always last 3 days
+- **"Today" insights** (total sleep today, dose count today) — always today
+- **Pain coverage** — always last 24 hours
+- **Stool color trend** — always last 5 entries
+
+## Feeding analytics
+
+When enabled, the feeding analytics section shows:
+
+### Charts
+- **Feedings per day** — Bar chart with 3-day moving average line
+- **Nursing minutes (L/R/Both)** — Stacked bar chart breaking down breast time by side (blue = left, orange = right, green = both)
+- **Feeding times** — 24-hour timeline for the last 3 days, color-coded by side
+- **Feeding activity by hour** — Heatmap showing feeding density across all 24 hours for each day in the window. Brighter cells = more feedings in that hour.
+- **L/R balance** — Horizontal bar showing left vs right percentage split
+
+### Insights
+- Average feedings per day with trend arrow
+- Average session duration (minutes)
+- Longest gap today (hours and minutes)
+- Next side suggestion (based on last feeding)
+- Average session duration sparkline trend
+
+## Sleep analytics
+
+When enabled, the sleep analytics section shows:
+
+### Charts
+- **Sleep hours per day** — Bar chart with 3-day moving average
+- **Sleep sessions per day** — Bar chart counting distinct sleep periods
+- **Sleep by time of day** — Ranked horizontal bars showing average sleep hours per day in each 6-hour period (Night 12a-6a, Morning 6a-12p, Afternoon 12p-6p, Evening 6p-12a). Sorted by most sleep first.
+- **Sleep activity by hour** — Heatmap showing sleep density across all 24 hours for each day. Brighter purple = more sleep in that hour.
+- **Sleep times** — 24-hour timeline for the last 3 days
+
+### Insights
+- Total sleep today (hours and minutes)
+- Longest stretch duration
+- Average awake window (gap between sleep sessions)
+- Sleep trend arrow
+- Parent sleep coverage percentage (when parent window is enabled)
+- Age-appropriate baseline ("Newborns: 14-17h/day typical")
+- Longest stretch sparkline trend
+
+### Parent sleep window
+
+You can set your target sleep hours so the timeline highlights when baby sleep overlaps with yours.
+
+<Steps>
+1. Go to **Settings > Trackers > Sleep**.
+2. Enable **Parent sleep window**.
+3. Set your **Bedtime** hour (e.g., 10:00 PM).
+4. Set your **Wake time** hour (e.g., 6:00 AM).
+</Steps>
+
+When enabled:
+- The timeline shows a **green background band** for your sleep window
+- Baby sleep blocks during your window are colored **green**, outside stays **purple**
+- A new insight appears: "Baby slept X% of your sleep window"
+  - Green (positive) at 70%+
+  - Neutral at 40-70%
+  - Red (negative) below 40%
+
+## Diaper analytics
+
+When enabled, the diaper analytics section shows:
+
+### Charts
+- **Diapers per day** — Bar chart counting changes
+- **Wet vs dirty** — Stacked bar chart
+- **Diaper times** — 24-hour timeline for the last 3 days
+- **Stool color trend** — Last 5 dirty diapers with color indicators
+
+### Insights
+- Wet and dirty counts today
+- Change frequency trend
+- Age-appropriate diaper count reference
+
+## Medication analytics
+
+When enabled, the medication analytics section shows:
+
+### Charts
+- **Doses per day** — Bar chart per medication
+- **Medication times** — 24-hour timeline for the last 3 days
+- **Pain coverage** — Last 24 hours with gap indicators
+
+### Insights
+- Doses taken today per medication
+- Timing compliance (on-schedule vs late)
+- Next dose due time
+
+## Heatmaps
+
+Heatmaps appear in both feeding and sleep analytics. They show a grid where:
+- **Rows** = days in the selected window
+- **Columns** = hours of the day (12a through 11p)
+- **Cell brightness** = amount of activity in that hour
+
+A gradient legend ("Less" to "More") appears below each heatmap. These are useful for spotting:
+- Cluster patterns (baby feeds heavily in the evening)
+- Schedule drift (sleep times shifting earlier or later over days)
+- Gaps that might indicate missed entries

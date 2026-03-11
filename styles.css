@@ -2174,6 +2174,21 @@
 	display: inline-block;
 }
 
+/* --- Heatmap legend --- */
+.pt-heatmap-legend {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 4px;
+	font-size: var(--font-smaller);
+	color: var(--text-muted);
+}
+.pt-heatmap-legend-bar {
+	width: 60px;
+	height: 8px;
+	border-radius: 3px;
+}
+
 /* --- Analytics window picker pills --- */
 .pt-analytics-window-picker {
 	display: flex;

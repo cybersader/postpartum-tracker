@@ -32,6 +32,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Tracker library', slug: 'guides/tracker-library' },
+            { label: 'Analytics', slug: 'guides/analytics' },
             { label: 'Notifications', slug: 'guides/notifications' },
             {
               label: 'Todoist integration',

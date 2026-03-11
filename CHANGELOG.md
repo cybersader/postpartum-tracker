@@ -7,6 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-03-11
+
+### Added
+
+- **Heatmaps**: New hour-of-day heatmap charts for both feeding and sleep analytics. Shows activity density across all 24 hours for each day in the window — brighter cells mean more activity. Useful for spotting cluster patterns and schedule drift.
+- **Analytics docs page**: New documentation page at the docs site covering all analytics features, chart types, heatmaps, window pickers, and parent sleep window setup.
+
+### Changed
+
+- **Sleep period ranking uses averages**: "Sleep by time of day" now shows average hours per day instead of summed totals, making the ranking meaningful across different window sizes.
+
 ## [0.18.0] - 2026-03-11
 
 ### Added

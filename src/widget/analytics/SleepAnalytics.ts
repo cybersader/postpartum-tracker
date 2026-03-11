@@ -8,6 +8,7 @@ import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS } from '..
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
+import { renderHeatmapChart } from '../charts/HeatmapChart';
 
 interface SleepEntry {
 	id: string;
@@ -67,8 +68,14 @@ export class SleepAnalytics {
 		const napContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderBarChart(napContainer, napData, { color: 'var(--color-purple)' });
 
-		// ── Sleep by time of day (period ranking) ──
-		this.renderPeriodRanking(entries, keys, byDay);
+		// ── Sleep by time of day (period ranking — averages) ──
+		this.renderPeriodRanking(entries, keys, byDay, days);
+
+		// ── Sleep heatmap (hour × day) ──
+		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
+		const heatGrid = this.buildHourGrid(keys, byDay);
+		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-purple)' });
 
 		// ── Sleep timeline (last 3 days) ──
 		const parentEnabled = settings.sleep?.parentWindowEnabled ?? false;
@@ -185,11 +192,12 @@ export class SleepAnalytics {
 		}
 	}
 
-	/** Render horizontal bar ranking of sleep hours by 6-hour period. */
+	/** Render horizontal bar ranking of average sleep hours per day by 6-hour period. */
 	private renderPeriodRanking(
 		entries: SleepEntry[],
 		keys: string[],
 		byDay: Map<string, SleepEntry[]>,
+		numDays: number,
 	): void {
 		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by time of day' });
 
@@ -210,21 +218,38 @@ export class SleepAnalytics {
 			distributeToPeriods(startH, endH, getDurHours(e), periodHours);
 		}
 
-		// Build ranked list (descending)
+		// Build ranked list by daily average (descending)
 		const ranked = PERIODS.map((p, i) => ({
 			label: p.label,
-			hours: Math.round(periodHours[i] * 10) / 10,
-		})).sort((a, b) => b.hours - a.hours);
+			avgHours: Math.round((periodHours[i] / numDays) * 10) / 10,
+		})).sort((a, b) => b.avgHours - a.avgHours);
 
-		const maxH = ranked[0].hours || 1;
+		const maxH = ranked[0].avgHours || 1;
 		const container = this.el.createDiv({ cls: 'pt-period-rank' });
 		for (const item of ranked) {
 			const row = container.createDiv({ cls: 'pt-period-rank-row' });
 			row.createSpan({ cls: 'pt-period-rank-label', text: item.label });
 			const bar = row.createDiv({ cls: 'pt-period-rank-bar' });
-			bar.style.width = `${Math.max((item.hours / maxH) * 100, 2)}%`;
-			row.createSpan({ cls: 'pt-period-rank-value', text: `${item.hours}h` });
+			bar.style.width = `${Math.max((item.avgHours / maxH) * 100, 2)}%`;
+			row.createSpan({ cls: 'pt-period-rank-value', text: `${item.avgHours}h avg` });
 		}
+	}
+
+	/** Build a grid[day][hour] of fractional sleep hours for the heatmap. */
+	private buildHourGrid(keys: string[], byDay: Map<string, SleepEntry[]>): number[][] {
+		const grid: number[][] = [];
+		for (const k of keys) {
+			const hourBuckets = new Array<number>(24).fill(0);
+			for (const e of byDay.get(k)!.filter(e => e.end != null)) {
+				const startH = toDecimalHour(e.timestamp);
+				const endH = toDecimalHour(e.end!);
+				const totalH = getDurHours(e);
+				if (totalH <= 0) continue;
+				distributeToHours(startH, endH, totalH, hourBuckets);
+			}
+			grid.push(hourBuckets);
+		}
+		return grid;
 	}
 
 	getEl(): HTMLElement { return this.el; }
@@ -385,4 +410,30 @@ function clipOverlap(s1: number, e1: number, s2: number, e2: number): [number, n
 	const start = Math.max(s1, s2);
 	const end = Math.min(e1, e2);
 	return end > start ? [start, end] : null;
+}
+
+/** Distribute sleep hours into 24 hour-buckets for the heatmap. */
+function distributeToHours(startH: number, endH: number, totalHours: number, out: number[]): void {
+	if (totalHours <= 0) return;
+	if (endH <= startH) {
+		// Crosses midnight
+		const span = (24 - startH) + endH;
+		if (span <= 0) return;
+		distributeHourSpan(startH, 24, (24 - startH) / span * totalHours, out);
+		distributeHourSpan(0, endH, endH / span * totalHours, out);
+	} else {
+		distributeHourSpan(startH, endH, totalHours, out);
+	}
+}
+
+function distributeHourSpan(startH: number, endH: number, totalHours: number, out: number[]): void {
+	const span = endH - startH;
+	if (span <= 0) return;
+	const firstHour = Math.floor(startH);
+	const lastHour = Math.min(Math.floor(endH - 0.001), 23);
+	for (let h = firstHour; h <= lastHour && h < 24; h++) {
+		const bucketStart = Math.max(startH, h);
+		const bucketEnd = Math.min(endH, h + 1);
+		out[h] += (bucketEnd - bucketStart) / span * totalHours;
+	}
 }

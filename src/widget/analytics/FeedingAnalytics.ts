@@ -7,6 +7,7 @@ import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS } from '..
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
+import { renderHeatmapChart } from '../charts/HeatmapChart';
 
 export class FeedingAnalytics {
 	private el: HTMLElement;
@@ -79,6 +80,19 @@ export class FeedingAnalytics {
 		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding times' });
 		const tlContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderTimelineChart(tlContainer, rows);
+
+		// ── Feeding heatmap (hour × day) ──
+		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
+		const heatGrid = keys.map(k => {
+			const hourBuckets = new Array<number>(24).fill(0);
+			for (const e of byDay.get(k)!.filter(e => e.end !== null)) {
+				const h = Math.floor(toDecimalHour(e.start));
+				if (h >= 0 && h < 24) hourBuckets[h]++;
+			}
+			return hourBuckets;
+		});
+		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-blue)' });
 
 		// ── L/R Balance bar ──
 		const allCompleted = entries.filter(e => e.end !== null && e.type !== 'bottle');
