@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.5] - 2026-03-11
+
+### Changed
+
+- **Bigger window picker pills**: Increased font size (11px → 14px), padding, and border radius for easier tapping on mobile.
+- **More window options**: Analytics pills now offer 3d, 1w, 2w, 1mo, 3mo (was just 3d/7d/14d). View up to 3 months of trends at a glance.
+
 ## [0.18.4] - 2026-03-11
 
 ### Fixed

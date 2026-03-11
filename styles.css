@@ -2192,19 +2192,19 @@
 /* --- Analytics window picker pills --- */
 .pt-analytics-window-picker {
 	display: flex;
-	gap: 4px;
-	margin-bottom: 8px;
+	gap: 6px;
+	margin-bottom: 10px;
 }
 
 .pt-window-pill {
-	font-size: 11px;
-	padding: 2px 10px;
-	border-radius: 12px;
+	font-size: 14px;
+	padding: 6px 16px;
+	border-radius: 16px;
 	border: 1px solid var(--background-modifier-border);
 	background: var(--background-primary);
 	color: var(--text-muted);
 	cursor: pointer;
-	font-weight: 500;
+	font-weight: 600;
 	line-height: 1.4;
 	-webkit-tap-highlight-color: transparent;
 	touch-action: manipulation;

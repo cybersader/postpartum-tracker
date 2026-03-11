@@ -613,11 +613,13 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		// Inline window picker pills
 		const pickerRow = body.createDiv({ cls: 'pt-analytics-window-picker' });
-		const options = [3, 7, 14];
-		for (const days of options) {
+		const windowOptions: [number, string][] = [
+			[3, '3d'], [7, '1w'], [14, '2w'], [30, '1mo'], [90, '3mo'],
+		];
+		for (const [days, label] of windowOptions) {
 			const pill = pickerRow.createEl('button', {
 				cls: `pt-window-pill${days === currentWindow ? ' pt-window-pill--active' : ''}`,
-				text: `${days}d`,
+				text: label,
 			});
 			this.addPillHandler(pill, () => {
 				this.setAnalyticsWindow(analyticsId, days, body, pickerRow);
@@ -667,12 +669,17 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		// Update pill active states
 		const pills = pickerRow.querySelectorAll('.pt-window-pill');
-		const options = [3, 7, 14];
-		pills.forEach((pill, i) => {
-			if (options[i] === days) {
+		pills.forEach(pill => {
+			pill.removeClass('pt-window-pill--active');
+		});
+		// Find the pill matching this day count by its text content mapping
+		const windowOptions: [number, string][] = [
+			[3, '3d'], [7, '1w'], [14, '2w'], [30, '1mo'], [90, '3mo'],
+		];
+		const targetLabel = windowOptions.find(([d]) => d === days)?.[1];
+		pills.forEach(pill => {
+			if ((pill as HTMLElement).textContent === targetLabel) {
 				pill.addClass('pt-window-pill--active');
-			} else {
-				pill.removeClass('pt-window-pill--active');
 			}
 		});
 
