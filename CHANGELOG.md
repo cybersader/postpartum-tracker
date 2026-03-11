@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.8] - 2026-03-11
+
+### Changed
+
+- **Sleep analytics monthly views**: Show daily bars with 7-day moving average overlay instead of weekly-aggregated bars. Gives both daily granularity and weekly trend at 1mo/3mo windows. Value labels hidden at monthly scale to reduce clutter.
+
 ## [0.18.7] - 2026-03-11
 
 ### Changed

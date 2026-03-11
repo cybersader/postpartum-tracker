@@ -4,7 +4,7 @@
  * parent sleep window overlay, and timeline.
  */
 import type { PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeeks } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, collapseToWeeks } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -56,35 +56,33 @@ export class SleepAnalytics {
 		const isWeekly = days >= 30;
 
 		// ── Sleep hours ──
-		if (isWeekly) {
-			const agg = aggregateWeekly(dailyHoursRaw, labels);
-			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours (weekly avg)' });
-			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderBarChart(c, barData, { color: 'var(--color-purple)' });
-		} else {
+		{
 			const barData: BarDatum[] = dailyHoursRaw.map((v, i) => ({
 				label: labels[i], value: Math.round(v * 10) / 10,
 			}));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours per day' });
+			const title = isWeekly ? 'Sleep hours per day (7-day avg)' : 'Sleep hours per day';
+			this.el.createDiv({ cls: 'pt-analytics-title', text: title });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderBarChart(c, barData, { movingAvgWindow: 3, color: 'var(--color-purple)' });
+			renderBarChart(c, barData, {
+				movingAvgWindow: isWeekly ? 7 : 3,
+				showValues: !isWeekly,
+				color: 'var(--color-purple)',
+			});
 		}
 
 		// ── Sleep sessions ──
-		if (isWeekly) {
-			const agg = aggregateWeekly(dailySessionsRaw, labels);
-			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions (weekly avg)' });
-			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderBarChart(c, barData, { color: 'var(--color-purple)' });
-		} else {
+		{
 			const barData: BarDatum[] = dailySessionsRaw.map((v, i) => ({
 				label: labels[i], value: v,
 			}));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions per day' });
+			const title = isWeekly ? 'Sleep sessions per day (7-day avg)' : 'Sleep sessions per day';
+			this.el.createDiv({ cls: 'pt-analytics-title', text: title });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+			renderBarChart(c, barData, {
+				movingAvgWindow: isWeekly ? 7 : 0,
+				showValues: !isWeekly,
+				color: 'var(--color-purple)',
+			});
 		}
 
 		// ── Sleep by time of day (period ranking — averages) ──
