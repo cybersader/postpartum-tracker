@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.3] - 2026-03-11
+
+### Fixed
+
+- **Heatmap filters out empty rows**: Weeks/days with zero data are removed entirely instead of showing "0m/day" rows. Only rows with actual logged data appear.
+- **Avg row only averages active rows**: The average summary no longer gets diluted by empty weeks (e.g., 9h9m/day instead of 42m/day when only 1 of 13 weeks has data).
+
 ## [0.19.2] - 2026-03-11
 
 ### Changed

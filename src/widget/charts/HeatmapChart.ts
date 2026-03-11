@@ -51,29 +51,40 @@ export function renderHeatmapChart(
 	const fmt = opts.formatValue ?? ((v: number) => String(Math.round(v * 10) / 10));
 	const fmtRow = opts.formatRowTotal ?? null;
 
+	// Filter out completely empty rows (no data logged)
+	const filtered: { row: number[]; label: string }[] = [];
+	for (let i = 0; i < grid.length; i++) {
+		const hasData = grid[i].some(v => v > 0);
+		if (hasData) filtered.push({ row: grid[i], label: dayLabels[i] ?? '' });
+	}
+	if (filtered.length === 0) return;
+
+	const rows = filtered.map(f => f.row);
+	const rowLabels = filtered.map(f => f.label);
+
 	// Find max value for opacity scaling
 	let maxVal = 0;
-	for (const row of grid) {
+	for (const row of rows) {
 		for (const v of row) {
 			if (v > maxVal) maxVal = v;
 		}
 	}
 	if (maxVal === 0) maxVal = 1; // avoid div-by-zero
 
-	// Compute average row if needed
+	// Compute average row (only across non-empty rows)
 	const avgRow = new Array<number>(COLS).fill(0);
-	if (showAvgRow && grid.length > 0) {
-		for (const row of grid) {
+	if (showAvgRow && rows.length > 0) {
+		for (const row of rows) {
 			for (let h = 0; h < COLS && h < row.length; h++) {
 				avgRow[h] += row[h];
 			}
 		}
-		for (let h = 0; h < COLS; h++) avgRow[h] /= grid.length;
+		for (let h = 0; h < COLS; h++) avgRow[h] /= rows.length;
 	}
 
 	const GAP_H = showAvgRow ? 2 : 0; // gap before avg row
 	const AVG_ROW_H = showAvgRow ? ROW_H + 1 : 0;
-	const viewH = HEADER_H + grid.length * ROW_H + GAP_H + AVG_ROW_H + 2;
+	const viewH = HEADER_H + rows.length * ROW_H + GAP_H + AVG_ROW_H + 2;
 	const svg = createSvg(VIEW_W, viewH);
 	svg.classList.add('pt-heatmap-chart');
 	// No fixed height — viewBox ratio scales with container width
@@ -89,8 +100,8 @@ export function renderHeatmapChart(
 	}
 
 	// Rows (oldest at top so newest is at bottom, matching timeline convention)
-	for (let r = 0; r < grid.length; r++) {
-		const row = grid[r];
+	for (let r = 0; r < rows.length; r++) {
+		const row = rows[r];
 		const y = HEADER_H + r * ROW_H;
 
 		// Day label
@@ -98,7 +109,7 @@ export function renderHeatmapChart(
 			x: LABEL_W, y: y + ROW_H / 2 + 0.8,
 			'text-anchor': 'end', 'font-size': 2.5,
 			fill: 'var(--text-muted)',
-		}, svg).textContent = dayLabels[r] ?? '';
+		}, svg).textContent = rowLabels[r];
 
 		// Cells
 		let rowSum = 0;
@@ -129,9 +140,9 @@ export function renderHeatmapChart(
 	}
 
 	// Average summary row
-	if (showAvgRow && grid.length > 0) {
+	if (showAvgRow && rows.length > 0) {
 		const avgMaxVal = Math.max(...avgRow, 0.001);
-		const avgY = HEADER_H + grid.length * ROW_H + GAP_H;
+		const avgY = HEADER_H + rows.length * ROW_H + GAP_H;
 
 		// Separator line
 		svgEl('line', {
