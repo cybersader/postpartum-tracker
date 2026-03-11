@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.6] - 2026-03-11
+
+### Fixed
+
+- **Sleep heatmap legend**: Shows "Awake" to "Asleep" instead of confusing "0m" to "120m" (which implied 120 minutes in a 60-minute hour). Row totals still show specific hours+minutes per day.
+
 ## [0.19.5] - 2026-03-11
 
 ### Fixed

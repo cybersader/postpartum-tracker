@@ -108,10 +108,7 @@ export class SleepAnalytics {
 			const min = Math.round((h - hrs) * 60);
 			return hrs > 0 ? `${hrs}h${min}m/day` : `${min}m/day`;
 		};
-		const fmtSleepCell = (v: number) => {
-			const min = Math.round(v * 60);
-			return min > 0 ? `${min}m/hr` : '0m';
-		};
+		const fmtSleepCell = (v: number) => v === 0 ? 'Awake' : 'Asleep';
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by week' });
