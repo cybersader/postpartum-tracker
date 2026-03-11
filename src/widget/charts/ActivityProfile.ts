@@ -12,17 +12,16 @@ export interface ActivityProfileOptions {
 }
 
 const VIEW_W = 100;
-const VIEW_H = 32;
-const LABEL_H = 4;      // space for hour labels at bottom
-const PLOT_TOP = 3;
-const PLOT_BOTTOM = VIEW_H - LABEL_H - 1;
-const PLOT_LEFT = 2;
-const PLOT_RIGHT = VIEW_W - 2;
+const VIEW_H = 50;
+const PLOT_TOP = 8;        // room for peak label above
+const PLOT_BOTTOM = 42;    // room for hour labels below
+const PLOT_LEFT = 1;
+const PLOT_RIGHT = 99;
 const PLOT_W = PLOT_RIGHT - PLOT_LEFT;
 const PLOT_H = PLOT_BOTTOM - PLOT_TOP;
 
 const HOUR_LABELS: [number, string][] = [
-	[0, '12a'], [6, '6a'], [12, '12p'], [18, '6p'], [24, ''],
+	[0, '12a'], [6, '6a'], [12, '12p'], [18, '6p'], [24, '12a'],
 ];
 
 /**
@@ -49,19 +48,26 @@ export function renderActivityProfile(
 	}
 	for (let h = 0; h < 24; h++) hourAvg[h] /= numDays;
 
-	const max = Math.max(...hourAvg, 0.01); // avoid div-by-zero
+	const max = Math.max(...hourAvg, 0.01);
 	const peakHour = hourAvg.indexOf(max);
 
 	const svg = createSvg(VIEW_W, VIEW_H);
 	svg.classList.add('pt-activity-profile');
-	svg.style.height = opts.height || '64px';
+	svg.style.height = opts.height || '120px';
 
 	// Gradient fill
 	const gradId = `pt-ap-grad-${Math.random().toString(36).slice(2, 8)}`;
 	const defs = svgEl('defs', {}, svg);
 	const grad = svgEl('linearGradient', { id: gradId, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-	svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': 0.35 }, grad);
+	svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': 0.4 }, grad);
 	svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': 0.03 }, grad);
+
+	// Baseline
+	svgEl('line', {
+		x1: PLOT_LEFT, y1: PLOT_BOTTOM, x2: PLOT_RIGHT, y2: PLOT_BOTTOM,
+		stroke: 'var(--background-modifier-border)',
+		'stroke-width': 0.3,
+	}, svg);
 
 	// Hour grid lines + labels
 	for (const [h, label] of HOUR_LABELS) {
@@ -69,15 +75,14 @@ export function renderActivityProfile(
 		svgEl('line', {
 			x1: x, y1: PLOT_TOP, x2: x, y2: PLOT_BOTTOM,
 			stroke: 'var(--background-modifier-border)',
-			'stroke-width': 0.3,
+			'stroke-width': 0.2,
+			'stroke-dasharray': '1,1',
 		}, svg);
-		if (label) {
-			svgEl('text', {
-				x, y: VIEW_H - 0.5,
-				'text-anchor': 'middle', 'font-size': 2.5,
-				fill: 'var(--text-muted)',
-			}, svg).textContent = label;
-		}
+		svgEl('text', {
+			x, y: VIEW_H - 1,
+			'text-anchor': 'middle', 'font-size': 3,
+			fill: 'var(--text-muted)',
+		}, svg).textContent = label;
 	}
 
 	// Build points (one per hour, centered in each hour slot)
@@ -101,7 +106,7 @@ export function renderActivityProfile(
 		points: points.map(([x, y]) => `${x},${y}`).join(' '),
 		fill: 'none',
 		stroke: color,
-		'stroke-width': 0.7,
+		'stroke-width': 0.8,
 		'stroke-linejoin': 'round',
 		'stroke-linecap': 'round',
 	}, svg);
@@ -109,15 +114,17 @@ export function renderActivityProfile(
 	// Peak dot + label
 	const peakX = points[peakHour][0];
 	const peakY = points[peakHour][1];
-	svgEl('circle', { cx: peakX, cy: peakY, r: 1.2, fill: color }, svg);
+	svgEl('circle', { cx: peakX, cy: peakY, r: 1.5, fill: color }, svg);
 
 	const peakTime = formatHour(peakHour);
 	const labelText = opts.peakLabel ? `${opts.peakLabel} ${peakTime}` : `peak ${peakTime}`;
-	const anchor = peakHour > 18 ? 'end' : peakHour < 6 ? 'start' : 'middle';
+	// Position label above the dot, shift left/right near edges
+	const anchor = peakHour >= 20 ? 'end' : peakHour <= 4 ? 'start' : 'middle';
 	svgEl('text', {
-		x: peakX, y: peakY - 2,
-		'text-anchor': anchor, 'font-size': 2.3,
-		fill: 'var(--text-muted)',
+		x: peakX, y: Math.max(peakY - 3, 4),
+		'text-anchor': anchor, 'font-size': 3,
+		fill: color,
+		'font-weight': '600',
 	}, svg).textContent = labelText;
 
 	parent.appendChild(svg);

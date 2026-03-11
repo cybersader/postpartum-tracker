@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.3] - 2026-03-11
+
+### Fixed
+
+- **Activity profile chart too small**: Increased chart height from 64px to 120px, enlarged viewBox proportions, bigger font for peak label and hour labels. Chart now renders at a readable size.
+
 ## [0.18.2] - 2026-03-11
 
 ### Added
