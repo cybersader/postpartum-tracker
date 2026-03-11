@@ -103,15 +103,30 @@ export class SleepAnalytics {
 
 		// ── Sleep heatmap (hour × day or weekday average) ──
 		const dailyHeatGrid = this.buildHourGrid(keys, byDay);
+		const fmtSleepHours = (h: number) => {
+			const hrs = Math.floor(h);
+			const min = Math.round((h - hrs) * 60);
+			return hrs > 0 ? `${hrs}h${min}m` : `${min}m`;
+		};
+		const fmtSleepCell = (v: number) => {
+			const min = Math.round(v * 60);
+			return min > 0 ? `${min}m` : '0';
+		};
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-purple)', showAvgRow: true });
+			renderHeatmapChart(c, wkGrid, wkLabels, {
+				color: 'var(--color-purple)', showAvgRow: true,
+				formatValue: fmtSleepCell, formatRowTotal: fmtSleepHours,
+			});
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, dailyHeatGrid, labels, { color: 'var(--color-purple)' });
+			renderHeatmapChart(c, dailyHeatGrid, labels, {
+				color: 'var(--color-purple)',
+				formatValue: fmtSleepCell, formatRowTotal: fmtSleepHours,
+			});
 		}
 
 		// ── Average sleep profile ──

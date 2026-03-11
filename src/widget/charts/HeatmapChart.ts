@@ -12,14 +12,19 @@ export interface HeatmapOptions {
 	showLegend?: boolean;
 	/** Show an averaged summary row at bottom. Default: false. */
 	showAvgRow?: boolean;
+	/** Format a cell value for the legend scale. Default: rounds to 1 decimal. */
+	formatValue?: (v: number) => string;
+	/** Format row daily total shown on right. If provided, shows daily avg per row. */
+	formatRowTotal?: (total: number) => string;
 }
 
 const VIEW_W = 100;
 const LABEL_W = 12;
 const HEADER_H = 4;
 const ROW_H = 5;
+const ROW_TOTAL_W = 14; // space for daily avg on right
 const PLOT_LEFT = LABEL_W + 1;
-const PLOT_RIGHT = VIEW_W - 1;
+const PLOT_RIGHT = VIEW_W - ROW_TOTAL_W;
 const PLOT_W = PLOT_RIGHT - PLOT_LEFT;
 const COLS = 24;
 const COL_W = PLOT_W / COLS;
@@ -43,6 +48,8 @@ export function renderHeatmapChart(
 	const color = opts.color ?? 'var(--interactive-accent)';
 	const showLegend = opts.showLegend ?? true;
 	const showAvgRow = opts.showAvgRow ?? false;
+	const fmt = opts.formatValue ?? ((v: number) => String(Math.round(v * 10) / 10));
+	const fmtRow = opts.formatRowTotal ?? null;
 
 	// Find max value for opacity scaling
 	let maxVal = 0;
@@ -94,8 +101,10 @@ export function renderHeatmapChart(
 		}, svg).textContent = dayLabels[r] ?? '';
 
 		// Cells
+		let rowSum = 0;
 		for (let c = 0; c < COLS && c < row.length; c++) {
 			const val = row[c];
+			rowSum += val;
 			const opacity = val > 0 ? 0.05 + (val / maxVal) * 0.85 : 0.03;
 			const cx = PLOT_LEFT + c * COL_W + CELL_PAD;
 			const cy = y + CELL_PAD;
@@ -107,6 +116,15 @@ export function renderHeatmapChart(
 				opacity,
 				rx: 0.5,
 			}, svg);
+		}
+
+		// Row daily average on right
+		if (fmtRow) {
+			svgEl('text', {
+				x: PLOT_RIGHT + 1.5, y: y + ROW_H / 2 + 0.8,
+				'text-anchor': 'start', 'font-size': 2.2,
+				fill: 'var(--text-muted)',
+			}, svg).textContent = fmtRow(rowSum);
 		}
 	}
 
@@ -145,16 +163,27 @@ export function renderHeatmapChart(
 				rx: 0.5,
 			}, svg);
 		}
+
+		// Avg row total on right
+		if (fmtRow) {
+			const avgSum = avgRow.reduce((a, b) => a + b, 0);
+			svgEl('text', {
+				x: PLOT_RIGHT + 1.5, y: avgY + AVG_ROW_H / 2 + 0.5,
+				'text-anchor': 'start', 'font-size': 2.2,
+				fill: 'var(--text-accent)',
+				'font-weight': 'bold',
+			}, svg).textContent = fmtRow(avgSum);
+		}
 	}
 
 	parent.appendChild(svg);
 
-	// Legend
+	// Legend with actual values
 	if (showLegend) {
 		const legend = parent.createDiv({ cls: 'pt-heatmap-legend' });
-		legend.createSpan({ text: 'Less' });
+		legend.createSpan({ text: fmt(0) });
 		const bar = legend.createDiv({ cls: 'pt-heatmap-legend-bar' });
 		bar.style.background = `linear-gradient(to right, transparent, ${color})`;
-		legend.createSpan({ text: 'More' });
+		legend.createSpan({ text: `${fmt(maxVal)}/hr` });
 	}
 }

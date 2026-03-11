@@ -125,15 +125,23 @@ export class FeedingAnalytics {
 			return hourBuckets;
 		});
 
+		const fmtFeedCount = (v: number) => String(Math.round(v * 10) / 10);
+		const fmtFeedTotal = (total: number) => `${Math.round(total)}/day`;
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(heatGrid);
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-blue)', showAvgRow: true });
+			renderHeatmapChart(c, wkGrid, wkLabels, {
+				color: 'var(--color-blue)', showAvgRow: true,
+				formatValue: fmtFeedCount, formatRowTotal: fmtFeedTotal,
+			});
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, heatGrid, labels, { color: 'var(--color-blue)' });
+			renderHeatmapChart(c, heatGrid, labels, {
+				color: 'var(--color-blue)',
+				formatValue: fmtFeedCount, formatRowTotal: fmtFeedTotal,
+			});
 		}
 
 		// ── Average feeding profile ──

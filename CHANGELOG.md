@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-03-11
+
+### Changed
+
+- **Heatmap shows specific values**: Legend shows actual units (e.g., "0" to "45m/hr") instead of generic "Less"/"More". Each row shows daily total on right (e.g., "3h12m" for sleep, "10/day" for feedings). Avg row also shows its total.
+- **Sleep heatmap cell values in minutes**: Legend scale uses minutes format for clarity.
+
 ## [0.19.0] - 2026-03-11
 
 ### Fixed
