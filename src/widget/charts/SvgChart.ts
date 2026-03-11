@@ -59,20 +59,26 @@ export function drawGridLines(
 	}
 }
 
-/** Draw x-axis labels. */
+/** Draw x-axis labels. Automatically skips labels and shrinks font when crowded. */
 export function drawXLabels(
 	svg: SVGElement,
 	labels: string[],
 	plotArea: PlotArea,
 	y: number,
 ): void {
-	const step = (plotArea.right - plotArea.left) / labels.length;
-	for (let i = 0; i < labels.length; i++) {
+	const n = labels.length;
+	const step = (plotArea.right - plotArea.left) / n;
+	// Skip every other label when crowded (>10 bars), always show first and last
+	const skip = n > 10 ? 2 : 1;
+	const fontSize = n > 10 ? 2.4 : 3;
+	for (let i = 0; i < n; i++) {
+		const isEdge = i === 0 || i === n - 1;
+		if (!isEdge && i % skip !== 0) continue;
 		svgEl('text', {
 			x: plotArea.left + step * i + step / 2,
 			y,
 			'text-anchor': 'middle',
-			'font-size': 3,
+			'font-size': fontSize,
 			fill: 'var(--text-muted)',
 		}, svg).textContent = labels[i];
 	}
@@ -132,7 +138,15 @@ export function dayLabels(days: number): string[] {
 	for (let i = days - 1; i >= 0; i--) {
 		const d = new Date(now);
 		d.setDate(d.getDate() - i);
-		labels.push(i === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short' }));
+		if (i === 0) {
+			labels.push('Today');
+		} else if (days <= 7) {
+			// Short day names for 1-week view
+			labels.push(d.toLocaleDateString(undefined, { weekday: 'short' }));
+		} else {
+			// M/D format for 2w+ to avoid repeating day names
+			labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+		}
 	}
 	return labels;
 }
@@ -201,6 +215,31 @@ export function aggregateWeekly(
 
 /** Day-of-week labels. */
 export const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Collapse a daily heatmap grid into weekly rows (W1, W2, ...).
+ * Each row is the average hour profile across that 7-day chunk.
+ */
+export function collapseToWeeks(
+	dailyGrid: number[][],
+): { grid: number[][]; labels: string[] } {
+	const grid: number[][] = [];
+	const labels: string[] = [];
+	for (let i = 0; i < dailyGrid.length; i += 7) {
+		const chunk = dailyGrid.slice(i, i + 7);
+		const n = chunk.length;
+		const avgRow = new Array<number>(24).fill(0);
+		for (const row of chunk) {
+			for (let h = 0; h < 24 && h < row.length; h++) {
+				avgRow[h] += row[h];
+			}
+		}
+		for (let h = 0; h < 24; h++) avgRow[h] /= n;
+		grid.push(avgRow);
+		labels.push(`W${Math.floor(i / 7) + 1}`);
+	}
+	return { grid, labels };
+}
 
 /**
  * Collapse a daily heatmap grid into a 7-row day-of-week average grid.

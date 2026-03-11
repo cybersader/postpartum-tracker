@@ -4,7 +4,7 @@
  * parent sleep window overlay, and timeline.
  */
 import type { PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeekdays } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeeks } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -93,10 +93,10 @@ export class SleepAnalytics {
 		// ── Sleep heatmap (hour × day or weekday average) ──
 		const dailyHeatGrid = this.buildHourGrid(keys, byDay);
 		if (isWeekly) {
-			const { grid: wdGrid, labels: wdLabels } = collapseToWeekdays(dailyHeatGrid, keys);
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by day of week' });
+			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wdGrid, wdLabels, { color: 'var(--color-purple)' });
+			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-purple)' });
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });

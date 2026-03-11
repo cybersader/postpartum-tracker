@@ -3,7 +3,7 @@
  * Shows trends, time-of-day patterns, and L/R balance.
  */
 import type { FeedingEntry, PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeekdays } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeeks } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -126,10 +126,10 @@ export class FeedingAnalytics {
 		});
 
 		if (isWeekly) {
-			const { grid: wdGrid, labels: wdLabels } = collapseToWeekdays(heatGrid, keys);
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings by day of week' });
+			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(heatGrid);
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wdGrid, wdLabels, { color: 'var(--color-blue)' });
+			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-blue)' });
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });

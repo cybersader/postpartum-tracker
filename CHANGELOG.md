@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.7] - 2026-03-11
+
+### Changed
+
+- **Date labels for 2w+ views**: Bar chart x-axis now shows M/D format (e.g., 3/1, 3/2) instead of repeating day names (Thu, Fri... Thu, Fri) which were ambiguous across multiple weeks.
+- **Label thinning**: Charts with >10 bars skip every other x-axis label to prevent crowding, always showing first and last.
+- **Heatmaps collapse to weekly rows**: At 1mo+ windows, heatmaps now show W1, W2, W3... rows (weekly averages) instead of day-of-week, preserving progression over time.
+
 ## [0.18.6] - 2026-03-11
 
 ### Changed
