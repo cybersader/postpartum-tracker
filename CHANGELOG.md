@@ -7,6 +7,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-03-11
+
+### Added
+
+- **Sleep period ranking**: New "Sleep by time of day" chart shows which 6-hour period (Night, Morning, Afternoon, Evening) has the most baby sleep, ranked with horizontal bars.
+- **Parent sleep window**: New setting (Settings > Trackers > Sleep) to define your target sleep hours (e.g. 10pm-6am). When enabled:
+  - Timeline shows a green background band for the parent sleep window
+  - Baby sleep blocks during your window are colored green, outside stays purple
+  - New insight: "Baby slept X% of your sleep window" with positive/neutral/negative coloring
+- **Timeline background bands**: TimelineChart now supports semi-transparent background bands for any overlay (used by parent sleep window).
+
+### Changed
+
+- **Analytics toggles consolidated**: All 4 analytics enable toggles now live in one "Analytics" section at the top of the Trackers tab, instead of being scattered under individual tracker sections.
+
 ## [0.17.2] - 2026-03-11
 
 ### Changed

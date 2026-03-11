@@ -476,6 +476,16 @@ export interface PostpartumTrackerSettings {
 		buttons: MedicationButtonsConfig;
 	};
 
+	/** Sleep-specific */
+	sleep: {
+		/** Show parent sleep window overlay on timeline. */
+		parentWindowEnabled: boolean;
+		/** Parent bedtime hour (0-23). */
+		parentBedtimeHour: number;
+		/** Parent wake hour (0-23). */
+		parentWakeHour: number;
+	};
+
 	/** Notifications */
 	notifications: NotificationSettings;
 
@@ -545,6 +555,11 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	medication: {
 		medications: [...DEFAULT_MEDICATIONS],
 		buttons: { ...DEFAULT_MEDICATION_BUTTONS },
+	},
+	sleep: {
+		parentWindowEnabled: false,
+		parentBedtimeHour: 22,
+		parentWakeHour: 6,
 	},
 	notifications: { ...DEFAULT_NOTIFICATION_SETTINGS },
 	todoist: { ...DEFAULT_TODOIST_SETTINGS },

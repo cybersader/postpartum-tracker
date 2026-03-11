@@ -2125,6 +2125,55 @@
 	max-width: 200px;
 }
 
+/* --- Sleep period ranking --- */
+.pt-period-rank {
+	margin: 8px 0;
+}
+.pt-period-rank-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 3px 0;
+}
+.pt-period-rank-label {
+	flex: 0 0 110px;
+	font-size: var(--font-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.pt-period-rank-bar {
+	height: 14px;
+	background: var(--color-purple);
+	border-radius: 3px;
+	min-width: 2px;
+}
+.pt-period-rank-value {
+	font-size: var(--font-smaller);
+	color: var(--text-muted);
+	min-width: 40px;
+	text-align: right;
+}
+
+/* --- Timeline legend --- */
+.pt-timeline-legend {
+	display: flex;
+	gap: 12px;
+	margin-top: 4px;
+	font-size: var(--font-smaller);
+	color: var(--text-muted);
+}
+.pt-timeline-legend-item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+.pt-timeline-legend-swatch {
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	display: inline-block;
+}
+
 /* --- Analytics window picker pills --- */
 .pt-analytics-window-picker {
 	display: flex;

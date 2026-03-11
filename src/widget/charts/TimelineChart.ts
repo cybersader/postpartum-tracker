@@ -18,9 +18,18 @@ export interface TimelineRow {
 	blocks: TimelineBlock[];
 }
 
+export interface TimelineBand {
+	startHour: number;
+	endHour: number;
+	color: string;
+	opacity?: number;
+}
+
 export interface TimelineChartOptions {
 	height?: string;
 	showCurrentTime?: boolean;
+	/** Semi-transparent background bands (e.g. parent sleep window). */
+	backgroundBands?: TimelineBand[];
 }
 
 const VIEW_W = 100;
@@ -81,6 +90,34 @@ export function renderTimelineChart(
 			fill: 'var(--background-secondary)',
 			rx: 1,
 		}, svg);
+
+		// Background bands (e.g. parent sleep window)
+		if (opts.backgroundBands) {
+			for (const band of opts.backgroundBands) {
+				const op = band.opacity ?? 0.08;
+				if (band.startHour <= band.endHour) {
+					// Same-day band
+					const bx1 = PLOT_LEFT + (band.startHour / 24) * PLOT_W;
+					const bx2 = PLOT_LEFT + (band.endHour / 24) * PLOT_W;
+					svgEl('rect', {
+						x: bx1, y: y + 0.5, width: bx2 - bx1, height: ROW_H - 1,
+						fill: band.color, opacity: op, rx: 1,
+					}, svg);
+				} else {
+					// Wraps midnight: draw two segments
+					const bx1 = PLOT_LEFT + (band.startHour / 24) * PLOT_W;
+					svgEl('rect', {
+						x: bx1, y: y + 0.5, width: PLOT_RIGHT - bx1, height: ROW_H - 1,
+						fill: band.color, opacity: op, rx: 1,
+					}, svg);
+					const bx2 = PLOT_LEFT + (band.endHour / 24) * PLOT_W;
+					svgEl('rect', {
+						x: PLOT_LEFT, y: y + 0.5, width: bx2 - PLOT_LEFT, height: ROW_H - 1,
+						fill: band.color, opacity: op, rx: 1,
+					}, svg);
+				}
+			}
+		}
 
 		// Blocks
 		for (const block of row.blocks) {

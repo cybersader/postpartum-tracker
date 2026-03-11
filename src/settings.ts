@@ -87,6 +87,70 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				);
 		}
 
+		// --- Analytics ---
+		new Setting(el).setName('Analytics').setHeading();
+		new Setting(el)
+			.setDesc('Charts and insights for your tracking data. Each enabled module appears as a collapsible section you can reorder. Use the 3d/7d/14d pills inside each section to change the time window.');
+		this.buildAnalyticsToggle(el, 'feeding-analytics', 'Feeding analytics',
+			'Feedings per day, nursing minutes, L/R balance, session trends.');
+		this.buildAnalyticsToggle(el, 'sleep-analytics', 'Sleep analytics',
+			'Sleep hours, session count, longest stretch, awake windows.');
+		this.buildAnalyticsToggle(el, 'diaper-analytics', 'Diaper analytics',
+			'Wet/dirty counts, change times, stool color trends.');
+		this.buildAnalyticsToggle(el, 'medication-analytics', 'Medication analytics',
+			'Doses per day, timing compliance, pain coverage.');
+
+		// --- Sleep ---
+		new Setting(el).setName('Sleep').setHeading();
+
+		const sleepCfg = this.plugin.settings.sleep ??
+			{ parentWindowEnabled: false, parentBedtimeHour: 22, parentWakeHour: 6 };
+		this.plugin.settings.sleep = sleepCfg;
+
+		const formatHour = (h: number): string => {
+			const suffix = h < 12 ? 'AM' : 'PM';
+			const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+			return `${h12}:00 ${suffix}`;
+		};
+
+		new Setting(el)
+			.setName('Parent sleep window')
+			.setDesc('Highlight baby sleep that overlaps with your target sleep hours on the timeline.')
+			.addToggle(t => t
+				.setValue(sleepCfg.parentWindowEnabled)
+				.onChange(async v => {
+					sleepCfg.parentWindowEnabled = v;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		if (sleepCfg.parentWindowEnabled) {
+			new Setting(el)
+				.setName('Bedtime')
+				.setDesc('When you aim to go to sleep.')
+				.addDropdown(dd => {
+					for (let h = 0; h < 24; h++) dd.addOption(String(h), formatHour(h));
+					dd.setValue(String(sleepCfg.parentBedtimeHour));
+					dd.onChange(async v => {
+						sleepCfg.parentBedtimeHour = parseInt(v, 10);
+						await this.plugin.saveSettings();
+					});
+				});
+
+			new Setting(el)
+				.setName('Wake time')
+				.setDesc('When you aim to wake up.')
+				.addDropdown(dd => {
+					for (let h = 0; h < 24; h++) dd.addOption(String(h), formatHour(h));
+					dd.setValue(String(sleepCfg.parentWakeHour));
+					dd.onChange(async v => {
+						sleepCfg.parentWakeHour = parseInt(v, 10);
+						await this.plugin.saveSettings();
+					});
+				});
+		}
+
 		// --- Tracker Library with search + filter ---
 		new Setting(el).setName('Tracker library').setHeading();
 		new Setting(el)
@@ -324,10 +388,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
-		// --- Library Tracker Analytics ---
-		this.buildAnalyticsToggle(el, 'sleep-analytics', 'Sleep analytics',
-			'Show charts and insights for sleep patterns. Requires sleep tracker enabled above.');
-
 		// --- Feeding ---
 		new Setting(el).setName('Feeding').setHeading();
 
@@ -397,9 +457,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		this.buildButtonConfig(el, 'Both button', fCfg.both);
 		this.buildButtonConfig(el, 'Bottle button', fCfg.bottle);
 
-		this.buildAnalyticsToggle(el, 'feeding-analytics', 'Feeding analytics',
-			'Show charts and insights for feeding patterns.');
-
 		// --- Diapers ---
 		new Setting(el).setName('Diapers').setHeading();
 
@@ -434,9 +491,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		this.buildButtonConfig(el, 'Wet button', dCfg.wet);
 		this.buildButtonConfig(el, 'Dirty button', dCfg.dirty);
 		this.buildButtonConfig(el, 'Both button', dCfg.both);
-
-		this.buildAnalyticsToggle(el, 'diaper-analytics', 'Diaper analytics',
-			'Show charts and insights for diaper patterns.');
 
 		// --- Medication ---
 		new Setting(el).setName('Medication').setHeading();
@@ -541,9 +595,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					this.display();
 				})
 			);
-
-		this.buildAnalyticsToggle(el, 'medication-analytics', 'Medication analytics',
-			'Show charts and insights for medication patterns.');
 
 		// --- Recovery Care ---
 		new Setting(el).setName('Recovery care').setHeading();
