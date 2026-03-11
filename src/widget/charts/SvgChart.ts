@@ -174,3 +174,63 @@ export const TREND_ARROWS: Record<string, string> = {
 	down: '\u2198',  // ↘
 	stable: '\u2192', // →
 };
+
+/**
+ * Aggregate daily BarDatum arrays into weekly buckets.
+ * Returns { data, labels } with one bar per week showing the weekly average.
+ */
+export function aggregateWeekly(
+	dailyValues: number[],
+	dailyLabels: string[],
+): { values: number[]; labels: string[] } {
+	const weeks: { sum: number; count: number; label: string }[] = [];
+	for (let i = 0; i < dailyValues.length; i += 7) {
+		const chunk = dailyValues.slice(i, i + 7);
+		const sum = chunk.reduce((a, b) => a + b, 0);
+		const count = chunk.length;
+		// Label: use the first day's label or "Wk N"
+		const weekNum = Math.floor(i / 7) + 1;
+		const label = `W${weekNum}`;
+		weeks.push({ sum, count, label });
+	}
+	return {
+		values: weeks.map(w => Math.round((w.sum / w.count) * 10) / 10),
+		labels: weeks.map(w => w.label),
+	};
+}
+
+/** Day-of-week labels. */
+export const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Collapse a daily heatmap grid into a 7-row day-of-week average grid.
+ * Returns { grid, labels } with Mon-Sun rows, each being the average
+ * hour profile for that weekday.
+ */
+export function collapseToWeekdays(
+	dailyGrid: number[][],
+	keys: string[],
+): { grid: number[][]; labels: string[] } {
+	// 7 weekday buckets, each with 24 hour accumulators + count
+	const buckets: { hours: number[]; count: number }[] = Array.from({ length: 7 }, () => ({
+		hours: new Array(24).fill(0),
+		count: 0,
+	}));
+
+	for (let i = 0; i < dailyGrid.length && i < keys.length; i++) {
+		const d = new Date(keys[i] + 'T12:00:00'); // noon to avoid TZ issues
+		const dow = (d.getDay() + 6) % 7; // 0=Mon, 6=Sun
+		buckets[dow].count++;
+		for (let h = 0; h < 24 && h < dailyGrid[i].length; h++) {
+			buckets[dow].hours[h] += dailyGrid[i][h];
+		}
+	}
+
+	// Average each bucket
+	const grid = buckets.map(b => {
+		if (b.count === 0) return new Array(24).fill(0);
+		return b.hours.map(v => v / b.count);
+	});
+
+	return { grid, labels: DOW_LABELS };
+}

@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.6] - 2026-03-11
+
+### Changed
+
+- **Weekly aggregation for large windows**: At 1mo+ windows, all bar charts switch from daily bars to weekly averages (W1, W2, ...) so the data is readable instead of 90 compressed slivers. Applies to all 4 analytics modules.
+- **Heatmap collapses to day-of-week**: At 1mo+ windows, feeding and sleep heatmaps show Mon-Sun rows (averaged across weeks) instead of 30-90 individual day rows. Title changes to "Sleep by day of week" / "Feedings by day of week".
+- **Stacked charts aggregate correctly**: Nursing minutes L/R/Both, diaper wet/dirty, and medication dose stacks all properly average per-segment when aggregating weekly.
+
 ## [0.18.5] - 2026-03-11
 
 ### Changed

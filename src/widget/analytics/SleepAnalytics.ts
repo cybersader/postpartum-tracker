@@ -4,7 +4,7 @@
  * parent sleep window overlay, and timeline.
  */
 import type { PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeekdays } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -48,40 +48,65 @@ export class SleepAnalytics {
 			if (byDay.has(k)) byDay.get(k)!.push(e);
 		}
 
-		// ── Total sleep hours per day ──
-		const sleepHoursData: BarDatum[] = keys.map((k, i) => {
-			const total = byDay.get(k)!.reduce((sum, e) => sum + getDurHours(e), 0);
-			return { label: labels[i], value: Math.round(total * 10) / 10 };
-		});
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours per day' });
-		const hoursContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(hoursContainer, sleepHoursData, {
-			movingAvgWindow: 3,
-			color: 'var(--color-purple)',
-		});
+		// Daily values (used by bars and heatmap)
+		const dailyHoursRaw = keys.map(k =>
+			byDay.get(k)!.reduce((sum, e) => sum + getDurHours(e), 0));
+		const dailySessionsRaw = keys.map(k =>
+			byDay.get(k)!.filter(e => e.end != null).length);
+		const isWeekly = days >= 30;
 
-		// ── Nap count per day ──
-		const napData: BarDatum[] = keys.map((k, i) => ({
-			label: labels[i],
-			value: byDay.get(k)!.filter(e => e.end != null).length,
-		}));
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions per day' });
-		const napContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(napContainer, napData, { color: 'var(--color-purple)' });
+		// ── Sleep hours ──
+		if (isWeekly) {
+			const agg = aggregateWeekly(dailyHoursRaw, labels);
+			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours (weekly avg)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+		} else {
+			const barData: BarDatum[] = dailyHoursRaw.map((v, i) => ({
+				label: labels[i], value: Math.round(v * 10) / 10,
+			}));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours per day' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { movingAvgWindow: 3, color: 'var(--color-purple)' });
+		}
+
+		// ── Sleep sessions ──
+		if (isWeekly) {
+			const agg = aggregateWeekly(dailySessionsRaw, labels);
+			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions (weekly avg)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+		} else {
+			const barData: BarDatum[] = dailySessionsRaw.map((v, i) => ({
+				label: labels[i], value: v,
+			}));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions per day' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+		}
 
 		// ── Sleep by time of day (period ranking — averages) ──
 		this.renderPeriodRanking(entries, keys, byDay, days);
 
-		// ── Sleep heatmap (hour × day) ──
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
-		const heatGrid = this.buildHourGrid(keys, byDay);
-		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-purple)' });
+		// ── Sleep heatmap (hour × day or weekday average) ──
+		const dailyHeatGrid = this.buildHourGrid(keys, byDay);
+		if (isWeekly) {
+			const { grid: wdGrid, labels: wdLabels } = collapseToWeekdays(dailyHeatGrid, keys);
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by day of week' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderHeatmapChart(c, wdGrid, wdLabels, { color: 'var(--color-purple)' });
+		} else {
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderHeatmapChart(c, dailyHeatGrid, labels, { color: 'var(--color-purple)' });
+		}
 
-		// ── Average sleep profile (collapsed heatmap) ──
+		// ── Average sleep profile ──
 		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Average sleep by hour' });
 		const profileContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderActivityProfile(profileContainer, heatGrid, {
+		renderActivityProfile(profileContainer, dailyHeatGrid, {
 			color: 'var(--color-purple)',
 			peakLabel: 'most sleep',
 		});
@@ -172,7 +197,7 @@ export class SleepAnalytics {
 		}
 
 		// Trend
-		const dailyHours = sleepHoursData.map(d => d.value);
+		const dailyHours = dailyHoursRaw;
 		const trend = trendDirection(dailyHours);
 		addInsight(insightsEl, `Sleep trend: ${TREND_ARROWS[trend]}`, trend);
 

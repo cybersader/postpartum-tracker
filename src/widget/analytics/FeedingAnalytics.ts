@@ -3,7 +3,7 @@
  * Shows trends, time-of-day patterns, and L/R balance.
  */
 import type { FeedingEntry, PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeekdays } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -31,17 +31,27 @@ export class FeedingAnalytics {
 			if (byDay.has(k)) byDay.get(k)!.push(e);
 		}
 
-		// ── Feedings per day (bar chart with moving avg) ──
-		const countData: BarDatum[] = keys.map((k, i) => ({
-			label: labels[i],
-			value: byDay.get(k)!.filter(e => e.end !== null).length,
-		}));
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings per day' });
-		const countContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(countContainer, countData, { movingAvgWindow: 3 });
+		const isWeekly = days >= 30;
 
-		// ── Nursing minutes per day (stacked L/R) ──
-		const durationData: BarDatum[] = keys.map((k, i) => {
+		// Daily values
+		const dailyCounts = keys.map(k => byDay.get(k)!.filter(e => e.end !== null).length);
+
+		// ── Feedings per day/week ──
+		if (isWeekly) {
+			const agg = aggregateWeekly(dailyCounts, labels);
+			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings (weekly avg)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData);
+		} else {
+			const countData: BarDatum[] = dailyCounts.map((v, i) => ({ label: labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings per day' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, countData, { movingAvgWindow: 3 });
+		}
+
+		// ── Nursing minutes (stacked L/R) ──
+		const dailyDurationData: BarDatum[] = keys.map((k, i) => {
 			const dayEntries = byDay.get(k)!.filter(e => e.end !== null && e.type !== 'bottle');
 			let leftMin = 0, rightMin = 0, bothMin = 0;
 			for (const e of dayEntries) {
@@ -51,8 +61,7 @@ export class FeedingAnalytics {
 				else bothMin += dur;
 			}
 			return {
-				label: labels[i],
-				value: 0,
+				label: labels[i], value: 0,
 				segments: [
 					{ value: Math.round(leftMin), color: 'var(--color-blue)' },
 					{ value: Math.round(rightMin), color: 'var(--color-orange)' },
@@ -60,9 +69,33 @@ export class FeedingAnalytics {
 				],
 			};
 		});
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Nursing minutes (L/R/Both)' });
-		const durContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(durContainer, durationData);
+
+		if (isWeekly) {
+			// Aggregate stacked data into weekly totals per side, then average
+			const weeklyData: BarDatum[] = [];
+			for (let i = 0; i < dailyDurationData.length; i += 7) {
+				const chunk = dailyDurationData.slice(i, i + 7);
+				const n = chunk.length;
+				const avgL = chunk.reduce((s, d) => s + (d.segments?.[0]?.value || 0), 0) / n;
+				const avgR = chunk.reduce((s, d) => s + (d.segments?.[1]?.value || 0), 0) / n;
+				const avgB = chunk.reduce((s, d) => s + (d.segments?.[2]?.value || 0), 0) / n;
+				weeklyData.push({
+					label: `W${Math.floor(i / 7) + 1}`, value: 0,
+					segments: [
+						{ value: Math.round(avgL), color: 'var(--color-blue)' },
+						{ value: Math.round(avgR), color: 'var(--color-orange)' },
+						{ value: Math.round(avgB), color: 'var(--color-green)' },
+					],
+				});
+			}
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Nursing minutes (weekly avg L/R/Both)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, weeklyData);
+		} else {
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Nursing minutes (L/R/Both)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, dailyDurationData);
+		}
 
 		// ── Time-of-day timeline (last 3 days) ──
 		const timelineDays = Math.min(3, days);
@@ -82,8 +115,7 @@ export class FeedingAnalytics {
 		const tlContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderTimelineChart(tlContainer, rows);
 
-		// ── Feeding heatmap (hour × day) ──
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
+		// ── Feeding heatmap ──
 		const heatGrid = keys.map(k => {
 			const hourBuckets = new Array<number>(24).fill(0);
 			for (const e of byDay.get(k)!.filter(e => e.end !== null)) {
@@ -92,10 +124,19 @@ export class FeedingAnalytics {
 			}
 			return hourBuckets;
 		});
-		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-blue)' });
 
-		// ── Average feeding profile (collapsed heatmap) ──
+		if (isWeekly) {
+			const { grid: wdGrid, labels: wdLabels } = collapseToWeekdays(heatGrid, keys);
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings by day of week' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderHeatmapChart(c, wdGrid, wdLabels, { color: 'var(--color-blue)' });
+		} else {
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderHeatmapChart(c, heatGrid, labels, { color: 'var(--color-blue)' });
+		}
+
+		// ── Average feeding profile ──
 		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Average feedings by hour' });
 		const profileContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderActivityProfile(profileContainer, heatGrid, {
@@ -132,7 +173,6 @@ export class FeedingAnalytics {
 
 		// ── Insights ──
 		const insightsEl = this.el.createDiv({ cls: 'pt-insights' });
-		const dailyCounts = countData.map(d => d.value);
 		const nonZero = dailyCounts.filter(v => v > 0);
 		const avgFeedings = nonZero.length > 0
 			? Math.round(nonZero.reduce((a, b) => a + b, 0) / nonZero.length * 10) / 10

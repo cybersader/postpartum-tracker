@@ -49,8 +49,9 @@ export class MedicationAnalytics {
 		const medColor = new Map<string, string>();
 		medNames.forEach((name, i) => medColor.set(name.toLowerCase(), colors[i % colors.length]));
 
-		// ── Doses per day (stacked by medication) ──
-		const doseData: BarDatum[] = keys.map((k, i) => {
+		// ── Doses per day/week ──
+		const isWeekly = days >= 30;
+		const dailyDoseData: BarDatum[] = keys.map((k, i) => {
 			const dayEntries = byDay.get(k)!;
 			const segments = medNames.map(name => ({
 				value: dayEntries.filter(e => e.name.toLowerCase() === name.toLowerCase()).length,
@@ -58,7 +59,9 @@ export class MedicationAnalytics {
 			}));
 			return { label: labels[i], value: 0, segments };
 		});
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Doses per day' });
+
+		const titleText = isWeekly ? 'Doses (weekly avg)' : 'Doses per day';
+		this.el.createDiv({ cls: 'pt-analytics-title', text: titleText });
 		// Legend
 		const legend = this.el.createDiv({ cls: 'pt-chart-legend' });
 		for (const name of medNames) {
@@ -67,8 +70,24 @@ export class MedicationAnalytics {
 			swatch.style.backgroundColor = medColor.get(name.toLowerCase()) || colors[0];
 			item.createSpan({ text: ` ${name}` });
 		}
-		const doseContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(doseContainer, doseData);
+
+		if (isWeekly) {
+			const weeklyData: BarDatum[] = [];
+			for (let i = 0; i < dailyDoseData.length; i += 7) {
+				const chunk = dailyDoseData.slice(i, i + 7);
+				const n = chunk.length;
+				const segments = medNames.map((name, mi) => ({
+					value: Math.round(chunk.reduce((s, d) => s + (d.segments?.[mi]?.value || 0), 0) / n * 10) / 10,
+					color: medColor.get(name.toLowerCase()) || colors[0],
+				}));
+				weeklyData.push({ label: `W${Math.floor(i / 7) + 1}`, value: 0, segments });
+			}
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, weeklyData);
+		} else {
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, dailyDoseData);
+		}
 
 		// ── Medication timeline (last 3 days) ──
 		const timelineDays = Math.min(3, days);

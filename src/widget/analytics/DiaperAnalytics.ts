@@ -3,7 +3,7 @@
  * Shows wet/dirty counts, stool color progression, and adequacy checks.
  */
 import type { DiaperEntry, PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { daysSinceBirth } from '../../data/dateUtils';
@@ -28,23 +28,44 @@ export class DiaperAnalytics {
 			if (byDay.has(k)) byDay.get(k)!.push(e);
 		}
 
-		// ── Wet + Dirty counts (stacked bar) ──
-		const countData: BarDatum[] = keys.map((k, i) => {
+		// ── Wet + Dirty counts ──
+		const isWeekly = days >= 30;
+		const dailyCountData: BarDatum[] = keys.map((k, i) => {
 			const dayEntries = byDay.get(k)!;
 			const wet = dayEntries.filter(e => e.wet).length;
 			const dirty = dayEntries.filter(e => e.dirty).length;
 			return {
-				label: labels[i],
-				value: 0,
+				label: labels[i], value: 0,
 				segments: [
 					{ value: wet, color: 'var(--color-blue)' },
 					{ value: dirty, color: 'var(--color-yellow)' },
 				],
 			};
 		});
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Diapers per day (wet/dirty)' });
-		const countContainer = this.el.createDiv({ cls: 'pt-chart-container' });
-		renderBarChart(countContainer, countData);
+
+		if (isWeekly) {
+			const weeklyData: BarDatum[] = [];
+			for (let i = 0; i < dailyCountData.length; i += 7) {
+				const chunk = dailyCountData.slice(i, i + 7);
+				const n = chunk.length;
+				const avgW = chunk.reduce((s, d) => s + (d.segments?.[0]?.value || 0), 0) / n;
+				const avgD = chunk.reduce((s, d) => s + (d.segments?.[1]?.value || 0), 0) / n;
+				weeklyData.push({
+					label: `W${Math.floor(i / 7) + 1}`, value: 0,
+					segments: [
+						{ value: Math.round(avgW * 10) / 10, color: 'var(--color-blue)' },
+						{ value: Math.round(avgD * 10) / 10, color: 'var(--color-yellow)' },
+					],
+				});
+			}
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Diapers (weekly avg wet/dirty)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, weeklyData);
+		} else {
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Diapers per day (wet/dirty)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, dailyCountData);
+		}
 
 		// ── Time-of-day dot plot (last 3 days) ──
 		const timelineDays = Math.min(3, days);
