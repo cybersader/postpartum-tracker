@@ -53,7 +53,7 @@ export function renderHeatmapChart(
 	const viewH = HEADER_H + grid.length * ROW_H + 2;
 	const svg = createSvg(VIEW_W, viewH);
 	svg.classList.add('pt-heatmap-chart');
-	svg.style.height = opts.height || `${Math.max(50, grid.length * 22 + 16)}px`;
+	// No fixed height — viewBox ratio scales with container width
 
 	// Hour labels at top
 	for (const [h, label] of HOUR_LABELS) {

@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.4] - 2026-03-11
+
+### Fixed
+
+- **All charts now width-adaptive**: Removed fixed pixel heights from BarChart, TimelineChart, HeatmapChart, and ActivityProfile. Charts now scale naturally with container width via SVG viewBox ratio — no more squished/narrow rendering.
+- **Smoothed activity profile curve**: Activity profile now uses Gaussian-weighted moving average (circular, wraps around midnight) instead of raw point-to-point. Produces a smooth, professional waveform that reveals true patterns without noise.
+
 ## [0.18.3] - 2026-03-11
 
 ### Fixed

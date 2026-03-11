@@ -48,12 +48,15 @@ export function renderActivityProfile(
 	}
 	for (let h = 0; h < 24; h++) hourAvg[h] /= numDays;
 
-	const max = Math.max(...hourAvg, 0.01);
-	const peakHour = hourAvg.indexOf(max);
+	// Gaussian-weighted moving average (wraps around midnight)
+	const smoothed = gaussianSmooth(hourAvg, 2);
+
+	const max = Math.max(...smoothed, 0.01);
+	const peakHour = smoothed.indexOf(max);
 
 	const svg = createSvg(VIEW_W, VIEW_H);
 	svg.classList.add('pt-activity-profile');
-	svg.style.height = opts.height || '120px';
+	// No fixed height — let viewBox ratio (2:1) scale naturally with container width
 
 	// Gradient fill
 	const gradId = `pt-ap-grad-${Math.random().toString(36).slice(2, 8)}`;
@@ -89,7 +92,7 @@ export function renderActivityProfile(
 	const points: [number, number][] = [];
 	for (let h = 0; h < 24; h++) {
 		const x = PLOT_LEFT + ((h + 0.5) / 24) * PLOT_W;
-		const y = PLOT_BOTTOM - (hourAvg[h] / max) * PLOT_H;
+		const y = PLOT_BOTTOM - (smoothed[h] / max) * PLOT_H;
 		points.push([x, y]);
 	}
 
@@ -128,6 +131,36 @@ export function renderActivityProfile(
 	}, svg).textContent = labelText;
 
 	parent.appendChild(svg);
+}
+
+/**
+ * Gaussian-weighted moving average that wraps around (circular).
+ * sigma controls smoothing width — higher = smoother.
+ */
+function gaussianSmooth(data: number[], sigma: number): number[] {
+	const n = data.length;
+	const result = new Array<number>(n).fill(0);
+	// Pre-compute weights for the kernel (±3σ covers 99.7%)
+	const radius = Math.ceil(sigma * 3);
+	const weights: number[] = [];
+	let weightSum = 0;
+	for (let d = -radius; d <= radius; d++) {
+		const w = Math.exp(-(d * d) / (2 * sigma * sigma));
+		weights.push(w);
+		weightSum += w;
+	}
+	// Normalize
+	for (let i = 0; i < weights.length; i++) weights[i] /= weightSum;
+
+	for (let i = 0; i < n; i++) {
+		let sum = 0;
+		for (let d = -radius; d <= radius; d++) {
+			const j = ((i + d) % n + n) % n; // circular wrap
+			sum += data[j] * weights[d + radius];
+		}
+		result[i] = sum;
+	}
+	return result;
 }
 
 function formatHour(h: number): string {

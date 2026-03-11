@@ -47,7 +47,7 @@ export function renderBarChart(
 	} = opts;
 
 	const svg = createSvg(VIEW_W, VIEW_H);
-	svg.style.height = height;
+	// No fixed height — viewBox ratio scales with container width
 	svg.classList.add('pt-bar-chart');
 
 	const plot = defaultPlotArea(VIEW_W, VIEW_H);

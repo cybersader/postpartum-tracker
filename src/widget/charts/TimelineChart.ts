@@ -51,7 +51,7 @@ export function renderTimelineChart(
 	const viewH = HEADER_H + rows.length * ROW_H + 2;
 	const svg = createSvg(VIEW_W, viewH);
 	svg.classList.add('pt-timeline-chart');
-	svg.style.height = opts.height || `${Math.max(60, rows.length * 28 + 16)}px`;
+	// No fixed height — viewBox ratio scales with container width
 
 	// Hour labels (0, 6, 12, 18, 24)
 	const hours = [0, 6, 12, 18, 24];
