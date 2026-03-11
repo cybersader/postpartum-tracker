@@ -445,6 +445,11 @@ export interface PostpartumTrackerSettings {
 	/** Show the unified event history feed below the module sections. */
 	showEventHistory: boolean;
 
+	/** Which analytics modules are enabled (layout IDs: 'feeding-analytics', etc.) */
+	enabledAnalytics: string[];
+	/** How many days of data to show in analytics charts. */
+	analyticsWindowDays: number;
+
 	/** Which module IDs are enabled */
 	enabledModules: string[];
 
@@ -519,6 +524,8 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	enableDebugLog: false,
 	entryWindowHours: 24,
 	showEventHistory: true,
+	enabledAnalytics: [],
+	analyticsWindowDays: 7,
 	activeLogicPacks: [],
 	libraryTrackerOverrides: {},
 	customTrackers: [],

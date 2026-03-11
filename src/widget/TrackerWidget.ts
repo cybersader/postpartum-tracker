@@ -14,6 +14,11 @@ import { InlineEditPanel, type EditField } from './shared/InlineEditPanel';
 import { deepMerge } from '../utils/deepMerge';
 import { evaluateMilestones } from '../trackers/milestoneEvaluator';
 import { getLogicPacks } from '../trackers/logicPacks';
+import { FeedingAnalytics } from './analytics/FeedingAnalytics';
+import { SleepAnalytics } from './analytics/SleepAnalytics';
+import { DiaperAnalytics } from './analytics/DiaperAnalytics';
+import { MedicationAnalytics } from './analytics/MedicationAnalytics';
+import type { FeedingEntry, DiaperEntry, MedicationEntry } from '../types';
 import type PostpartumTrackerPlugin from '../main';
 
 function setsEqual(a: Set<string>, b: Set<string>): boolean {
@@ -323,6 +328,12 @@ export class TrackerWidget extends MarkdownRenderChild {
 	}
 
 	private static readonly HISTORY_ID = 'event-history';
+	private static readonly ANALYTICS_IDS: Record<string, string> = {
+		'feeding-analytics': 'Feeding analytics',
+		'sleep-analytics': 'Sleep analytics',
+		'diaper-analytics': 'Diaper analytics',
+		'medication-analytics': 'Medication analytics',
+	};
 
 	/** Build collapsible sections in layout order with move controls. */
 	private buildSections(): void {
@@ -341,12 +352,27 @@ export class TrackerWidget extends MarkdownRenderChild {
 			this.data.layout.push(TrackerWidget.HISTORY_ID);
 		}
 
+		// Ensure enabled analytics sections are in the layout
+		const enabledAnalytics = this.settings.enabledAnalytics || [];
+		for (const aId of enabledAnalytics) {
+			if (!this.data.layout.includes(aId)) {
+				this.data.layout.push(aId);
+			}
+		}
+
 		const activeLayout = this.data.layout.filter(id => {
 			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			if (id in TrackerWidget.ANALYTICS_IDS) return enabledAnalytics.includes(id);
 			return this.settings.enabledModules.includes(id);
 		});
 
 		for (const itemId of activeLayout) {
+			// Analytics sections
+			if (itemId in TrackerWidget.ANALYTICS_IDS) {
+				this.buildAnalyticsSection(itemId);
+				continue;
+			}
+
 			// Event history — first-class moveable section
 			if (itemId === TrackerWidget.HISTORY_ID) {
 				const collapsible = new CollapsibleSection(
@@ -556,6 +582,52 @@ export class TrackerWidget extends MarkdownRenderChild {
 		if (this.eventHistory) this.eventHistory.refresh();
 	}
 
+	/** Build an analytics collapsible section and render the chart module inside it. */
+	private buildAnalyticsSection(analyticsId: string): void {
+		const title = TrackerWidget.ANALYTICS_IDS[analyticsId] || analyticsId;
+		const collapsible = new CollapsibleSection(
+			this.sectionsContainer, title, analyticsId, false,
+		);
+		collapsible.enableMove(
+			() => this.moveSection(analyticsId, -1),
+			() => this.moveSection(analyticsId, 1),
+		);
+		collapsible.enableDrag((dir) => this.moveSection(analyticsId, dir));
+		this.sectionCollapsibles.set(analyticsId, collapsible);
+
+		const body = collapsible.getBodyEl();
+		const settingsWithWindow = { ...this.settings, analyticsWindowDays: this.settings.analyticsWindowDays || 7 };
+
+		switch (analyticsId) {
+			case 'feeding-analytics': {
+				const entries = (this.data.trackers.feeding || []) as FeedingEntry[];
+				const analytics = new FeedingAnalytics(body);
+				analytics.render(entries, settingsWithWindow);
+				break;
+			}
+			case 'sleep-analytics': {
+				// Sleep entries come from library trackers (simple tracker module)
+				const entries = (this.data.trackers['sleep'] || []) as any[];
+				const analytics = new SleepAnalytics(body);
+				analytics.render(entries, settingsWithWindow);
+				break;
+			}
+			case 'diaper-analytics': {
+				const entries = (this.data.trackers.diaper || []) as DiaperEntry[];
+				const analytics = new DiaperAnalytics(body);
+				analytics.render(entries, settingsWithWindow, this.data.meta.birthDate);
+				break;
+			}
+			case 'medication-analytics': {
+				const entries = (this.data.trackers.medication || []) as MedicationEntry[];
+				const configs = (this.data.trackers.medicationConfig || this.settings.medication.medications) as any[];
+				const analytics = new MedicationAnalytics(body);
+				analytics.render(entries, configs, settingsWithWindow);
+				break;
+			}
+		}
+	}
+
 	/** Called every 200ms to update live timer displays. No file writes. */
 	private previousActiveIds: Set<string> = new Set();
 
@@ -607,8 +679,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 	/** Update which move arrows are enabled based on position. */
 	private updateMoveButtons(): void {
+		const enabledAnalytics = this.settings.enabledAnalytics || [];
 		const activeLayout = this.data.layout.filter(id => {
 			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			if (id in TrackerWidget.ANALYTICS_IDS) return enabledAnalytics.includes(id);
 			return this.settings.enabledModules.includes(id);
 		});
 		for (let i = 0; i < activeLayout.length; i++) {

@@ -7,6 +7,22 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-03-11
+
+### Added
+
+- **Analytics dashboard with SVG charts**: Four new collapsible analytics sections showing trends, patterns, and insights for feeding, sleep, diapers, and medications. All charts are pure SVG (zero dependencies) and theme-aware.
+  - **Feeding analytics**: Feedings per day (bar chart with 3-day moving average), nursing minutes by side (stacked L/R/Both), time-of-day timeline, L/R balance bar, avg session sparkline, and insights (avg feedings/day, session duration, longest gap, next side suggestion).
+  - **Sleep analytics**: Total sleep hours and session count per day, sleep timeline, longest stretch sparkline, and insights (total today, longest stretch, avg awake window, trend, age-appropriate context).
+  - **Diaper analytics**: Wet/dirty stacked bar chart, change times dot plot, and insights (today's counts, day-of-life adequacy targets, stool color trend, volume trend).
+  - **Medication analytics**: Doses per day by medication (stacked with color legend), dose timing timeline, and insights (pain coverage hours, per-med average gap vs target, today's dose count).
+- **Analytics settings**: Toggle each analytics module on/off and choose analysis window (3, 7, or 14 days) under Settings > General > Analytics.
+- **Analytics sections are reorderable**: Drag or use move arrows to position analytics sections anywhere in the layout.
+
+### Fixed
+
+- **Sleep notification timing**: "Baby awake" reminder now measures from sleep END time (when baby woke up) instead of sleep START time. Previously the alert fired too early because it measured from when the baby fell asleep.
+
 ## [0.16.2] - 2026-03-07
 
 ### Fixed

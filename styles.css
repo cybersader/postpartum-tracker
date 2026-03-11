@@ -1980,3 +1980,147 @@
 	border: none;
 	cursor: pointer;
 }
+
+/* =============================================================
+   Analytics & Charts
+   ============================================================= */
+
+.pt-analytics {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.pt-analytics-title {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	margin-bottom: 2px;
+}
+
+.pt-analytics-mini-title {
+	font-size: 0.72rem;
+	font-weight: 500;
+	color: var(--text-faint);
+	margin-top: 8px;
+	margin-bottom: 2px;
+}
+
+.pt-chart-container {
+	width: 100%;
+	overflow: hidden;
+}
+
+.pt-chart-container svg {
+	display: block;
+	width: 100%;
+}
+
+.pt-bar-chart,
+.pt-timeline-chart,
+.pt-sparkline {
+	display: block;
+	width: 100%;
+}
+
+/* --- Chart legend --- */
+.pt-chart-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+.pt-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.72rem;
+	color: var(--text-muted);
+}
+
+.pt-legend-swatch {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+/* --- Insights --- */
+.pt-insights {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: 6px;
+}
+
+.pt-insight {
+	font-size: 0.8rem;
+	padding: 4px 8px;
+	border-radius: 6px;
+	background: var(--background-primary);
+	border-left: 3px solid var(--text-muted);
+}
+
+.pt-insight--positive {
+	border-left-color: var(--color-green, #22c55e);
+}
+
+.pt-insight--negative {
+	border-left-color: var(--color-red, #ef4444);
+}
+
+.pt-insight--neutral {
+	border-left-color: var(--text-muted);
+}
+
+.pt-insight--up {
+	border-left-color: var(--color-green, #22c55e);
+}
+
+.pt-insight--down {
+	border-left-color: var(--color-red, #ef4444);
+}
+
+.pt-insight--stable {
+	border-left-color: var(--text-muted);
+}
+
+/* --- L/R Balance bar --- */
+.pt-balance-section {
+	margin-top: 4px;
+}
+
+.pt-balance-bar {
+	display: flex;
+	height: 24px;
+	border-radius: 6px;
+	overflow: hidden;
+	font-size: 0.72rem;
+	font-weight: 600;
+}
+
+.pt-balance-left {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-blue, #3b82f6);
+	color: white;
+	min-width: 30px;
+}
+
+.pt-balance-right {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-orange, #f97316);
+	color: white;
+	min-width: 30px;
+}
+
+/* --- Sparkline container --- */
+.pt-sparkline-container {
+	width: 100%;
+	max-width: 200px;
+}

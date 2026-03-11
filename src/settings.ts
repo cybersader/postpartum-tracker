@@ -1360,6 +1360,53 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			this.buildSummaryOrderSetting(el);
 		}
 
+		// --- Analytics ---
+		new Setting(el).setName('Analytics').setHeading();
+
+		new Setting(el)
+			.setDesc('Show charts and insights for your tracking data. Each analytics section appears as a collapsible panel you can reorder.');
+
+		const analyticsModules: { id: string; label: string }[] = [
+			{ id: 'feeding-analytics', label: 'Feeding analytics' },
+			{ id: 'sleep-analytics', label: 'Sleep analytics' },
+			{ id: 'diaper-analytics', label: 'Diaper analytics' },
+			{ id: 'medication-analytics', label: 'Medication analytics' },
+		];
+
+		for (const mod of analyticsModules) {
+			const enabled = (this.plugin.settings.enabledAnalytics || []).includes(mod.id);
+			new Setting(el)
+				.setName(mod.label)
+				.addToggle(toggle => toggle
+					.setValue(enabled)
+					.onChange(async (value) => {
+						const arr = this.plugin.settings.enabledAnalytics || [];
+						if (value && !arr.includes(mod.id)) {
+							arr.push(mod.id);
+						} else if (!value) {
+							const idx = arr.indexOf(mod.id);
+							if (idx >= 0) arr.splice(idx, 1);
+						}
+						this.plugin.settings.enabledAnalytics = arr;
+						await this.plugin.saveSettings();
+					})
+				);
+		}
+
+		new Setting(el)
+			.setName('Analysis window')
+			.setDesc('How many days of data to include in analytics charts.')
+			.addDropdown(dd => dd
+				.addOption('3', '3 days')
+				.addOption('7', '7 days')
+				.addOption('14', '14 days')
+				.setValue(String(this.plugin.settings.analyticsWindowDays || 7))
+				.onChange(async (value) => {
+					this.plugin.settings.analyticsWindowDays = parseInt(value, 10);
+					await this.plugin.saveSettings();
+				})
+			);
+
 		// --- Debug ---
 		new Setting(el).setName('Developer').setHeading();
 

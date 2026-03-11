@@ -344,15 +344,22 @@ export class NotificationService {
 			(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
 		);
 		const last = sorted[sorted.length - 1];
-		const hoursSince = (now - new Date(last.timestamp).getTime()) / 3_600_000;
+		// For duration-based trackers (sleep, tummy-time), measure from end time
+		const measureFrom = last.end
+			? new Date(last.end as string).getTime()
+			: new Date(last.timestamp).getTime();
+		const hoursSince = (now - measureFrom) / 3_600_000;
 
 		if (hoursSince >= config.reminderIntervalHours) {
+			const hoursStr = hoursSince >= 1
+				? `${Math.floor(hoursSince)}h ${Math.round((hoursSince % 1) * 60)}m`
+				: `${Math.round(hoursSince * 60)}m`;
 			return {
 				id: `simple-reminder-${moduleId}`,
 				category: moduleId,
 				level: 'info',
 				title: config.reminderMessage,
-				message: `Last logged ${Math.floor(hoursSince)}h ago`,
+				message: `Last ended ${hoursStr} ago`,
 				firedAt: now,
 			};
 		}
