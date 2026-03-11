@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.2] - 2026-03-11
+
+### Added
+
+- **Activity profile charts**: New "Average sleep by hour" and "Average feedings by hour" area charts that collapse the heatmap into a single 24-hour curve showing average activity by hour of day. Annotates the peak hour automatically (e.g. "most sleep 2am", "busiest 7pm").
+
 ## [0.18.1] - 2026-03-11
 
 ### Added

@@ -8,6 +8,7 @@ import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
 import { renderHeatmapChart } from '../charts/HeatmapChart';
+import { renderActivityProfile } from '../charts/ActivityProfile';
 
 export class FeedingAnalytics {
 	private el: HTMLElement;
@@ -93,6 +94,14 @@ export class FeedingAnalytics {
 		});
 		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-blue)' });
+
+		// ── Average feeding profile (collapsed heatmap) ──
+		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Average feedings by hour' });
+		const profileContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+		renderActivityProfile(profileContainer, heatGrid, {
+			color: 'var(--color-blue)',
+			peakLabel: 'busiest',
+		});
 
 		// ── L/R Balance bar ──
 		const allCompleted = entries.filter(e => e.end !== null && e.type !== 'bottle');

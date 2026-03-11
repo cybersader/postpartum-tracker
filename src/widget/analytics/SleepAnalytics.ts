@@ -9,6 +9,7 @@ import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
 import { renderHeatmapChart } from '../charts/HeatmapChart';
+import { renderActivityProfile } from '../charts/ActivityProfile';
 
 interface SleepEntry {
 	id: string;
@@ -76,6 +77,14 @@ export class SleepAnalytics {
 		const heatGrid = this.buildHourGrid(keys, byDay);
 		const heatContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderHeatmapChart(heatContainer, heatGrid, labels, { color: 'var(--color-purple)' });
+
+		// ── Average sleep profile (collapsed heatmap) ──
+		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Average sleep by hour' });
+		const profileContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+		renderActivityProfile(profileContainer, heatGrid, {
+			color: 'var(--color-purple)',
+			peakLabel: 'most sleep',
+		});
 
 		// ── Sleep timeline (last 3 days) ──
 		const parentEnabled = settings.sleep?.parentWindowEnabled ?? false;
