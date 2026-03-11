@@ -397,7 +397,7 @@ export const DEFAULT_CORE_BUTTON: CoreButtonConfig = { visible: true, label: '',
 export const DEFAULT_FEEDING_BUTTONS: FeedingButtonsConfig = {
 	left: { ...DEFAULT_CORE_BUTTON },
 	right: { ...DEFAULT_CORE_BUTTON },
-	both: { ...DEFAULT_CORE_BUTTON },
+	both: { visible: false, label: '', icon: '' },
 	bottle: { ...DEFAULT_CORE_BUTTON },
 	holdForDetails: true,
 	showPositionField: false,

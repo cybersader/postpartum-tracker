@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-03-11
+
+### Changed
+
+- **"Both" feeding button hidden by default**: New installs no longer show the "Both" breast button. Existing users are unaffected (their saved config is preserved). Can be re-enabled in Settings > Trackers > Feeding > Both button.
+
 ## [0.17.1] - 2026-03-11
 
 ### Changed
