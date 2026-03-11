@@ -7,6 +7,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-03-11
+
+### Changed
+
+- **Smart per-module analytics windows**: Each analytics section now has inline pill buttons (3d / 7d / 14d) to change the time window right where you're viewing the charts. No more single global dropdown.
+- **Smart defaults by baby age**: Analytics default to 3 days for babies < 1 week, 7 days for 1-2 weeks, 14 days for 2+ weeks.
+- **Per-module persistence**: Window choices are saved per analytics section in the code block data, so different sections can show different time ranges.
+- **Analytics toggles moved to tracker settings**: Enable feeding analytics under Feeding, diaper analytics under Diapers, etc. — no longer buried in General settings.
+- **Fixed charts unaffected**: Timelines stay at 3 days, "today" insights stay today, pain coverage stays 24h. Only bar charts, sparklines, and trend arrows change with the picker.
+
+### Fixed
+
+- **CodeBlockStore preserves logicPackId**: Pre-existing bug where `logicPackId` in code block data was silently dropped on parse. Now preserved.
+
 ## [0.17.0] - 2026-03-11
 
 ### Added

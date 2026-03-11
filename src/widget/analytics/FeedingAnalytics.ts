@@ -15,9 +15,9 @@ export class FeedingAnalytics {
 		this.el = parent.createDiv({ cls: 'pt-analytics pt-feeding-analytics' });
 	}
 
-	render(entries: FeedingEntry[], settings: PostpartumTrackerSettings): void {
+	render(entries: FeedingEntry[], settings: PostpartumTrackerSettings, windowDays: number): void {
 		this.el.empty();
-		const days = (settings as any).analyticsWindowDays || 7;
+		const days = windowDays;
 		const keys = dateKeys(days);
 		const labels = dayLabels(days);
 

@@ -447,7 +447,7 @@ export interface PostpartumTrackerSettings {
 
 	/** Which analytics modules are enabled (layout IDs: 'feeding-analytics', etc.) */
 	enabledAnalytics: string[];
-	/** How many days of data to show in analytics charts. */
+	/** @deprecated Use per-module inline pickers instead. Kept as migration fallback. */
 	analyticsWindowDays: number;
 
 	/** Which module IDs are enabled */
@@ -584,6 +584,10 @@ export interface PostpartumData {
 
 	/** Per-code-block logic pack override (overrides global activeLogicPacks for this block) */
 	logicPackId?: string;
+
+	/** Per-analytics-module time window (days), keyed by analytics section ID.
+	 *  e.g. { 'feeding-analytics': 7, 'sleep-analytics': 14 } */
+	analyticsWindows?: Record<string, number>;
 }
 
 export const DEFAULT_LAYOUT: string[] = ['feeding', 'diaper', 'medication'];
@@ -600,6 +604,7 @@ export const EMPTY_DATA: PostpartumData = {
 		logNotes: [],
 		comments: [],
 	},
+	analyticsWindows: {},
 };
 
 // ── Shared UI Types ──────────────────────────────────────────

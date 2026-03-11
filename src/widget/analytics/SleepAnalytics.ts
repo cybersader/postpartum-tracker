@@ -24,9 +24,9 @@ export class SleepAnalytics {
 		this.el = parent.createDiv({ cls: 'pt-analytics pt-sleep-analytics' });
 	}
 
-	render(entries: SleepEntry[], settings: PostpartumTrackerSettings): void {
+	render(entries: SleepEntry[], settings: PostpartumTrackerSettings, windowDays: number): void {
 		this.el.empty();
-		const days = (settings as any).analyticsWindowDays || 7;
+		const days = windowDays;
 		const keys = dateKeys(days);
 		const labels = dayLabels(days);
 

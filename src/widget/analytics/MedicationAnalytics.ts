@@ -19,9 +19,10 @@ export class MedicationAnalytics {
 		entries: MedicationEntry[],
 		configs: MedicationConfig[],
 		settings: PostpartumTrackerSettings,
+		windowDays: number,
 	): void {
 		this.el.empty();
-		const days = (settings as any).analyticsWindowDays || 7;
+		const days = windowDays;
 		const keys = dateKeys(days);
 		const labels = dayLabels(days);
 

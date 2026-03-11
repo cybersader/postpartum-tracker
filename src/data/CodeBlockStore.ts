@@ -62,6 +62,10 @@ export class CodeBlockStore {
 				settingsOverrides: parsed.settingsOverrides && typeof parsed.settingsOverrides === 'object'
 					? parsed.settingsOverrides
 					: undefined,
+				logicPackId: typeof parsed.logicPackId === 'string' ? parsed.logicPackId : undefined,
+				analyticsWindows: parsed.analyticsWindows && typeof parsed.analyticsWindows === 'object'
+					? parsed.analyticsWindows as Record<string, number>
+					: {},
 			};
 		} catch (e) {
 			console.error('Postpartum Tracker: failed to parse code block JSON. Data may be corrupted.', e);

@@ -15,9 +15,9 @@ export class DiaperAnalytics {
 		this.el = parent.createDiv({ cls: 'pt-analytics pt-diaper-analytics' });
 	}
 
-	render(entries: DiaperEntry[], settings: PostpartumTrackerSettings, birthDate?: string): void {
+	render(entries: DiaperEntry[], settings: PostpartumTrackerSettings, windowDays: number, birthDate?: string): void {
 		this.el.empty();
-		const days = (settings as any).analyticsWindowDays || 7;
+		const days = windowDays;
 		const keys = dateKeys(days);
 		const labels = dayLabels(days);
 

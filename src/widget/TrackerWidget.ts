@@ -3,7 +3,7 @@ import type { PostpartumData, PostpartumTrackerSettings, HealthAlert } from '../
 import type { TrackerModule } from '../trackers/BaseTracker';
 import { CodeBlockStore } from '../data/CodeBlockStore';
 import { TrackerRegistry } from '../data/TrackerRegistry';
-import { getDayStart, getDayEnd, daysSinceBirth } from '../data/dateUtils';
+import { getDayStart, getDayEnd, daysSinceBirth, getDefaultAnalyticsWindow } from '../data/dateUtils';
 import { CollapsibleSection } from './CollapsibleSection';
 import { QuickActions } from './QuickActions';
 import { DailySummary, type SummaryCard } from './DailySummary';
@@ -52,6 +52,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 	// State
 	private saving = false;
 	private babyEditPanel: InlineEditPanel | null = null;
+	private deferredSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(
 		containerEl: HTMLElement,
@@ -94,6 +95,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 	onunload(): void {
 		this.plugin.unregisterWidget(this);
+		if (this.deferredSaveTimer) {
+			clearTimeout(this.deferredSaveTimer);
+			this.deferredSaveTimer = null;
+		}
 	}
 
 	/**
@@ -582,7 +587,15 @@ export class TrackerWidget extends MarkdownRenderChild {
 		if (this.eventHistory) this.eventHistory.refresh();
 	}
 
-	/** Build an analytics collapsible section and render the chart module inside it. */
+	/** Resolve the effective analytics window (days) for a given module. */
+	private getAnalyticsWindow(analyticsId: string): number {
+		const perModule = this.data.analyticsWindows?.[analyticsId];
+		if (perModule) return perModule;
+		if (this.settings.analyticsWindowDays) return this.settings.analyticsWindowDays;
+		return getDefaultAnalyticsWindow(this.data.meta.birthDate);
+	}
+
+	/** Build an analytics collapsible section with inline window picker. */
 	private buildAnalyticsSection(analyticsId: string): void {
 		const title = TrackerWidget.ANALYTICS_IDS[analyticsId] || analyticsId;
 		const collapsible = new CollapsibleSection(
@@ -596,36 +609,106 @@ export class TrackerWidget extends MarkdownRenderChild {
 		this.sectionCollapsibles.set(analyticsId, collapsible);
 
 		const body = collapsible.getBodyEl();
-		const settingsWithWindow = { ...this.settings, analyticsWindowDays: this.settings.analyticsWindowDays || 7 };
+		const currentWindow = this.getAnalyticsWindow(analyticsId);
 
+		// Inline window picker pills
+		const pickerRow = body.createDiv({ cls: 'pt-analytics-window-picker' });
+		const options = [3, 7, 14];
+		for (const days of options) {
+			const pill = pickerRow.createEl('button', {
+				cls: `pt-window-pill${days === currentWindow ? ' pt-window-pill--active' : ''}`,
+				text: `${days}d`,
+			});
+			this.addPillHandler(pill, () => {
+				this.setAnalyticsWindow(analyticsId, days, body, pickerRow);
+			});
+		}
+
+		// Content container (re-rendered on window change without full rebuild)
+		const contentEl = body.createDiv({ cls: 'pt-analytics-content' });
+		this.renderAnalyticsContent(analyticsId, contentEl, currentWindow);
+	}
+
+	/** Render analytics charts into a container. Called on build and on window change. */
+	private renderAnalyticsContent(analyticsId: string, container: HTMLElement, days: number): void {
 		switch (analyticsId) {
 			case 'feeding-analytics': {
 				const entries = (this.data.trackers.feeding || []) as FeedingEntry[];
-				const analytics = new FeedingAnalytics(body);
-				analytics.render(entries, settingsWithWindow);
+				const analytics = new FeedingAnalytics(container);
+				analytics.render(entries, this.settings, days);
 				break;
 			}
 			case 'sleep-analytics': {
-				// Sleep entries come from library trackers (simple tracker module)
 				const entries = (this.data.trackers['sleep'] || []) as any[];
-				const analytics = new SleepAnalytics(body);
-				analytics.render(entries, settingsWithWindow);
+				const analytics = new SleepAnalytics(container);
+				analytics.render(entries, this.settings, days);
 				break;
 			}
 			case 'diaper-analytics': {
 				const entries = (this.data.trackers.diaper || []) as DiaperEntry[];
-				const analytics = new DiaperAnalytics(body);
-				analytics.render(entries, settingsWithWindow, this.data.meta.birthDate);
+				const analytics = new DiaperAnalytics(container);
+				analytics.render(entries, this.settings, days, this.data.meta.birthDate);
 				break;
 			}
 			case 'medication-analytics': {
 				const entries = (this.data.trackers.medication || []) as MedicationEntry[];
 				const configs = (this.data.trackers.medicationConfig || this.settings.medication.medications) as any[];
-				const analytics = new MedicationAnalytics(body);
-				analytics.render(entries, configs, settingsWithWindow);
+				const analytics = new MedicationAnalytics(container);
+				analytics.render(entries, configs, this.settings, days);
 				break;
 			}
 		}
+	}
+
+	/** Handle window pill tap: update in memory, re-render content, deferred save. */
+	private setAnalyticsWindow(analyticsId: string, days: number, body: HTMLElement, pickerRow: HTMLElement): void {
+		if (!this.data.analyticsWindows) this.data.analyticsWindows = {};
+		this.data.analyticsWindows[analyticsId] = days;
+
+		// Update pill active states
+		const pills = pickerRow.querySelectorAll('.pt-window-pill');
+		const options = [3, 7, 14];
+		pills.forEach((pill, i) => {
+			if (options[i] === days) {
+				pill.addClass('pt-window-pill--active');
+			} else {
+				pill.removeClass('pt-window-pill--active');
+			}
+		});
+
+		// Re-render just the content area
+		const contentEl = body.querySelector('.pt-analytics-content') as HTMLElement;
+		if (contentEl) {
+			contentEl.empty();
+			this.renderAnalyticsContent(analyticsId, contentEl, days);
+		}
+
+		// Deferred save (2s debounce) to persist without scroll jumps
+		if (this.deferredSaveTimer) clearTimeout(this.deferredSaveTimer);
+		this.deferredSaveTimer = setTimeout(() => {
+			this.deferredSaveTimer = null;
+			this.save();
+		}, 2000);
+	}
+
+	/** Add pointerdown/pointerup handler for a pill button (CodeMirror-safe). */
+	private addPillHandler(el: HTMLElement, handler: () => void): void {
+		el.addEventListener('pointerdown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+		el.addEventListener('pointerup', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			handler();
+		});
+		el.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
 	}
 
 	/** Called every 200ms to update live timer displays. No file writes. */

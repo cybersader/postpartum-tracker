@@ -324,6 +324,10 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		// --- Library Tracker Analytics ---
+		this.buildAnalyticsToggle(el, 'sleep-analytics', 'Sleep analytics',
+			'Show charts and insights for sleep patterns. Requires sleep tracker enabled above.');
+
 		// --- Feeding ---
 		new Setting(el).setName('Feeding').setHeading();
 
@@ -393,6 +397,9 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		this.buildButtonConfig(el, 'Both button', fCfg.both);
 		this.buildButtonConfig(el, 'Bottle button', fCfg.bottle);
 
+		this.buildAnalyticsToggle(el, 'feeding-analytics', 'Feeding analytics',
+			'Show charts and insights for feeding patterns.');
+
 		// --- Diapers ---
 		new Setting(el).setName('Diapers').setHeading();
 
@@ -427,6 +434,9 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		this.buildButtonConfig(el, 'Wet button', dCfg.wet);
 		this.buildButtonConfig(el, 'Dirty button', dCfg.dirty);
 		this.buildButtonConfig(el, 'Both button', dCfg.both);
+
+		this.buildAnalyticsToggle(el, 'diaper-analytics', 'Diaper analytics',
+			'Show charts and insights for diaper patterns.');
 
 		// --- Medication ---
 		new Setting(el).setName('Medication').setHeading();
@@ -531,6 +541,9 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 					this.display();
 				})
 			);
+
+		this.buildAnalyticsToggle(el, 'medication-analytics', 'Medication analytics',
+			'Show charts and insights for medication patterns.');
 
 		// --- Recovery Care ---
 		new Setting(el).setName('Recovery care').setHeading();
@@ -1359,53 +1372,6 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 			this.buildSummaryOrderSetting(el);
 		}
-
-		// --- Analytics ---
-		new Setting(el).setName('Analytics').setHeading();
-
-		new Setting(el)
-			.setDesc('Show charts and insights for your tracking data. Each analytics section appears as a collapsible panel you can reorder.');
-
-		const analyticsModules: { id: string; label: string }[] = [
-			{ id: 'feeding-analytics', label: 'Feeding analytics' },
-			{ id: 'sleep-analytics', label: 'Sleep analytics' },
-			{ id: 'diaper-analytics', label: 'Diaper analytics' },
-			{ id: 'medication-analytics', label: 'Medication analytics' },
-		];
-
-		for (const mod of analyticsModules) {
-			const enabled = (this.plugin.settings.enabledAnalytics || []).includes(mod.id);
-			new Setting(el)
-				.setName(mod.label)
-				.addToggle(toggle => toggle
-					.setValue(enabled)
-					.onChange(async (value) => {
-						const arr = this.plugin.settings.enabledAnalytics || [];
-						if (value && !arr.includes(mod.id)) {
-							arr.push(mod.id);
-						} else if (!value) {
-							const idx = arr.indexOf(mod.id);
-							if (idx >= 0) arr.splice(idx, 1);
-						}
-						this.plugin.settings.enabledAnalytics = arr;
-						await this.plugin.saveSettings();
-					})
-				);
-		}
-
-		new Setting(el)
-			.setName('Analysis window')
-			.setDesc('How many days of data to include in analytics charts.')
-			.addDropdown(dd => dd
-				.addOption('3', '3 days')
-				.addOption('7', '7 days')
-				.addOption('14', '14 days')
-				.setValue(String(this.plugin.settings.analyticsWindowDays || 7))
-				.onChange(async (value) => {
-					this.plugin.settings.analyticsWindowDays = parseInt(value, 10);
-					await this.plugin.saveSettings();
-				})
-			);
 
 		// --- Debug ---
 		new Setting(el).setName('Developer').setHeading();
@@ -2521,6 +2487,29 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				.onClick(() => {
 					editor.remove();
 					this.display();
+				})
+			);
+	}
+
+	/** Reusable toggle for enabling an analytics module. */
+	private buildAnalyticsToggle(el: HTMLElement, analyticsId: string, name: string, desc: string): void {
+		const arr = this.plugin.settings.enabledAnalytics || [];
+		const enabled = arr.includes(analyticsId);
+		new Setting(el)
+			.setName(name)
+			.setDesc(desc)
+			.addToggle(toggle => toggle
+				.setValue(enabled)
+				.onChange(async (value) => {
+					const list = this.plugin.settings.enabledAnalytics || [];
+					if (value && !list.includes(analyticsId)) {
+						list.push(analyticsId);
+					} else if (!value) {
+						const idx = list.indexOf(analyticsId);
+						if (idx >= 0) list.splice(idx, 1);
+					}
+					this.plugin.settings.enabledAnalytics = list;
+					await this.plugin.saveSettings();
 				})
 			);
 	}

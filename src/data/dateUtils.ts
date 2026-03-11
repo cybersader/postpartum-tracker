@@ -101,6 +101,19 @@ export function getDynamicFeedingIntervalHours(birthDateIso?: string): number {
 	return 3;
 }
 
+/**
+ * Compute a sensible default analytics window based on baby age.
+ * < 7 days: 3, 7-13 days: 7, 14+ days: 14, no birth date: 7.
+ */
+export function getDefaultAnalyticsWindow(birthDateIso?: string): number {
+	if (!birthDateIso) return 7;
+	const dol = daysSinceBirth(birthDateIso);
+	if (dol < 0) return 7;
+	if (dol < 7) return 3;
+	if (dol < 14) return 7;
+	return 14;
+}
+
 /** Format "X ago" from an ISO timestamp. */
 export function timeAgo(iso: string): string {
 	const diff = Date.now() - new Date(iso).getTime();
