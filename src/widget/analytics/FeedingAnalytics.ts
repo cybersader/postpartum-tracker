@@ -129,7 +129,7 @@ export class FeedingAnalytics {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(heatGrid);
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-blue)' });
+			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-blue)', showAvgRow: true });
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });

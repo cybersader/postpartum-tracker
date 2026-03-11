@@ -94,7 +94,7 @@ export class SleepAnalytics {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep by week' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
-			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-purple)' });
+			renderHeatmapChart(c, wkGrid, wkLabels, { color: 'var(--color-purple)', showAvgRow: true });
 		} else {
 			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep activity by hour' });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });

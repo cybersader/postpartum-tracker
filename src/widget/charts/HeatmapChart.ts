@@ -10,6 +10,8 @@ export interface HeatmapOptions {
 	height?: string;
 	/** Show gradient legend bar below chart. Default: true. */
 	showLegend?: boolean;
+	/** Show an averaged summary row at bottom. Default: false. */
+	showAvgRow?: boolean;
 }
 
 const VIEW_W = 100;
@@ -40,6 +42,7 @@ export function renderHeatmapChart(
 
 	const color = opts.color ?? 'var(--interactive-accent)';
 	const showLegend = opts.showLegend ?? true;
+	const showAvgRow = opts.showAvgRow ?? false;
 
 	// Find max value for opacity scaling
 	let maxVal = 0;
@@ -50,7 +53,20 @@ export function renderHeatmapChart(
 	}
 	if (maxVal === 0) maxVal = 1; // avoid div-by-zero
 
-	const viewH = HEADER_H + grid.length * ROW_H + 2;
+	// Compute average row if needed
+	const avgRow = new Array<number>(COLS).fill(0);
+	if (showAvgRow && grid.length > 0) {
+		for (const row of grid) {
+			for (let h = 0; h < COLS && h < row.length; h++) {
+				avgRow[h] += row[h];
+			}
+		}
+		for (let h = 0; h < COLS; h++) avgRow[h] /= grid.length;
+	}
+
+	const GAP_H = showAvgRow ? 2 : 0; // gap before avg row
+	const AVG_ROW_H = showAvgRow ? ROW_H + 1 : 0;
+	const viewH = HEADER_H + grid.length * ROW_H + GAP_H + AVG_ROW_H + 2;
 	const svg = createSvg(VIEW_W, viewH);
 	svg.classList.add('pt-heatmap-chart');
 	// No fixed height — viewBox ratio scales with container width
@@ -87,6 +103,43 @@ export function renderHeatmapChart(
 				x: cx, y: cy,
 				width: COL_W - CELL_PAD * 2,
 				height: ROW_H - CELL_PAD * 2,
+				fill: color,
+				opacity,
+				rx: 0.5,
+			}, svg);
+		}
+	}
+
+	// Average summary row
+	if (showAvgRow && grid.length > 0) {
+		const avgMaxVal = Math.max(...avgRow, 0.001);
+		const avgY = HEADER_H + grid.length * ROW_H + GAP_H;
+
+		// Separator line
+		svgEl('line', {
+			x1: PLOT_LEFT, y1: avgY - 0.5,
+			x2: PLOT_RIGHT, y2: avgY - 0.5,
+			stroke: 'var(--background-modifier-border)',
+			'stroke-width': 0.3,
+		}, svg);
+
+		// Label
+		svgEl('text', {
+			x: LABEL_W, y: avgY + (AVG_ROW_H) / 2 + 0.5,
+			'text-anchor': 'end', 'font-size': 2.3,
+			fill: 'var(--text-accent)',
+			'font-weight': 'bold',
+		}, svg).textContent = 'Avg';
+
+		// Cells with slightly larger height
+		for (let c = 0; c < COLS; c++) {
+			const val = avgRow[c];
+			const opacity = val > 0 ? 0.1 + (val / avgMaxVal) * 0.8 : 0.03;
+			svgEl('rect', {
+				x: PLOT_LEFT + c * COL_W + CELL_PAD,
+				y: avgY + CELL_PAD,
+				width: COL_W - CELL_PAD * 2,
+				height: AVG_ROW_H - CELL_PAD * 2,
 				fill: color,
 				opacity,
 				rx: 0.5,

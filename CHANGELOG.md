@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.18.9] - 2026-03-11
+
+### Added
+
+- **Heatmap average row**: Weekly heatmaps (feeding & sleep at 1mo+) now show an "Avg" summary row at the bottom — a gradient bar averaging all weeks' hourly profiles into one row.
+
 ## [0.18.8] - 2026-03-11
 
 ### Changed
