@@ -184,6 +184,6 @@ export function renderHeatmapChart(
 		legend.createSpan({ text: fmt(0) });
 		const bar = legend.createDiv({ cls: 'pt-heatmap-legend-bar' });
 		bar.style.background = `linear-gradient(to right, transparent, ${color})`;
-		legend.createSpan({ text: `${fmt(maxVal)}/hr` });
+		legend.createSpan({ text: fmt(maxVal) });
 	}
 }

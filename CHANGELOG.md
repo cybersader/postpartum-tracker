@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.2] - 2026-03-11
+
+### Changed
+
+- **Heatmap row totals show per-day averages**: Sleep rows show "3h12m/day", feeding rows show "10/day". Legend drops "/hr" suffix — just shows the value range.
+
 ## [0.19.1] - 2026-03-11
 
 ### Changed

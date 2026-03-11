@@ -106,11 +106,11 @@ export class SleepAnalytics {
 		const fmtSleepHours = (h: number) => {
 			const hrs = Math.floor(h);
 			const min = Math.round((h - hrs) * 60);
-			return hrs > 0 ? `${hrs}h${min}m` : `${min}m`;
+			return hrs > 0 ? `${hrs}h${min}m/day` : `${min}m/day`;
 		};
 		const fmtSleepCell = (v: number) => {
 			const min = Math.round(v * 60);
-			return min > 0 ? `${min}m` : '0';
+			return min > 0 ? `${min}m` : '0m';
 		};
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);
