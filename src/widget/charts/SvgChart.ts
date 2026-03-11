@@ -197,18 +197,18 @@ export function aggregateWeekly(
 	dailyValues: number[],
 	dailyLabels: string[],
 ): { values: number[]; labels: string[] } {
-	const weeks: { sum: number; count: number; label: string }[] = [];
+	const weeks: { sum: number; activeDays: number; label: string }[] = [];
 	for (let i = 0; i < dailyValues.length; i += 7) {
 		const chunk = dailyValues.slice(i, i + 7);
 		const sum = chunk.reduce((a, b) => a + b, 0);
-		const count = chunk.length;
-		// Label: use the first day's label or "Wk N"
+		const activeDays = chunk.filter(v => v > 0).length;
 		const weekNum = Math.floor(i / 7) + 1;
-		const label = `W${weekNum}`;
-		weeks.push({ sum, count, label });
+		weeks.push({ sum, activeDays, label: `W${weekNum}` });
 	}
 	return {
-		values: weeks.map(w => Math.round((w.sum / w.count) * 10) / 10),
+		values: weeks.map(w => w.activeDays > 0
+			? Math.round((w.sum / w.activeDays) * 10) / 10
+			: 0),
 		labels: weeks.map(w => w.label),
 	};
 }
@@ -227,14 +227,21 @@ export function collapseToWeeks(
 	const labels: string[] = [];
 	for (let i = 0; i < dailyGrid.length; i += 7) {
 		const chunk = dailyGrid.slice(i, i + 7);
-		const n = chunk.length;
+		// Only count days that have any data
+		const activeDays = chunk.filter(row => row.some(v => v > 0)).length;
+		if (activeDays === 0) {
+			// Still push the row (heatmap will filter it out), keeps label alignment
+			grid.push(new Array(24).fill(0));
+			labels.push(`W${Math.floor(i / 7) + 1}`);
+			continue;
+		}
 		const avgRow = new Array<number>(24).fill(0);
 		for (const row of chunk) {
 			for (let h = 0; h < 24 && h < row.length; h++) {
 				avgRow[h] += row[h];
 			}
 		}
-		for (let h = 0; h < 24; h++) avgRow[h] /= n;
+		for (let h = 0; h < 24; h++) avgRow[h] /= activeDays;
 		grid.push(avgRow);
 		labels.push(`W${Math.floor(i / 7) + 1}`);
 	}

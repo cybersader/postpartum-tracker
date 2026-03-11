@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.4] - 2026-03-11
+
+### Fixed
+
+- **Weekly averages ignore empty days**: `collapseToWeeks` and `aggregateWeekly` now divide by days with actual data, not total days in the chunk. A week with 2 days of 9h sleep correctly shows ~9h/day, not ~2.6h/day.
+
 ## [0.19.3] - 2026-03-11
 
 ### Fixed
