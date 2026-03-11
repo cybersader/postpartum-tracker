@@ -110,7 +110,7 @@ export class SleepAnalytics {
 		};
 		const fmtSleepCell = (v: number) => {
 			const min = Math.round(v * 60);
-			return min > 0 ? `${min}m` : '0m';
+			return min > 0 ? `${min}m/hr` : '0m';
 		};
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(dailyHeatGrid);

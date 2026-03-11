@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.5] - 2026-03-11
+
+### Fixed
+
+- **Heatmap legend shows meaningful units**: Feeding legend now shows "0 feeds/hr" to "1 feed/hr" instead of bare "0" to "1". Sleep legend shows "0m" to "39m/hr" to clarify cells represent per-hour values.
+
 ## [0.19.4] - 2026-03-11
 
 ### Fixed

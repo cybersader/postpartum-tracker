@@ -125,7 +125,10 @@ export class FeedingAnalytics {
 			return hourBuckets;
 		});
 
-		const fmtFeedCount = (v: number) => String(Math.round(v * 10) / 10);
+		const fmtFeedCount = (v: number) => {
+			const r = Math.round(v * 10) / 10;
+			return r === 1 ? '1 feed/hr' : `${r} feeds/hr`;
+		};
 		const fmtFeedTotal = (total: number) => `${Math.round(total)}/day`;
 		if (isWeekly) {
 			const { grid: wkGrid, labels: wkLabels } = collapseToWeeks(heatGrid);
