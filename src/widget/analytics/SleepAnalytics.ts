@@ -4,7 +4,7 @@
  * parent sleep window overlay, and timeline.
  */
 import type { PostpartumTrackerSettings } from '../../types';
-import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, collapseToWeeks } from '../charts/SvgChart';
+import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeeks } from '../charts/SvgChart';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -53,10 +53,17 @@ export class SleepAnalytics {
 			byDay.get(k)!.reduce((sum, e) => sum + getDurHours(e), 0));
 		const dailySessionsRaw = keys.map(k =>
 			byDay.get(k)!.filter(e => e.end != null).length);
+		const useWeeklyBars = days >= 60;
 		const isWeekly = days >= 30;
 
 		// ── Sleep hours ──
-		{
+		if (useWeeklyBars) {
+			const agg = aggregateWeekly(dailyHoursRaw, labels);
+			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep hours (weekly avg)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+		} else {
 			const barData: BarDatum[] = dailyHoursRaw.map((v, i) => ({
 				label: labels[i], value: Math.round(v * 10) / 10,
 			}));
@@ -71,7 +78,13 @@ export class SleepAnalytics {
 		}
 
 		// ── Sleep sessions ──
-		{
+		if (useWeeklyBars) {
+			const agg = aggregateWeekly(dailySessionsRaw, labels);
+			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep sessions (weekly avg)' });
+			const c = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderBarChart(c, barData, { color: 'var(--color-purple)' });
+		} else {
 			const barData: BarDatum[] = dailySessionsRaw.map((v, i) => ({
 				label: labels[i], value: v,
 			}));
@@ -194,10 +207,16 @@ export class SleepAnalytics {
 			}
 		}
 
-		// Trend
+		// Trend (only use days with data for trend)
 		const dailyHours = dailyHoursRaw;
 		const trend = trendDirection(dailyHours);
 		addInsight(insightsEl, `Sleep trend: ${TREND_ARROWS[trend]}`, trend);
+
+		// Active days notice
+		const activeDays = keys.filter(k => byDay.get(k)!.some(e => e.end != null)).length;
+		if (activeDays < days && activeDays > 0) {
+			addInsight(insightsEl, `Data from ${activeDays} of ${days} days (averages adjusted)`, 'neutral');
+		}
 
 		// Parent sleep coverage
 		if (parentEnabled) {
@@ -242,6 +261,10 @@ export class SleepAnalytics {
 			return;
 		}
 
+		// Count days that actually have sleep data (ignore empty/missed logging days)
+		const activeDays = keys.filter(k => byDay.get(k)!.some(e => e.end != null)).length;
+		const divisor = Math.max(activeDays, 1);
+
 		// Accumulate hours per period
 		const periodHours: number[] = [0, 0, 0, 0]; // Night, Morning, Afternoon, Evening
 		for (const e of allEntries) {
@@ -253,7 +276,7 @@ export class SleepAnalytics {
 		// Build ranked list by daily average (descending)
 		const ranked = PERIODS.map((p, i) => ({
 			label: p.label,
-			avgHours: Math.round((periodHours[i] / numDays) * 10) / 10,
+			avgHours: periodHours[i] / divisor,
 		})).sort((a, b) => b.avgHours - a.avgHours);
 
 		const maxH = ranked[0].avgHours || 1;
@@ -263,7 +286,10 @@ export class SleepAnalytics {
 			row.createSpan({ cls: 'pt-period-rank-label', text: item.label });
 			const bar = row.createDiv({ cls: 'pt-period-rank-bar' });
 			bar.style.width = `${Math.max((item.avgHours / maxH) * 100, 2)}%`;
-			row.createSpan({ cls: 'pt-period-rank-value', text: `${item.avgHours}h avg` });
+			const h = Math.floor(item.avgHours);
+			const m = Math.round((item.avgHours - h) * 60);
+			const timeStr = h > 0 ? `${h}h ${m}m avg` : `${m}m avg`;
+			row.createSpan({ cls: 'pt-period-rank-value', text: timeStr });
 		}
 	}
 

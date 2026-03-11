@@ -68,9 +68,9 @@ export function drawXLabels(
 ): void {
 	const n = labels.length;
 	const step = (plotArea.right - plotArea.left) / n;
-	// Skip every other label when crowded (>10 bars), always show first and last
-	const skip = n > 10 ? 2 : 1;
-	const fontSize = n > 10 ? 2.4 : 3;
+	// Adaptive label skipping: show ~8-12 labels max
+	const skip = n <= 10 ? 1 : n <= 20 ? 2 : n <= 40 ? 5 : 7;
+	const fontSize = n > 14 ? 2.2 : n > 10 ? 2.4 : 3;
 	for (let i = 0; i < n; i++) {
 		const isEdge = i === 0 || i === n - 1;
 		if (!isEdge && i % skip !== 0) continue;

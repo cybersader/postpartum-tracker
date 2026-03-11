@@ -7,6 +7,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-03-11
+
+### Fixed
+
+- **3mo sleep bars unreadable**: 3mo view now uses weekly-aggregated bars again (W1, W2...) instead of 90 compressed daily bars. 1mo still shows daily bars with 7-day moving average.
+- **Period ranking shows hours + minutes**: "0.2h avg" is now "12m avg" or "1h 30m avg" — much more readable.
+- **Averages ignore empty days**: Period ranking and insights now divide by days with actual data, not total window days. Shows "Data from X of Y days" when there are gaps.
+- **X-axis label crowding**: Adaptive label skipping for charts with many bars (shows ~10 labels max regardless of bar count).
+
 ## [0.18.9] - 2026-03-11
 
 ### Added
