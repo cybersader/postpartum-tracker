@@ -1998,6 +1998,13 @@
 	margin-bottom: 2px;
 }
 
+.pt-analytics-subtitle {
+	font-size: 0.7rem;
+	color: var(--text-faint);
+	margin-top: -2px;
+	margin-bottom: 4px;
+}
+
 .pt-analytics-mini-title {
 	font-size: 0.72rem;
 	font-weight: 500;

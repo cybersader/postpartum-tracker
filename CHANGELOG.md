@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-03-12
+
+### Improved
+
+- **Session grouping clarity**: Charts now titled "Sessions per day" with subtitle explaining "L ↔ R switches within 2m grouped as one feeding". Insight shows "14 breast switches → 9 sessions" instead of vague "14 entries in 9 sessions".
+
 ## [0.20.2] - 2026-03-12
 
 ### Added

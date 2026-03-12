@@ -44,16 +44,19 @@ export class FeedingAnalytics {
 		// Daily values (count sessions, not raw entries)
 		const dailyCounts = keys.map(k => sessionsByDay.get(k)!.filter(s => s.end !== null).length);
 
-		// ── Feedings per day/week ──
+		// ── Feedings per day/week (sessions) ──
+		const gapMin = settings.feeding?.sessionGapMinutes ?? 2;
 		if (isWeekly) {
 			const agg = aggregateWeekly(dailyCounts, labels);
 			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings (weekly avg)' });
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sessions (weekly avg)' });
+			this.el.createDiv({ cls: 'pt-analytics-subtitle', text: `L\u2009\u2194\u2009R switches within ${gapMin}m grouped as one feeding` });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
 			renderBarChart(c, barData);
 		} else {
 			const countData: BarDatum[] = dailyCounts.map((v, i) => ({ label: labels[i], value: v }));
-			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feedings per day' });
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sessions per day' });
+			this.el.createDiv({ cls: 'pt-analytics-subtitle', text: `L\u2009\u2194\u2009R switches within ${gapMin}m grouped as one feeding` });
 			const c = this.el.createDiv({ cls: 'pt-chart-container' });
 			renderBarChart(c, countData, { movingAvgWindow: 3 });
 		}
@@ -220,7 +223,7 @@ export class FeedingAnalytics {
 		const totalEntries = keys.reduce((sum, k) => sum + byDay.get(k)!.filter(e => e.end !== null).length, 0);
 		const totalSessions = allSessions.length;
 		if (totalEntries !== totalSessions && totalSessions > 0) {
-			addInsight(insightsEl, `${totalEntries} entries in ${totalSessions} sessions`, 'neutral');
+			addInsight(insightsEl, `${totalEntries} breast switches \u2192 ${totalSessions} sessions`, 'neutral');
 		}
 
 		// Longest gap today (between sessions, not entries)
