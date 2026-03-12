@@ -100,6 +100,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 		this.buildAnalyticsToggle(el, 'medication-analytics', 'Medication analytics',
 			'Doses per day, timing compliance, pain coverage.');
 
+		new Setting(el)
+			.setName('Feeding session gap')
+			.setDesc('Max gap (minutes) between breast switches to count as one session in analytics.')
+			.addSlider(slider => slider
+				.setLimits(0.5, 10, 0.5)
+				.setValue(this.plugin.settings.feeding?.sessionGapMinutes ?? 2)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.feeding.sessionGapMinutes = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
 		// --- Sleep ---
 		new Setting(el).setName('Sleep').setHeading();
 

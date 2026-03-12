@@ -2,8 +2,9 @@
  * Feeding analytics section with charts and insights.
  * Shows trends, time-of-day patterns, and L/R balance.
  */
-import type { FeedingEntry, PostpartumTrackerSettings } from '../../types';
+import type { FeedingEntry, FeedingSession, PostpartumTrackerSettings } from '../../types';
 import { dateKeys, toDateKey, dayLabels, trendDirection, TREND_ARROWS, aggregateWeekly, collapseToWeeks } from '../charts/SvgChart';
+import { groupIntoSessions } from '../../trackers/feeding/feedingSessions';
 import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
@@ -33,8 +34,15 @@ export class FeedingAnalytics {
 
 		const isWeekly = days >= 30;
 
-		// Daily values
-		const dailyCounts = keys.map(k => byDay.get(k)!.filter(e => e.end !== null).length);
+		// ── Session grouping ──
+		const gapMs = (settings.feeding?.sessionGapMinutes ?? 2) * 60 * 1000;
+		const sessionsByDay = new Map<string, FeedingSession[]>();
+		for (const k of keys) {
+			sessionsByDay.set(k, groupIntoSessions(byDay.get(k)!, gapMs));
+		}
+
+		// Daily values (count sessions, not raw entries)
+		const dailyCounts = keys.map(k => sessionsByDay.get(k)!.filter(s => s.end !== null).length);
 
 		// ── Feedings per day/week ──
 		if (isWeekly) {
@@ -115,11 +123,11 @@ export class FeedingAnalytics {
 		const tlContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderTimelineChart(tlContainer, rows);
 
-		// ── Feeding heatmap ──
+		// ── Feeding heatmap (count sessions, not entries) ──
 		const heatGrid = keys.map(k => {
 			const hourBuckets = new Array<number>(24).fill(0);
-			for (const e of byDay.get(k)!.filter(e => e.end !== null)) {
-				const h = Math.floor(toDecimalHour(e.start));
+			for (const s of sessionsByDay.get(k)!.filter(s => s.end !== null)) {
+				const h = Math.floor(toDecimalHour(s.start));
 				if (h >= 0 && h < 24) hourBuckets[h]++;
 			}
 			return hourBuckets;
@@ -191,22 +199,30 @@ export class FeedingAnalytics {
 		const trend = trendDirection(dailyCounts);
 		addInsight(insightsEl, `${avgFeedings} feedings/day avg ${TREND_ARROWS[trend]}`, trend);
 
-		// Average session duration
-		const allDurs = recentCompleted.map(getDurMin).filter(d => d > 0);
-		if (allDurs.length > 0) {
-			const avgDur = Math.round(allDurs.reduce((a, b) => a + b, 0) / allDurs.length);
+		// Average session duration (uses grouped sessions)
+		const allSessions = keys.flatMap(k => sessionsByDay.get(k)!.filter(s => s.end !== null));
+		const sessionDurs = allSessions.map(s => s.totalDurationSec / 60).filter(d => d > 0);
+		if (sessionDurs.length > 0) {
+			const avgDur = Math.round(sessionDurs.reduce((a, b) => a + b, 0) / sessionDurs.length);
 			addInsight(insightsEl, `Average session: ${avgDur}m`, 'neutral');
 		}
 
-		// Longest gap today
+		// Entry vs session count insight
+		const totalEntries = keys.reduce((sum, k) => sum + byDay.get(k)!.filter(e => e.end !== null).length, 0);
+		const totalSessions = allSessions.length;
+		if (totalEntries !== totalSessions && totalSessions > 0) {
+			addInsight(insightsEl, `${totalEntries} entries in ${totalSessions} sessions`, 'neutral');
+		}
+
+		// Longest gap today (between sessions, not entries)
 		const todayKey = keys[keys.length - 1];
-		const todayEntries = byDay.get(todayKey)!
-			.filter(e => e.end !== null)
+		const todaySessions = sessionsByDay.get(todayKey)!
+			.filter(s => s.end !== null)
 			.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-		if (todayEntries.length >= 2) {
+		if (todaySessions.length >= 2) {
 			let maxGap = 0;
-			for (let i = 1; i < todayEntries.length; i++) {
-				const gap = new Date(todayEntries[i].start).getTime() - new Date(todayEntries[i - 1].end!).getTime();
+			for (let i = 1; i < todaySessions.length; i++) {
+				const gap = new Date(todaySessions[i].start).getTime() - new Date(todaySessions[i - 1].end!).getTime();
 				maxGap = Math.max(maxGap, gap);
 			}
 			const gapH = Math.floor(maxGap / 3600000);
@@ -214,18 +230,18 @@ export class FeedingAnalytics {
 			addInsight(insightsEl, `Longest gap today: ${gapH}h ${gapM}m`, 'neutral');
 		}
 
-		// Next side suggestion
-		const lastFeeding = allCompleted[allCompleted.length - 1];
-		if (lastFeeding) {
-			const nextSide = lastFeeding.side === 'left' ? 'Right' : 'Left';
+		// Next side suggestion (uses last session's last side)
+		const lastSession = allSessions[allSessions.length - 1];
+		if (lastSession?.lastSide) {
+			const nextSide = lastSession.lastSide === 'left' ? 'Right' : 'Left';
 			addInsight(insightsEl, `Next side: ${nextSide}`, 'neutral');
 		}
 
-		// Sparkline for avg duration trend
+		// Sparkline for avg session duration trend
 		if (days >= 3) {
 			const durByDay = keys.map(k => {
-				const d = byDay.get(k)!.filter(e => e.end !== null && e.type !== 'bottle');
-				const durs = d.map(getDurMin);
+				const daySessions = sessionsByDay.get(k)!.filter(s => s.end !== null);
+				const durs = daySessions.map(s => s.totalDurationSec / 60);
 				return durs.length > 0 ? durs.reduce((a, b) => a + b, 0) / durs.length : 0;
 			});
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Avg session trend' });

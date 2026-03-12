@@ -7,6 +7,27 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-03-12
+
+### Added
+
+- **Feeding session grouping**: Consecutive breast entries (L→R or R→L switches) within a configurable time gap are now auto-grouped into logical sessions for analytics. Fixes inflated feeding counts (~2x) and halved average durations.
+- **Session gap setting**: New slider in Settings → Analytics to configure the max gap between breast switches (0.5–10 min, default 2 min).
+- **"X entries in Y sessions" insight**: Shows when entry count differs from session count, so you can see the grouping in action.
+
+### Changed
+
+- **Feedings per day**: Counts sessions instead of raw entries.
+- **Heatmap**: Counts sessions per hour instead of entries.
+- **Average session duration**: Uses grouped session duration (L+R combined) instead of per-entry duration.
+- **Longest gap today**: Measures gap between sessions, not between individual breast entries.
+- **Next side suggestion**: Based on last session's final side.
+- **Avg session trend sparkline**: Uses session durations.
+
+### Unchanged
+
+- Raw data storage, entry list, nursing minutes chart, timeline blocks, L/R balance bar, notifications, and status bar are all unaffected.
+
 ## [0.19.6] - 2026-03-11
 
 ### Fixed

@@ -18,6 +18,15 @@ export interface FeedingEntry {
 	notes: string;
 }
 
+/** A logical feeding session: consecutive breast entries grouped by time proximity. Analytics-only, never persisted. */
+export interface FeedingSession {
+	entries: FeedingEntry[];
+	start: string;
+	end: string | null;
+	totalDurationSec: number;
+	lastSide?: 'left' | 'right' | 'both';
+}
+
 /** A single diaper change event. */
 export interface DiaperEntry {
 	id: string;
@@ -460,6 +469,8 @@ export interface PostpartumTrackerSettings {
 		trackSide: boolean;
 		showBottle: boolean;
 		buttons: FeedingButtonsConfig;
+		/** Max gap (minutes) between breast switches to group into one session for analytics. */
+		sessionGapMinutes: number;
 	};
 
 	/** Diaper-specific */
@@ -546,6 +557,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 		trackSide: true,
 		showBottle: true,
 		buttons: { ...DEFAULT_FEEDING_BUTTONS },
+		sessionGapMinutes: 2,
 	},
 	diaper: {
 		showColorPicker: true,
