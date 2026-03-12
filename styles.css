@@ -379,6 +379,14 @@
 .pt-quick-btn--feeding-both:hover { background: #c4a0e820; }
 .pt-quick-btn--feeding-bottle { border-color: #e8c8a0; }
 .pt-quick-btn--feeding-bottle:hover { background: #e8c8a020; }
+.pt-quick-btn--sleep { border-color: #b39ddb; }
+.pt-quick-btn--sleep:hover { background: #b39ddb20; }
+.pt-quick-btn--sleep.pt-quick-btn--active {
+	--pt-timer-color: #b39ddb;
+	background: #b39ddb;
+	border-color: #b39ddb;
+	color: #fff;
+}
 .pt-quick-btn--diaper-wet { border-color: #e8d44d; }
 .pt-quick-btn--diaper-wet:hover { background: #e8d44d20; }
 .pt-quick-btn--diaper-dirty { border-color: #d4956b; }

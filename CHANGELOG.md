@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.9] - 2026-03-12
+
+### Fixed
+
+- **Sleep button pulses purple when running**: Added distinct purple color variant and active state styling so the sleep button visibly animates (pulse/glow/flash) while a sleep timer is active, matching the L/R breast button behavior.
+
 ## [0.20.8] - 2026-03-12
 
 ### Fixed
