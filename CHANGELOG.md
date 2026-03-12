@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.8] - 2026-03-12
+
+### Fixed
+
+- **Sleep/nap long-press uses inline panel instead of modal**: Modals were immediately dismissed by CodeMirror in Live Preview. Now uses inline form that works reliably inside code blocks.
+- **Sleep button flashes immediately on widget load**: Active state now set on first render instead of waiting 200ms for the tick loop.
+
 ## [0.20.7] - 2026-03-12
 
 ### Added

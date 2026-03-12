@@ -87,7 +87,8 @@ export class TrackerWidget extends MarkdownRenderChild {
 			requestAnimationFrame(() => this.scrollToSection(scrollTarget));
 		}
 
-		// Start the update loop for live timers
+		// Start the update loop for live timers — run immediately to set active states
+		this.tick();
 		this.registerInterval(
 			window.setInterval(() => this.tick(), 200)
 		);

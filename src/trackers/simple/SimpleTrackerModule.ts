@@ -390,15 +390,12 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			await this.startTimer(fields, timestamp);
 		};
 
-		if (this.settings?.inputMode === 'modal' && this.app) {
-			new TrackerEditModal(this.app, `Start ${this.def.displayName.toLowerCase()}`, editFields, onSave).open();
-		} else {
-			if (!this.editPanelContainer) return;
-			this.currentEditPanel = new InlineEditPanel(
-				this.editPanelContainer, `Start ${this.def.displayName.toLowerCase()}`, editFields, onSave,
-				() => this.dismissEditPanel()
-			);
-		}
+		// Always use inline panel — modals get dismissed by CodeMirror in Live Preview
+		if (!this.editPanelContainer) return;
+		this.currentEditPanel = new InlineEditPanel(
+			this.editPanelContainer, `Start ${this.def.displayName.toLowerCase()}`, editFields, onSave,
+			() => this.dismissEditPanel()
+		);
 	}
 
 	private async startTimer(
@@ -457,21 +454,18 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			if (this.save) await this.save();
 		};
 
-		if (this.settings?.inputMode === 'modal' && this.app) {
-			new TrackerEditModal(this.app, `Finish ${this.def.displayName.toLowerCase()}`, editFields, onSave).open();
-		} else {
-			if (!this.editPanelContainer) return;
-			this.currentEditPanel = new InlineEditPanel(
-				this.editPanelContainer, `Finish ${this.def.displayName.toLowerCase()}`, editFields, onSave,
-				() => {
-					this.dismissEditPanel();
-					// Still save even if cancelled — timer already stopped
-					this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
-					this.refreshUI();
-					this.save?.();
-				}
-			);
-		}
+		// Always use inline panel — modals get dismissed by CodeMirror in Live Preview
+		if (!this.editPanelContainer) return;
+		this.currentEditPanel = new InlineEditPanel(
+			this.editPanelContainer, `Finish ${this.def.displayName.toLowerCase()}`, editFields, onSave,
+			() => {
+				this.dismissEditPanel();
+				// Still save even if cancelled — timer already stopped
+				this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
+				this.refreshUI();
+				this.save?.();
+			}
+		);
 	}
 
 	private showLogForm(timestamp?: string): void {
