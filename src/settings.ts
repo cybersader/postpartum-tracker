@@ -101,6 +101,33 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			'Doses per day, timing compliance, pain coverage.');
 
 		new Setting(el)
+			.setName('Chart size')
+			.setDesc('Controls the height of analytics charts.')
+			.addDropdown(dd => dd
+				.addOption('compact', 'Compact')
+				.addOption('normal', 'Normal')
+				.addOption('large', 'Large')
+				.setValue(this.plugin.settings.chartSize ?? 'normal')
+				.onChange(async (value) => {
+					this.plugin.settings.chartSize = value as 'compact' | 'normal' | 'large';
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Trend sparkline height')
+			.setDesc('Height of the small trend line charts (px).')
+			.addSlider(slider => slider
+				.setLimits(28, 80, 4)
+				.setValue(this.plugin.settings.sparklineHeight ?? 48)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.sparklineHeight = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Feeding session gap')
 			.setDesc('Max gap (minutes) between breast switches to count as one session in analytics.')
 			.addSlider(slider => slider

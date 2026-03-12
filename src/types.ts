@@ -458,6 +458,10 @@ export interface PostpartumTrackerSettings {
 	enabledAnalytics: string[];
 	/** @deprecated Use per-module inline pickers instead. Kept as migration fallback. */
 	analyticsWindowDays: number;
+	/** Chart height scale: 'compact' | 'normal' | 'large'. Default: 'normal'. */
+	chartSize: 'compact' | 'normal' | 'large';
+	/** Sparkline/trend height in px. Default: 48. */
+	sparklineHeight: number;
 
 	/** Which module IDs are enabled */
 	enabledModules: string[];
@@ -547,6 +551,8 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	showEventHistory: true,
 	enabledAnalytics: [],
 	analyticsWindowDays: 7,
+	chartSize: 'normal',
+	sparklineHeight: 48,
 	activeLogicPacks: [],
 	libraryTrackerOverrides: {},
 	customTrackers: [],

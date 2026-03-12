@@ -256,6 +256,8 @@ export class SleepAnalytics {
 			return h > 0 ? `${h}h${m}m` : `${m}m`;
 		};
 
+		const sparkH = `${settings.sparklineHeight ?? 48}px`;
+
 		if (days >= 3) {
 			// Total sleep per day trend
 			const totalByDay = keys.map(k => {
@@ -264,7 +266,7 @@ export class SleepAnalytics {
 			});
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Total sleep/day trend' });
 			const totalSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(totalSparkEl, totalByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin });
+			renderSparkLine(totalSparkEl, totalByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin, height: sparkH });
 
 			// Longest stretch trend
 			const longestByDay = keys.map(k => {
@@ -273,13 +275,13 @@ export class SleepAnalytics {
 			});
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Longest stretch trend' });
 			const sparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(sparkEl, longestByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin });
+			renderSparkLine(sparkEl, longestByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin, height: sparkH });
 
 			// Number of naps/sleeps per day
 			const countByDay = keys.map(k => byDay.get(k)!.filter(e => e.end).length);
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Sleep sessions/day trend' });
 			const countSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(countSparkEl, countByDay, { color: 'var(--color-purple)', formatValue: (v) => `${Math.round(v)}` });
+			renderSparkLine(countSparkEl, countByDay, { color: 'var(--color-purple)', formatValue: (v) => `${Math.round(v)}`, height: sparkH });
 		}
 	}
 

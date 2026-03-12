@@ -2023,6 +2023,14 @@
 	width: 100%;
 }
 
+/* Chart size variants */
+[data-chart-size="compact"] .pt-chart-container svg {
+	max-height: 120px;
+}
+[data-chart-size="large"] .pt-chart-container svg {
+	min-height: 200px;
+}
+
 .pt-bar-chart,
 .pt-timeline-chart,
 .pt-sparkline {
@@ -2129,7 +2137,7 @@
 /* --- Sparkline container --- */
 .pt-sparkline-container {
 	width: 100%;
-	max-width: 200px;
+	max-width: 300px;
 }
 
 /* --- Sleep period ranking --- */

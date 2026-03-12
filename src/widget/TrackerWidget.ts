@@ -628,6 +628,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		// Content container (re-rendered on window change without full rebuild)
 		const contentEl = body.createDiv({ cls: 'pt-analytics-content' });
+		contentEl.dataset.chartSize = this.settings.chartSize ?? 'normal';
 		this.renderAnalyticsContent(analyticsId, contentEl, currentWindow);
 	}
 

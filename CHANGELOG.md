@@ -7,6 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.7] - 2026-03-12
+
+### Added
+
+- **Chart size setting**: Compact/Normal/Large controls chart height in analytics.
+- **Sparkline height setting**: Slider (28–80px, default 48px) for trend chart size.
+
+### Changed
+
+- **Bigger default sparklines**: Default height raised from 28px to 48px, max-width from 200px to 300px.
+
 ## [0.20.6] - 2026-03-12
 
 ### Improved

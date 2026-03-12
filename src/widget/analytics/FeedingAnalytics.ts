@@ -252,12 +252,13 @@ export class FeedingAnalytics {
 		// Trend sparklines
 		const fmtMin = (v: number) => `${Math.round(v)}m`;
 		const fmtCount = (v: number) => `${Math.round(v)}`;
+		const sparkH = `${settings.sparklineHeight ?? 48}px`;
 
 		if (days >= 3) {
 			// Sessions per day trend
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Sessions/day trend' });
 			const countSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(countSparkEl, dailyCounts, { formatValue: fmtCount });
+			renderSparkLine(countSparkEl, dailyCounts, { formatValue: fmtCount, height: sparkH });
 
 			// Avg session duration trend
 			const durByDay = keys.map(k => {
@@ -267,7 +268,7 @@ export class FeedingAnalytics {
 			});
 			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Avg session duration trend' });
 			const durSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(durSparkEl, durByDay, { formatValue: fmtMin });
+			renderSparkLine(durSparkEl, durByDay, { formatValue: fmtMin, height: sparkH });
 
 			// Longest gap trend
 			const gapByDay = keys.map(k => {
@@ -287,6 +288,7 @@ export class FeedingAnalytics {
 			renderSparkLine(gapSparkEl, gapByDay, {
 				color: 'var(--color-orange)',
 				formatValue: (v) => v >= 60 ? `${Math.floor(v / 60)}h${Math.round(v % 60)}m` : `${Math.round(v)}m`,
+				height: sparkH,
 			});
 		}
 	}
