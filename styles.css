@@ -386,6 +386,20 @@
 	background: #b39ddb;
 	border-color: #b39ddb;
 	color: #fff;
+	/* Force animation — explicitly apply so it can't be lost in cascade */
+	animation: pt-sleep-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pt-sleep-pulse {
+	0%, 100% {
+		box-shadow: 0 0 0 0 #b39ddb;
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		box-shadow: 0 0 18px 10px #b39ddb80;
+		opacity: 0.8;
+		transform: scale(1.08);
+	}
 }
 .pt-quick-btn--diaper-wet { border-color: #e8d44d; }
 .pt-quick-btn--diaper-wet:hover { background: #e8d44d20; }

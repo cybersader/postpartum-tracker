@@ -112,8 +112,8 @@ export class EventHistorySection {
 				if (isNaN(d.getTime())) continue;
 				if (d.getTime() < cutoff) continue;
 
-				// Skip active timers (entries with end === null and a start)
-				if (entry.end === null && entry.start) continue;
+				// Skip active timers (entries with end explicitly set to null)
+				if (entry.end === null) continue;
 
 				results.push({
 					moduleId: module.id,

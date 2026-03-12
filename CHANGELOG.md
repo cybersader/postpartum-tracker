@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.10] - 2026-03-12
+
+### Fixed
+
+- **Event history missing entries**: Active sleep/nap timers were not properly filtered, causing entries to sometimes not display in the recent activity section. Fixed the active timer detection to handle all tracker types.
+- **Sleep button animation now explicitly pulses**: Added dedicated purple pulse animation directly on the sleep button active state. Previously relied on inherited animation which could be lost in the CSS cascade on some devices.
+
 ## [0.20.9] - 2026-03-12
 
 ### Fixed
