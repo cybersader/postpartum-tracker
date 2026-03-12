@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-postpartum-tracker",
-	"version": "0.20.2",
+	"version": "0.20.3",
 	"description": "Mobile-friendly postpartum tracker for Obsidian with feeding, diapers, and medication tracking.",
 	"main": "main.js",
 	"scripts": {
