@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.4] - 2026-03-12
+
+### Changed
+
+- **Session gap default raised to 20 minutes**: Accounts for burping, swaddling, and diaper changes between breast switches. Slider range now 1–60 min (was 0.5–10 min).
+
 ## [0.20.3] - 2026-03-12
 
 ### Improved

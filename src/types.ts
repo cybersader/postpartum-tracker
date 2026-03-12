@@ -557,7 +557,7 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 		trackSide: true,
 		showBottle: true,
 		buttons: { ...DEFAULT_FEEDING_BUTTONS },
-		sessionGapMinutes: 2,
+		sessionGapMinutes: 20,
 	},
 	diaper: {
 		showColorPicker: true,

@@ -35,7 +35,7 @@ export class FeedingAnalytics {
 		const isWeekly = days >= 30;
 
 		// ── Session grouping ──
-		const gapMs = (settings.feeding?.sessionGapMinutes ?? 2) * 60 * 1000;
+		const gapMs = (settings.feeding?.sessionGapMinutes ?? 20) * 60 * 1000;
 		const sessionsByDay = new Map<string, FeedingSession[]>();
 		for (const k of keys) {
 			sessionsByDay.set(k, groupIntoSessions(byDay.get(k)!, gapMs));
@@ -45,7 +45,7 @@ export class FeedingAnalytics {
 		const dailyCounts = keys.map(k => sessionsByDay.get(k)!.filter(s => s.end !== null).length);
 
 		// ── Feedings per day/week (sessions) ──
-		const gapMin = settings.feeding?.sessionGapMinutes ?? 2;
+		const gapMin = settings.feeding?.sessionGapMinutes ?? 20;
 		if (isWeekly) {
 			const agg = aggregateWeekly(dailyCounts, labels);
 			const barData: BarDatum[] = agg.values.map((v, i) => ({ label: agg.labels[i], value: v }));

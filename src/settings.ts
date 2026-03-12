@@ -104,8 +104,8 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			.setName('Feeding session gap')
 			.setDesc('Max gap (minutes) between breast switches to count as one session in analytics.')
 			.addSlider(slider => slider
-				.setLimits(0.5, 10, 0.5)
-				.setValue(this.plugin.settings.feeding?.sessionGapMinutes ?? 2)
+				.setLimits(1, 60, 1)
+				.setValue(this.plugin.settings.feeding?.sessionGapMinutes ?? 20)
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					this.plugin.settings.feeding.sessionGapMinutes = value;
