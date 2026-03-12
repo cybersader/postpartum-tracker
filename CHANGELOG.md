@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-03-12
+
+### Added
+
+- **Y-axis labels on activity profiles**: Sleep and feeding "by hour" charts now show value ticks (0%, 50%, 100% for sleep; 0/hr, mid, max for feeding) so the chart heights are no longer ambiguous.
+
 ## [0.20.1] - 2026-03-12
 
 ### Added

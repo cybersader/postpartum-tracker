@@ -13,15 +13,17 @@ export interface ActivityProfileOptions {
 	showAvgLine?: boolean;
 	/** Format the average value for the label. Default: round to 1 decimal. */
 	formatAvg?: (avg: number) => string;
+	/** Format a raw value for Y-axis ticks. When provided, Y-axis labels are shown. */
+	formatValue?: (v: number) => string;
 }
 
 const VIEW_W = 100;
 const VIEW_H = 50;
 const PLOT_TOP = 8;        // room for peak label above
 const PLOT_BOTTOM = 42;    // room for hour labels below
-const PLOT_LEFT = 1;
+const PLOT_LEFT_NO_AXIS = 1;
+const PLOT_LEFT_WITH_AXIS = 14;  // room for Y-axis labels
 const PLOT_RIGHT = 99;
-const PLOT_W = PLOT_RIGHT - PLOT_LEFT;
 const PLOT_H = PLOT_BOTTOM - PLOT_TOP;
 
 const HOUR_LABELS: [number, string][] = [
@@ -42,6 +44,9 @@ export function renderActivityProfile(
 
 	const color = opts.color ?? 'var(--interactive-accent)';
 	const numDays = grid.length;
+	const hasYAxis = !!opts.formatValue;
+	const PLOT_LEFT = hasYAxis ? PLOT_LEFT_WITH_AXIS : PLOT_LEFT_NO_AXIS;
+	const PLOT_W = PLOT_RIGHT - PLOT_LEFT;
 
 	// Average each hour across all days
 	const hourAvg = new Array<number>(24).fill(0);
@@ -75,6 +80,24 @@ export function renderActivityProfile(
 		stroke: 'var(--background-modifier-border)',
 		'stroke-width': 0.3,
 	}, svg);
+
+	// Y-axis ticks (0, mid, max)
+	if (hasYAxis) {
+		const ticks = [0, max / 2, max];
+		for (const v of ticks) {
+			const y = PLOT_BOTTOM - (v / max) * PLOT_H;
+			svgEl('line', {
+				x1: PLOT_LEFT - 1, y1: y, x2: PLOT_LEFT, y2: y,
+				stroke: 'var(--background-modifier-border)',
+				'stroke-width': 0.3,
+			}, svg);
+			svgEl('text', {
+				x: PLOT_LEFT - 2, y: y + 1,
+				'text-anchor': 'end', 'font-size': 2.6,
+				fill: 'var(--text-muted)',
+			}, svg).textContent = opts.formatValue!(v);
+		}
+	}
 
 	// Hour grid lines + labels
 	for (const [h, label] of HOUR_LABELS) {

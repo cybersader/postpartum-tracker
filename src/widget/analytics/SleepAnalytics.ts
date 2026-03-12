@@ -137,6 +137,7 @@ export class SleepAnalytics {
 				const pct = Math.round(v * 100);
 				return `avg ${pct}% asleep`;
 			},
+			formatValue: (v) => `${Math.round(v * 100)}%`,
 		});
 
 		// ── Sleep timeline (last 3 days) ──

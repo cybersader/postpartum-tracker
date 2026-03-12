@@ -164,7 +164,11 @@ export class FeedingAnalytics {
 			showAvgLine: true,
 			formatAvg: (v) => {
 				const r = Math.round(v * 10) / 10;
-				return `avg ${r} feeds/hr`;
+				return `avg ${r}/hr`;
+			},
+			formatValue: (v) => {
+				const r = Math.round(v * 10) / 10;
+				return `${r}/hr`;
 			},
 		});
 
