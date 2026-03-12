@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.6] - 2026-03-12
+
+### Improved
+
+- **Sparkline trends now show value labels**: Latest value highlighted in accent color, min/max shown in faint text so the line shape has context.
+- **More trend sparklines**: Feeding analytics adds sessions/day, avg session duration, and longest gap trends. Sleep analytics adds total sleep/day, longest stretch, and sleep sessions/day trends.
+
 ## [0.20.5] - 2026-03-12
 
 ### Fixed

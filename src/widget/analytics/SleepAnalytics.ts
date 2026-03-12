@@ -249,15 +249,37 @@ export class SleepAnalytics {
 			addInsight(insightsEl, 'Newborns: 14-17h/day typical', 'neutral');
 		}
 
-		// Sparkline
+		// Trend sparklines
+		const fmtHrMin = (v: number) => {
+			const h = Math.floor(v);
+			const m = Math.round((v - h) * 60);
+			return h > 0 ? `${h}h${m}m` : `${m}m`;
+		};
+
 		if (days >= 3) {
-			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Longest stretch trend' });
+			// Total sleep per day trend
+			const totalByDay = keys.map(k => {
+				const hrs = byDay.get(k)!.map(getDurHours);
+				return hrs.reduce((a, b) => a + b, 0);
+			});
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Total sleep/day trend' });
+			const totalSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
+			renderSparkLine(totalSparkEl, totalByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin });
+
+			// Longest stretch trend
 			const longestByDay = keys.map(k => {
 				const durs = byDay.get(k)!.map(getDurHours).filter(d => d > 0);
 				return durs.length > 0 ? Math.max(...durs) : 0;
 			});
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Longest stretch trend' });
 			const sparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(sparkEl, longestByDay, { color: 'var(--color-purple)' });
+			renderSparkLine(sparkEl, longestByDay, { color: 'var(--color-purple)', formatValue: fmtHrMin });
+
+			// Number of naps/sleeps per day
+			const countByDay = keys.map(k => byDay.get(k)!.filter(e => e.end).length);
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Sleep sessions/day trend' });
+			const countSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
+			renderSparkLine(countSparkEl, countByDay, { color: 'var(--color-purple)', formatValue: (v) => `${Math.round(v)}` });
 		}
 	}
 

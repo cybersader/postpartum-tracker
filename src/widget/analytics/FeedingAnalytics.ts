@@ -249,16 +249,45 @@ export class FeedingAnalytics {
 			addInsight(insightsEl, `Next side: ${nextSide}`, 'neutral');
 		}
 
-		// Sparkline for avg session duration trend
+		// Trend sparklines
+		const fmtMin = (v: number) => `${Math.round(v)}m`;
+		const fmtCount = (v: number) => `${Math.round(v)}`;
+
 		if (days >= 3) {
+			// Sessions per day trend
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Sessions/day trend' });
+			const countSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
+			renderSparkLine(countSparkEl, dailyCounts, { formatValue: fmtCount });
+
+			// Avg session duration trend
 			const durByDay = keys.map(k => {
 				const daySessions = sessionsByDay.get(k)!.filter(s => s.end !== null);
 				const durs = daySessions.map(s => s.totalDurationSec / 60);
 				return durs.length > 0 ? durs.reduce((a, b) => a + b, 0) / durs.length : 0;
 			});
-			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Avg session trend' });
-			const sparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
-			renderSparkLine(sparkEl, durByDay);
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Avg session duration trend' });
+			const durSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
+			renderSparkLine(durSparkEl, durByDay, { formatValue: fmtMin });
+
+			// Longest gap trend
+			const gapByDay = keys.map(k => {
+				const daySessions = sessionsByDay.get(k)!
+					.filter(s => s.end !== null)
+					.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+				if (daySessions.length < 2) return 0;
+				let maxGap = 0;
+				for (let i = 1; i < daySessions.length; i++) {
+					const gap = new Date(daySessions[i].start).getTime() - new Date(daySessions[i - 1].end!).getTime();
+					maxGap = Math.max(maxGap, gap);
+				}
+				return maxGap / 60000; // minutes
+			});
+			insightsEl.createDiv({ cls: 'pt-analytics-mini-title', text: 'Longest gap trend' });
+			const gapSparkEl = insightsEl.createDiv({ cls: 'pt-sparkline-container' });
+			renderSparkLine(gapSparkEl, gapByDay, {
+				color: 'var(--color-orange)',
+				formatValue: (v) => v >= 60 ? `${Math.floor(v / 60)}h${Math.round(v % 60)}m` : `${Math.round(v)}m`,
+			});
 		}
 	}
 
