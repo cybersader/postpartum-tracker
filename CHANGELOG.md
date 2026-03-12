@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.5] - 2026-03-12
+
+### Fixed
+
+- **Sleep/nap button: tap starts immediately**, no more modal that pops up and dismisses. Defaults to first option (nap type, crib location). Long-press shows the detail form to pick type/location before starting.
+- **Sleep/nap button flashes when active**: The pulse animation now correctly triggers on the sleep button while the timer is running, matching the breast feeding buttons.
+
 ## [0.20.4] - 2026-03-12
 
 ### Changed

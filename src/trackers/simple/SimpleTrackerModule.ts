@@ -165,7 +165,16 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 					icon: this.def.icon,
 					cls: `pt-quick-btn--${this.id}`,
 					onClick: (ts) => this.onQuickAction(ts),
-					onLongPress: (ts) => this.showLogForm(ts),
+					onLongPress: (ts) => {
+						const active = this.entries.find(e => e.end === null);
+						if (active) {
+							// Running: long-press shows stop form with fields
+							this.stopTimer();
+						} else {
+							// Not running: long-press shows start form with type/location
+							this.showStartForm(ts);
+						}
+					},
 					labelEssential: true,
 				},
 			];
@@ -357,13 +366,16 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			return;
 		}
 
-		// Check if there are start-phase fields to collect
+		// Quick tap: start immediately with default field values.
+		// Long-press shows the full form (handled by onLongPress in getQuickActions).
 		const startFields = this.getFieldsForPhase('start');
-		if (startFields.length > 0) {
-			this.showStartForm(timestamp, startFields);
-		} else {
-			await this.startTimer({}, timestamp);
+		const defaults: Record<string, string | number | boolean> = {};
+		for (const f of startFields) {
+			if (f.type === 'select' && f.options?.length) {
+				defaults[f.key] = f.options[0];
+			}
 		}
+		await this.startTimer(defaults, timestamp);
 	}
 
 	private showStartForm(timestamp?: string, fieldsToShow?: SimpleTrackerField[]): void {
