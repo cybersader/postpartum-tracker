@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.11] - 2026-03-12
+
+### Fixed
+
+- **Sleep/nap button now starts immediately on tap**: Tapping "nap" or "night" starts the timer instantly with default location (first option). Previously it opened a location form, blocking one-tap start. Hold still shows the full form for customizing.
+- **Sleep/nap button now animates when timer is running**: Fixed ID mismatch — `getActiveActionIds` returned `sleep-start` but buttons were `sleep-nap`/`sleep-night`. Now correctly returns the matching button ID so the pulse animation activates.
+
 ## [0.20.10] - 2026-03-12
 
 ### Fixed

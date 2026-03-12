@@ -211,7 +211,19 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 	getActiveActionIds(): string[] {
 		if (!this.def.hasDuration) return [];
 		const active = this.entries.find(e => e.end === null);
-		return active ? [`${this.id}-start`] : [];
+		if (!active) return [];
+
+		// If this tracker uses a primary select (first field is select with ≤4 options),
+		// button IDs are ${id}-${option} not ${id}-start. Return the matching one.
+		const f0 = this.def.fields[0];
+		if (f0?.type === 'select' && f0.options && f0.options.length <= 4) {
+			const val = active.fields[f0.key];
+			if (val !== undefined) return [`${this.id}-${val}`];
+			// Fallback: highlight the first option's button
+			return [`${this.id}-${f0.options[0]}`];
+		}
+
+		return [`${this.id}-start`];
 	}
 
 	computeStats(entries: SimpleTrackerEntry[], dayStart: Date): SimpleTrackerStats {
@@ -299,11 +311,13 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 				return;
 			}
 
-			// Check for other start-phase fields (excluding the pre-filled one)
+			// Default other start-phase fields so tap starts immediately.
+			// Long-press shows the full form for customizing these.
 			const otherStartFields = this.getFieldsForPhase('start').filter(f => f.key !== fieldKey);
-			if (otherStartFields.length > 0) {
-				this.showStartForm(timestamp, otherStartFields);
-				return;
+			for (const f of otherStartFields) {
+				if (f.type === 'select' && f.options?.length) {
+					fields[f.key] = f.options[0];
+				}
 			}
 			await this.startTimer(fields, timestamp);
 			return;
