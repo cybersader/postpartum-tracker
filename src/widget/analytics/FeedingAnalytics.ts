@@ -161,6 +161,11 @@ export class FeedingAnalytics {
 		renderActivityProfile(profileContainer, heatGrid, {
 			color: 'var(--color-blue)',
 			peakLabel: 'busiest',
+			showAvgLine: true,
+			formatAvg: (v) => {
+				const r = Math.round(v * 10) / 10;
+				return `avg ${r} feeds/hr`;
+			},
 		});
 
 		// ── L/R Balance bar ──

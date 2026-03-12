@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-03-12
+
+### Added
+
+- **Activity profile average line**: Sleep and feeding "by hour" charts now show a dashed horizontal average line with a contextual label ("avg 62% asleep", "avg 0.3 feeds/hr").
+
 ## [0.20.0] - 2026-03-12
 
 ### Added

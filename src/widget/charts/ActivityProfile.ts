@@ -9,6 +9,10 @@ export interface ActivityProfileOptions {
 	height?: string;
 	/** Label for the peak annotation. Default: 'peak'. */
 	peakLabel?: string;
+	/** Show a dashed horizontal line at the overall average. */
+	showAvgLine?: boolean;
+	/** Format the average value for the label. Default: round to 1 decimal. */
+	formatAvg?: (avg: number) => string;
 }
 
 const VIEW_W = 100;
@@ -113,6 +117,24 @@ export function renderActivityProfile(
 		'stroke-linejoin': 'round',
 		'stroke-linecap': 'round',
 	}, svg);
+
+	// Average line
+	if (opts.showAvgLine) {
+		const avg = smoothed.reduce((a, b) => a + b, 0) / 24;
+		const avgY = PLOT_BOTTOM - (avg / max) * PLOT_H;
+		svgEl('line', {
+			x1: PLOT_LEFT, y1: avgY, x2: PLOT_RIGHT, y2: avgY,
+			stroke: 'var(--text-muted)',
+			'stroke-width': 0.3,
+			'stroke-dasharray': '1.5,1',
+		}, svg);
+		const avgLabel = opts.formatAvg ? opts.formatAvg(avg) : `avg ${Math.round(avg * 10) / 10}`;
+		svgEl('text', {
+			x: PLOT_RIGHT - 1, y: avgY - 1.5,
+			'text-anchor': 'end', 'font-size': 2.8,
+			fill: 'var(--text-muted)',
+		}, svg).textContent = avgLabel;
+	}
 
 	// Peak dot + label
 	const peakX = points[peakHour][0];

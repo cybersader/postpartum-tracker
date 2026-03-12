@@ -132,6 +132,11 @@ export class SleepAnalytics {
 		renderActivityProfile(profileContainer, dailyHeatGrid, {
 			color: 'var(--color-purple)',
 			peakLabel: 'most sleep',
+			showAvgLine: true,
+			formatAvg: (v) => {
+				const pct = Math.round(v * 100);
+				return `avg ${pct}% asleep`;
+			},
 		});
 
 		// ── Sleep timeline (last 3 days) ──
