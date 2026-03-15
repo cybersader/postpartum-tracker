@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-03-15
+
+### Changed
+
+- **Pretty-printed JSON storage**: Code block data is now saved with 2-space indentation instead of a single compressed line. This makes sync engines (Obsidian Sync, git, Syncthing) able to merge line-level changes instead of clobbering the entire blob on conflict. Fully backwards compatible — existing compact JSON is read without issues.
+
+### Added
+
+- **Auto-recovery from corrupted JSON**: If sync conflicts produce invalid JSON (e.g. two devices splicing data together), the plugin now attempts to recover by extracting the largest valid prefix. Some entries near the corruption point may be lost, but the rest of the data is preserved instead of showing an empty tracker.
+
 ## [0.20.11] - 2026-03-12
 
 ### Fixed

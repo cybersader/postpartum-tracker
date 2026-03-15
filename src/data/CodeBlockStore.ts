@@ -21,7 +21,21 @@ export class CodeBlockStore {
 		try {
 			const trimmed = source.trim();
 			if (!trimmed) return this.makeEmpty();
-			const parsed = JSON.parse(trimmed);
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			let parsed: any;
+			try {
+				parsed = JSON.parse(trimmed);
+			} catch (jsonErr) {
+				// Attempt recovery: sync conflicts can splice two JSON versions together.
+				// Try to extract the largest valid JSON prefix.
+				console.warn('Postpartum Tracker: JSON parse failed, attempting recovery...', jsonErr);
+				parsed = this.attemptJsonRecovery(trimmed);
+				if (!parsed) {
+					throw jsonErr; // Recovery failed, fall through to outer catch
+				}
+				console.warn('Postpartum Tracker: recovery succeeded — some entries may be lost from the corrupted region.');
+			}
 
 			// Merge saved layout with defaults: preserve all saved IDs, append missing defaults
 			let layout: string[] = [...DEFAULT_LAYOUT];
@@ -91,7 +105,10 @@ export class CodeBlockStore {
 			return;
 		}
 
-		const json = JSON.stringify(data);
+		// Pretty-print JSON so each entry is on its own line.
+		// This makes sync engines (Obsidian Sync, git, Syncthing) able to do
+		// proper line-level merges instead of clobbering the whole blob.
+		const json = JSON.stringify(data, null, 2);
 
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
@@ -104,6 +121,59 @@ export class CodeBlockStore {
 
 			return [...before, json, ...after].join('\n');
 		});
+	}
+
+	/**
+	 * Attempt to recover data from corrupted JSON (e.g. sync conflict splicing).
+	 * Strategy: find the corruption point, truncate the broken array element,
+	 * and close all open brackets/braces to produce valid JSON.
+	 */
+	private attemptJsonRecovery(source: string): Record<string, unknown> | null {
+		// Binary-search for the longest parseable prefix isn't practical,
+		// but we can try progressively shorter substrings ending at array boundaries.
+		// First, find where JSON.parse fails by trying to parse and catching the position.
+		let errorPos = -1;
+		try {
+			JSON.parse(source);
+			return null; // Shouldn't reach here
+		} catch (e: unknown) {
+			const match = String(e).match(/position (\d+)/);
+			if (match) errorPos = parseInt(match[1], 10);
+		}
+		if (errorPos < 0) return null;
+
+		// Walk backwards from the error to find the last complete array element ('},')
+		let truncateAt = source.lastIndexOf('},{', errorPos);
+		if (truncateAt < 0) truncateAt = source.lastIndexOf('},\n', errorPos);
+		if (truncateAt < 0) return null;
+
+		// Keep everything up to and including the '}' of the last good element
+		let fixed = source.slice(0, truncateAt + 1);
+
+		// Close any open brackets/braces
+		const opens: string[] = [];
+		let inString = false;
+		let escape = false;
+		for (const ch of fixed) {
+			if (escape) { escape = false; continue; }
+			if (ch === '\\') { escape = true; continue; }
+			if (ch === '"') { inString = !inString; continue; }
+			if (inString) continue;
+			if (ch === '{' || ch === '[') opens.push(ch);
+			if (ch === '}' || ch === ']') opens.pop();
+		}
+
+		// Close in reverse order
+		while (opens.length > 0) {
+			const open = opens.pop();
+			fixed += open === '{' ? '}' : ']';
+		}
+
+		try {
+			return JSON.parse(fixed) as Record<string, unknown>;
+		} catch {
+			return null;
+		}
 	}
 
 	private makeEmpty(): PostpartumData {
