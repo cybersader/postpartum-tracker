@@ -105,10 +105,11 @@ export class CodeBlockStore {
 			return;
 		}
 
-		// Pretty-print JSON so each entry is on its own line.
-		// This makes sync engines (Obsidian Sync, git, Syncthing) able to do
-		// proper line-level merges instead of clobbering the whole blob.
-		const json = JSON.stringify(data, null, 2);
+		// Compact-per-entry format: each array entry on its own line, but entry
+		// properties stay on one line. This keeps the code block small (~500 lines
+		// instead of 5000+) so Obsidian renders it without scrolling, while still
+		// giving sync engines line-level granularity per entry.
+		const json = this.serializeCompactEntries(data);
 
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
@@ -121,6 +122,49 @@ export class CodeBlockStore {
 
 			return [...before, json, ...after].join('\n');
 		});
+	}
+
+	/**
+	 * Serialize data with one array entry per line.
+	 * Top-level keys get light indentation, but array elements are kept as
+	 * single-line JSON so the file stays compact (~500 lines vs 5000+).
+	 */
+	private serializeCompactEntries(data: PostpartumData): string {
+		const lines: string[] = ['{'];
+
+		const topKeys = Object.keys(data) as (keyof PostpartumData)[];
+		for (let i = 0; i < topKeys.length; i++) {
+			const key = topKeys[i];
+			const val = data[key];
+			const comma = i < topKeys.length - 1 ? ',' : '';
+
+			if (key === 'trackers' && val && typeof val === 'object') {
+				lines.push(`  "trackers": {`);
+				const tKeys = Object.keys(val);
+				for (let j = 0; j < tKeys.length; j++) {
+					const tk = tKeys[j];
+					const arr = (val as Record<string, unknown>)[tk];
+					const tComma = j < tKeys.length - 1 ? ',' : '';
+
+					if (Array.isArray(arr) && arr.length > 0) {
+						lines.push(`    "${tk}": [`);
+						for (let k = 0; k < arr.length; k++) {
+							const eComma = k < arr.length - 1 ? ',' : '';
+							lines.push(`      ${JSON.stringify(arr[k])}${eComma}`);
+						}
+						lines.push(`    ]${tComma}`);
+					} else {
+						lines.push(`    "${tk}": ${JSON.stringify(arr)}${tComma}`);
+					}
+				}
+				lines.push(`  }${comma}`);
+			} else {
+				lines.push(`  "${key}": ${JSON.stringify(val)}${comma}`);
+			}
+		}
+
+		lines.push('}');
+		return lines.join('\n');
 	}
 
 	/**

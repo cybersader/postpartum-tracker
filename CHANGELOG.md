@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-03-16
+
+### Fixed
+
+- **Code block too large to render without scrolling**: Full pretty-print (2-space indent) expanded JSON to 5000+ lines, causing Obsidian to lazy-render the code block and require scrolling to see the widget. Switched to compact-per-entry format: each array entry stays on one line, but entries are on separate lines (~600 lines vs 5000+). Still gives sync engines line-level merge granularity.
+
 ## [0.21.0] - 2026-03-15
 
 ### Changed
