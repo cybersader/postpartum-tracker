@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.5] - 2026-03-17
+
+### Fixed
+
+- **No more scroll jump on save**: External storage no longer updates the code block on every save. The widget updates its own DOM directly. The code block ref is only written once during migration, then stays static. This eliminates the auto-scroll-to-bottom caused by Obsidian re-rendering the code block.
+
 ## [0.22.4] - 2026-03-17
 
 ### Fixed

@@ -110,11 +110,27 @@ export class CodeBlockStore {
 		// 3. Rolling backup (every 10th save or every 5 minutes)
 		await this.maybeWriteBackup(dataFilePath, dataJson);
 
-		// 4. Update code block with tiny ref (triggers Obsidian re-render)
-		const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
+		// 4. Only update the code block ref if it doesn't already point to
+		//    this file (i.e., during initial migration from inline).
+		//    On regular saves, skip the code block update entirely — the widget
+		//    already refreshed its own DOM, so re-rendering is unnecessary and
+		//    causes scroll jumps.
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
 			const { lineStart, lineEnd } = sectionInfo;
+			const currentBlock = lines.slice(lineStart + 1, lineEnd).join('\n').trim();
+
+			// Check if the code block already has the right ref
+			try {
+				const existing = JSON.parse(currentBlock);
+				if (existing.dataFile === dataFileName) {
+					// Already pointing to the right file — no change needed
+					return content;
+				}
+			} catch { /* not valid JSON or inline data — needs migration */ }
+
+			// Migration: replace inline data with the external file ref
+			const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
 			const before = lines.slice(0, lineStart + 1);
 			const after = lines.slice(lineEnd);
 			return [...before, ref, ...after].join('\n');
