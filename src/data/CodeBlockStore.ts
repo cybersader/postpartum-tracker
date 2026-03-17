@@ -96,7 +96,10 @@ export class CodeBlockStore {
 			return;
 		}
 
-		// 2. Update code block with tiny ref (triggers Obsidian re-render)
+		// 2. Rolling backup (every 10th save or every 5 minutes)
+		await this.maybeWriteBackup(dataFilePath, dataJson);
+
+		// 3. Update code block with tiny ref (triggers Obsidian re-render)
 		const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
@@ -105,6 +108,68 @@ export class CodeBlockStore {
 			const after = lines.slice(lineEnd);
 			return [...before, ref, ...after].join('\n');
 		});
+	}
+
+	// ── Backup system ──
+
+	private saveCount = 0;
+	private lastBackupTime = 0;
+	private static readonly BACKUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+	private static readonly BACKUP_SAVE_INTERVAL = 10; // every 10th save
+	private static readonly MAX_BACKUPS = 20;
+
+	/** Write a timestamped backup if enough time/saves have passed. */
+	private async maybeWriteBackup(dataFilePath: string, dataJson: string): Promise<void> {
+		this.saveCount++;
+		const now = Date.now();
+		const elapsed = now - this.lastBackupTime;
+
+		if (this.saveCount < CodeBlockStore.BACKUP_SAVE_INTERVAL
+			&& elapsed < CodeBlockStore.BACKUP_INTERVAL_MS) {
+			return;
+		}
+
+		this.saveCount = 0;
+		this.lastBackupTime = now;
+
+		try {
+			// Store backups next to the data file: name.tracker.backups/
+			const backupDir = dataFilePath.replace('.tracker.json', '.tracker-backups');
+			const ts = new Date().toISOString().replace(/[:.]/g, '-');
+			const backupPath = `${backupDir}/${ts}.json`;
+
+			// Ensure backup directory exists
+			const dirExists = await this.app.vault.adapter.exists(backupDir);
+			if (!dirExists) {
+				await this.app.vault.adapter.mkdir(backupDir);
+			}
+
+			// Write backup
+			await this.app.vault.adapter.write(backupPath, dataJson);
+
+			// Prune old backups (keep last N)
+			await this.pruneBackups(backupDir);
+		} catch (e) {
+			// Backup failure is non-critical
+			console.warn('Postpartum Tracker: backup write failed', e);
+		}
+	}
+
+	/** Remove old backups, keeping only the most recent MAX_BACKUPS. */
+	private async pruneBackups(backupDir: string): Promise<void> {
+		try {
+			const listing = await this.app.vault.adapter.list(backupDir);
+			const files = listing.files
+				.filter(f => f.endsWith('.json'))
+				.sort(); // ISO timestamps sort lexicographically
+
+			const excess = files.length - CodeBlockStore.MAX_BACKUPS;
+			if (excess <= 0) return;
+
+			for (let i = 0; i < excess; i++) {
+				await this.app.vault.adapter.remove(files[i]);
+			}
+		} catch { /* best effort */ }
 	}
 
 	// ── Private helpers ──

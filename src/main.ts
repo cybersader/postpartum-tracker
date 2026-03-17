@@ -105,6 +105,13 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			},
 		});
 
+		// Command: restore data from a backup
+		this.addCommand({
+			id: 'restore-from-backup',
+			name: 'Restore tracker data from backup',
+			callback: () => this.restoreFromBackup(),
+		});
+
 		// Add ribbon icon
 		this.addRibbonIcon('baby', 'Insert postpartum tracker', () => {
 			const activeEditor = this.app.workspace.activeEditor;
@@ -659,6 +666,72 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	}
 
 	/** Find the first file with a postpartum-tracker code block and parse it. */
+	/** Let user pick a backup and restore it as the active data. */
+	private async restoreFromBackup(): Promise<void> {
+		// Find tracker files to locate backup directories
+		const files = this.app.vault.getMarkdownFiles();
+		const backupFiles: string[] = [];
+
+		for (const file of files) {
+			const content = await this.app.vault.cachedRead(file);
+			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+			if (!match?.[1]) continue;
+
+			try {
+				const ref = JSON.parse(match[1]);
+				if (ref.dataFile) {
+					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+					const backupDir = (dir ? `${dir}/` : '') + ref.dataFile.replace('.tracker.json', '.tracker-backups');
+					try {
+						const listing = await this.app.vault.adapter.list(backupDir);
+						backupFiles.push(...listing.files.filter(f => f.endsWith('.json')).sort().reverse());
+					} catch { /* no backups yet */ }
+				}
+			} catch { /* inline data, no backups */ }
+		}
+
+		if (backupFiles.length === 0) {
+			new Notice('No backups found. Backups are created automatically every 10 saves or 5 minutes.');
+			return;
+		}
+
+		// Show picker
+		const modal = new BackupPickerModal(this.app, backupFiles, async (chosen) => {
+			try {
+				const content = await this.app.vault.adapter.read(chosen);
+				JSON.parse(content); // validate
+
+				// Find the active tracker's data file and overwrite it
+				for (const file of this.app.vault.getMarkdownFiles()) {
+					const md = await this.app.vault.cachedRead(file);
+					const match = md.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+					if (!match?.[1]) continue;
+					try {
+						const ref = JSON.parse(match[1]);
+						if (ref.dataFile) {
+							const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+							const dataPath = (dir ? `${dir}/` : '') + ref.dataFile;
+							await this.app.vault.adapter.write(dataPath, content);
+							// Bump timestamp to trigger re-render
+							const newRef = JSON.stringify({ dataFile: ref.dataFile, ts: Date.now() });
+							const newMd = md.replace(
+								/```postpartum-tracker\n[\s\S]*?\n```/,
+								`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
+							);
+							await this.app.vault.modify(file, newMd);
+							new Notice('Backup restored successfully! Reopen the note to see changes.');
+							return;
+						}
+					} catch { continue; }
+				}
+				new Notice('Could not find tracker to restore to.');
+			} catch (e) {
+				new Notice(`Restore failed: ${e}`);
+			}
+		});
+		modal.open();
+	}
+
 	private async findAndParseTrackerBlock(): Promise<{ data: PostpartumData; file: TFile; content: string } | null> {
 		const files = this.app.vault.getMarkdownFiles();
 		for (const file of files) {
@@ -1176,5 +1249,33 @@ class DailySummaryModal extends Modal {
 
 	onClose(): void {
 		this.contentEl.empty();
+	}
+}
+
+/** Simple picker for backup files. */
+class BackupPickerModal extends SuggestModal<string> {
+	private items: string[];
+	private onChooseItem: (item: string) => void;
+
+	constructor(app: import('obsidian').App, items: string[], onChoose: (item: string) => void) {
+		super(app);
+		this.items = items;
+		this.onChooseItem = onChoose;
+		this.setPlaceholder('Pick a backup to restore...');
+	}
+
+	getSuggestions(query: string): string[] {
+		const q = query.toLowerCase();
+		return this.items.filter(f => f.toLowerCase().includes(q));
+	}
+
+	renderSuggestion(item: string, el: HTMLElement): void {
+		const name = item.substring(item.lastIndexOf('/') + 1).replace('.json', '');
+		const readable = name.replace(/T/, ' ').replace(/-(\d{2})-(\d{2})-/, ':$1:$2.');
+		el.createDiv({ text: readable });
+	}
+
+	onChooseSuggestion(item: string): void {
+		this.onChooseItem(item);
 	}
 }
