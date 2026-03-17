@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-03-17
+
+### Fixed
+
+- **Critical: migration could lose data**: Inline→external migration wrote the code block ref before verifying the .tracker.json file was actually created. Now verifies file existence after write — if verification fails, falls back to inline storage instead of leaving a dangling ref to a missing file.
+- **Save safety check**: Every save now verifies the external file exists after writing. Falls back to inline if the write silently fails.
+- **Empty data safety**: Migration skips code blocks with no entries to avoid creating empty external files.
+
 ## [0.22.3] - 2026-03-17
 
 ### Added

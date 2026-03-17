@@ -91,15 +91,26 @@ export class CodeBlockStore {
 			await this.app.vault.adapter.write(dataFilePath, dataJson);
 		} catch (e) {
 			console.error('Postpartum Tracker: failed to write data file, falling back to inline', e);
-			// Fallback: write inline to code block (old behavior)
 			await this.saveInline(file, sectionInfo, data);
 			return;
 		}
 
-		// 2. Rolling backup (every 10th save or every 5 minutes)
+		// 2. Verify the file was actually written (catch silent failures)
+		try {
+			const exists = await this.app.vault.adapter.exists(dataFilePath);
+			if (!exists) {
+				console.error('Postpartum Tracker: data file not found after write, falling back to inline');
+				await this.saveInline(file, sectionInfo, data);
+				return;
+			}
+		} catch {
+			// If we can't verify, proceed anyway — the write likely succeeded
+		}
+
+		// 3. Rolling backup (every 10th save or every 5 minutes)
 		await this.maybeWriteBackup(dataFilePath, dataJson);
 
-		// 3. Update code block with tiny ref (triggers Obsidian re-render)
+		// 4. Update code block with tiny ref (triggers Obsidian re-render)
 		const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
@@ -182,7 +193,7 @@ export class CodeBlockStore {
 		try {
 			const exists = await this.app.vault.adapter.exists(filePath);
 			if (!exists) {
-				console.warn(`Postpartum Tracker: data file ${filePath} not found`);
+				console.error(`Postpartum Tracker: data file ${filePath} not found! Use "Restore from backup" command to recover.`);
 				return this.makeEmpty();
 			}
 

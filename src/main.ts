@@ -722,11 +722,31 @@ export default class PostpartumTrackerPlugin extends Plugin {
 				// Inline → External: read data from code block, write to file, replace with ref
 				try {
 					const data = await this.store.load(blockContent, file.path);
+					// Safety: don't migrate empty/default data
+					const entryCount = Object.values(data.trackers).reduce(
+						(sum: number, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0 as number);
+					if (entryCount === 0 && !data.meta.babyName) {
+						skipped++;
+						continue;
+					}
+
 					const dataFileName = file.name.replace(/\.md$/, '.tracker.json');
 					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
 					const dataPath = dir ? `${dir}/${dataFileName}` : dataFileName;
 
-					await this.app.vault.adapter.write(dataPath, this.store.serializeForExternal(data));
+					// Write external file FIRST
+					const serialized = this.store.serializeForExternal(data);
+					await this.app.vault.adapter.write(dataPath, serialized);
+
+					// Verify the file was actually written before updating the code block
+					const exists = await this.app.vault.adapter.exists(dataPath);
+					if (!exists) {
+						console.error(`Migration: data file not created at ${dataPath}`);
+						skipped++;
+						continue;
+					}
+
+					// Only NOW replace the code block with the ref
 					const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
 					const newContent = content.replace(
 						/```postpartum-tracker\n[\s\S]*?\n```/,
@@ -736,6 +756,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 					migrated++;
 				} catch (e) {
 					console.warn(`Migration failed for ${file.path}`, e);
+					new Notice(`Migration failed for ${file.name}: ${e}`);
 					skipped++;
 				}
 			} else if (targetMode === 'inline' && isExternal) {
