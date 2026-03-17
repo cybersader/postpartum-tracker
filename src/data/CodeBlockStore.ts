@@ -132,7 +132,10 @@ export class CodeBlockStore {
 	private serializeCompactEntries(data: PostpartumData): string {
 		const lines: string[] = ['{'];
 
-		const topKeys = Object.keys(data) as (keyof PostpartumData)[];
+		// Filter out undefined values — JSON.stringify(undefined) produces the
+		// literal string "undefined" which is invalid JSON and corrupts the file.
+		const topKeys = (Object.keys(data) as (keyof PostpartumData)[])
+			.filter(k => data[k] !== undefined);
 		for (let i = 0; i < topKeys.length; i++) {
 			const key = topKeys[i];
 			const val = data[key];

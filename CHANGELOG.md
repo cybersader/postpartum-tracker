@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-03-17
+
+### Fixed
+
+- **Critical: `undefined` values corrupting JSON**: The compact serializer wrote literal `undefined` for optional fields (`settingsOverrides`, `logicPackId`) which is invalid JSON. This caused parse failures and could trigger duplicate code blocks from sync recovery. Now filters out undefined keys before serializing.
+
 ## [0.21.1] - 2026-03-16
 
 ### Fixed
