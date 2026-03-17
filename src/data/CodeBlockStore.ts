@@ -1,11 +1,15 @@
 import { App, TFile, MarkdownPostProcessorContext } from 'obsidian';
-import type { PostpartumData } from '../types';
+import type { PostpartumData, StorageMode } from '../types';
 import { EMPTY_DATA, DEFAULT_LAYOUT, DEFAULT_MEDICATIONS } from '../types';
 
 /**
- * Handles reading and writing tracker data to/from the code block JSON.
- * Uses ctx.getSectionInfo() to locate the code block and app.vault.process()
- * for atomic read-modify-write operations.
+ * Handles reading and writing tracker data.
+ *
+ * Storage strategy:
+ *   - Code block contains a tiny JSON ref: {"dataFile":"name.tracker.json","ts":123}
+ *   - Actual data lives in an external .tracker.json file next to the markdown
+ *   - External file uses compact-per-entry format (one entry per line) for sync safety
+ *   - Backwards compatible: old inline JSON is auto-migrated on first save
  */
 export class CodeBlockStore {
 	private app: App;
@@ -15,9 +19,11 @@ export class CodeBlockStore {
 	}
 
 	/**
-	 * Parse tracker data from code block source text.
+	 * Load tracker data. Handles both:
+	 *   - External file ref: {"dataFile": "x.tracker.json", "ts": N}
+	 *   - Inline data (legacy): full JSON blob in code block
 	 */
-	parse(source: string): PostpartumData {
+	async load(source: string, sourcePath: string): Promise<PostpartumData> {
 		try {
 			const trimmed = source.trim();
 			if (!trimmed) return this.makeEmpty();
@@ -27,76 +33,39 @@ export class CodeBlockStore {
 			try {
 				parsed = JSON.parse(trimmed);
 			} catch (jsonErr) {
-				// Attempt recovery: sync conflicts can splice two JSON versions together.
-				// Try to extract the largest valid JSON prefix.
+				// Attempt recovery on corrupted inline data
 				console.warn('Postpartum Tracker: JSON parse failed, attempting recovery...', jsonErr);
 				parsed = this.attemptJsonRecovery(trimmed);
 				if (!parsed) {
-					throw jsonErr; // Recovery failed, fall through to outer catch
+					throw jsonErr;
 				}
-				console.warn('Postpartum Tracker: recovery succeeded — some entries may be lost from the corrupted region.');
+				console.warn('Postpartum Tracker: recovery succeeded — some entries may be lost.');
 			}
 
-			// Merge saved layout with defaults: preserve all saved IDs, append missing defaults
-			let layout: string[] = [...DEFAULT_LAYOUT];
-			if (Array.isArray(parsed.layout) && parsed.layout.length > 0) {
-				const savedSet = new Set(parsed.layout as string[]);
-				const missing = DEFAULT_LAYOUT.filter(id => !savedSet.has(id));
-				layout = [...(parsed.layout as string[]), ...missing];
+			// External file ref
+			if (parsed.dataFile && typeof parsed.dataFile === 'string') {
+				return await this.loadFromFile(parsed.dataFile, sourcePath);
 			}
 
-			const trackers = parsed.trackers && typeof parsed.trackers === 'object'
-				? parsed.trackers
-				: {};
-
-			// Build tracker data: known keys with defaults, then preserve extra keys
-			const trackerData: PostpartumData['trackers'] = {
-				feeding: Array.isArray(trackers.feeding) ? trackers.feeding : [],
-				diaper: Array.isArray(trackers.diaper) ? trackers.diaper : [],
-				medication: Array.isArray(trackers.medication) ? trackers.medication : [],
-				medicationConfig: Array.isArray(trackers.medicationConfig)
-					? trackers.medicationConfig
-					: [...DEFAULT_MEDICATIONS],
-				logNotes: Array.isArray(trackers.logNotes) ? trackers.logNotes : [],
-			};
-
-			// Preserve arbitrary tracker keys (library trackers like sleep, pain, etc.)
-			const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes', 'comments']);
-			for (const key of Object.keys(trackers)) {
-				if (!knownKeys.has(key)) {
-					trackerData[key] = Array.isArray(trackers[key]) ? trackers[key] : [];
-				}
-			}
-
-			return {
-				version: parsed.version || 1,
-				meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
-				layout,
-				trackers: trackerData,
-				settingsOverrides: parsed.settingsOverrides && typeof parsed.settingsOverrides === 'object'
-					? parsed.settingsOverrides
-					: undefined,
-				logicPackId: typeof parsed.logicPackId === 'string' ? parsed.logicPackId : undefined,
-				analyticsWindows: parsed.analyticsWindows && typeof parsed.analyticsWindows === 'object'
-					? parsed.analyticsWindows as Record<string, number>
-					: {},
-			};
+			// Legacy inline data
+			return this.parseData(parsed);
 		} catch (e) {
-			console.error('Postpartum Tracker: failed to parse code block JSON. Data may be corrupted.', e);
+			console.error('Postpartum Tracker: failed to load data', e);
 			return this.makeEmpty();
 		}
 	}
 
 	/**
-	 * Save tracker data back to the code block in the file.
-	 * This will trigger a re-render of the code block processor.
+	 * Save tracker data to external file, then update code block ref to trigger re-render.
 	 */
 	async save(
 		ctx: MarkdownPostProcessorContext,
 		containerEl: HTMLElement,
-		data: PostpartumData
+		data: PostpartumData,
+		storageMode: StorageMode = 'external'
 	): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(ctx.sourcePath);
+		const sourcePath = ctx.sourcePath;
+		const file = this.app.vault.getAbstractFileByPath(sourcePath);
 		if (!(file instanceof TFile)) return;
 
 		const sectionInfo = ctx.getSectionInfo(containerEl);
@@ -105,34 +74,165 @@ export class CodeBlockStore {
 			return;
 		}
 
-		// Single-line JSON keeps the code block at 3 lines total (fence + json + fence)
-		// so Obsidian always eagerly renders it without needing to scroll.
-		// Obsidian Sync handles character-level merges on single files.
-		const json = JSON.stringify(data);
+		// Inline mode: store everything in the code block (legacy behavior)
+		if (storageMode === 'inline') {
+			await this.saveInline(file, sectionInfo, data);
+			return;
+		}
 
+		// External mode: store data in a separate .tracker.json file
+		const dataFileName = this.getDataFileName(sourcePath);
+		const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+		const dataFilePath = dir ? `${dir}/${dataFileName}` : dataFileName;
+
+		// 1. Write data to external file (compact-per-entry for sync safety)
+		const dataJson = this.serializeCompactEntries(data);
+		try {
+			await this.app.vault.adapter.write(dataFilePath, dataJson);
+		} catch (e) {
+			console.error('Postpartum Tracker: failed to write data file, falling back to inline', e);
+			// Fallback: write inline to code block (old behavior)
+			await this.saveInline(file, sectionInfo, data);
+			return;
+		}
+
+		// 2. Update code block with tiny ref (triggers Obsidian re-render)
+		const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
 			const { lineStart, lineEnd } = sectionInfo;
-
-			// lineStart is the ``` opening fence, lineEnd is the ``` closing fence
-			// Replace everything between them (exclusive of fences)
 			const before = lines.slice(0, lineStart + 1);
 			const after = lines.slice(lineEnd);
+			return [...before, ref, ...after].join('\n');
+		});
+	}
 
+	// ── Private helpers ──
+
+	/** Load data from an external .tracker.json file. */
+	private async loadFromFile(dataFileName: string, sourcePath: string): Promise<PostpartumData> {
+		const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+		const filePath = dir ? `${dir}/${dataFileName}` : dataFileName;
+
+		try {
+			const exists = await this.app.vault.adapter.exists(filePath);
+			if (!exists) {
+				console.warn(`Postpartum Tracker: data file ${filePath} not found`);
+				return this.makeEmpty();
+			}
+
+			const content = await this.app.vault.adapter.read(filePath);
+
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			let parsed: any;
+			try {
+				parsed = JSON.parse(content);
+			} catch (jsonErr) {
+				// Auto-repair corrupted external file
+				console.warn('Postpartum Tracker: external file corrupted, attempting recovery...', jsonErr);
+				parsed = this.attemptJsonRecovery(content);
+				if (!parsed) {
+					console.error('Postpartum Tracker: recovery failed for', filePath);
+					return this.makeEmpty();
+				}
+				// Write repaired data back
+				try {
+					await this.app.vault.adapter.write(filePath, JSON.stringify(parsed, null, 2));
+					console.warn('Postpartum Tracker: repaired and saved', filePath);
+				} catch { /* best effort */ }
+			}
+
+			return this.parseData(parsed);
+		} catch (e) {
+			console.error(`Postpartum Tracker: failed to load ${filePath}`, e);
+			return this.makeEmpty();
+		}
+	}
+
+	/** Fallback: save data inline in the code block (old behavior). */
+	private async saveInline(
+		file: TFile,
+		sectionInfo: { lineStart: number; lineEnd: number },
+		data: PostpartumData
+	): Promise<void> {
+		const json = JSON.stringify(data);
+		await this.app.vault.process(file, (content) => {
+			const lines = content.split('\n');
+			const { lineStart, lineEnd } = sectionInfo;
+			const before = lines.slice(0, lineStart + 1);
+			const after = lines.slice(lineEnd);
 			return [...before, json, ...after].join('\n');
 		});
+	}
+
+	/** Derive the data file name from the markdown file path. */
+	private getDataFileName(sourcePath: string): string {
+		const fileName = sourcePath.substring(sourcePath.lastIndexOf('/') + 1);
+		return fileName.replace(/\.md$/, '.tracker.json');
+	}
+
+	/** Parse a raw object into validated PostpartumData. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private parseData(parsed: any): PostpartumData {
+		// Merge saved layout with defaults: preserve all saved IDs, append missing defaults
+		let layout: string[] = [...DEFAULT_LAYOUT];
+		if (Array.isArray(parsed.layout) && parsed.layout.length > 0) {
+			const savedSet = new Set(parsed.layout as string[]);
+			const missing = DEFAULT_LAYOUT.filter(id => !savedSet.has(id));
+			layout = [...(parsed.layout as string[]), ...missing];
+		}
+
+		const trackers = parsed.trackers && typeof parsed.trackers === 'object'
+			? parsed.trackers
+			: {};
+
+		// Build tracker data: known keys with defaults, then preserve extra keys
+		const trackerData: PostpartumData['trackers'] = {
+			feeding: Array.isArray(trackers.feeding) ? trackers.feeding : [],
+			diaper: Array.isArray(trackers.diaper) ? trackers.diaper : [],
+			medication: Array.isArray(trackers.medication) ? trackers.medication : [],
+			medicationConfig: Array.isArray(trackers.medicationConfig)
+				? trackers.medicationConfig
+				: [...DEFAULT_MEDICATIONS],
+			logNotes: Array.isArray(trackers.logNotes) ? trackers.logNotes : [],
+		};
+
+		// Preserve arbitrary tracker keys (library trackers like sleep, pain, etc.)
+		const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes', 'comments']);
+		for (const key of Object.keys(trackers)) {
+			if (!knownKeys.has(key)) {
+				trackerData[key] = Array.isArray(trackers[key]) ? trackers[key] : [];
+			}
+		}
+
+		return {
+			version: parsed.version || 1,
+			meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
+			layout,
+			trackers: trackerData,
+			settingsOverrides: parsed.settingsOverrides && typeof parsed.settingsOverrides === 'object'
+				? parsed.settingsOverrides
+				: undefined,
+			logicPackId: typeof parsed.logicPackId === 'string' ? parsed.logicPackId : undefined,
+			analyticsWindows: parsed.analyticsWindows && typeof parsed.analyticsWindows === 'object'
+				? parsed.analyticsWindows as Record<string, number>
+				: {},
+		};
+	}
+
+	/** Public access to compact serialization for writeTrackerBlock in main.ts. */
+	serializeForExternal(data: PostpartumData): string {
+		return this.serializeCompactEntries(data);
 	}
 
 	/**
 	 * Serialize data with one array entry per line.
 	 * Top-level keys get light indentation, but array elements are kept as
-	 * single-line JSON so the file stays compact (~500 lines vs 5000+).
+	 * single-line JSON so the file stays compact for sync merges.
 	 */
 	private serializeCompactEntries(data: PostpartumData): string {
 		const lines: string[] = ['{'];
 
-		// Filter out undefined values — JSON.stringify(undefined) produces the
-		// literal string "undefined" which is invalid JSON and corrupts the file.
 		const topKeys = (Object.keys(data) as (keyof PostpartumData)[])
 			.filter(k => data[k] !== undefined);
 		for (let i = 0; i < topKeys.length; i++) {
@@ -175,25 +275,21 @@ export class CodeBlockStore {
 	 * and close all open brackets/braces to produce valid JSON.
 	 */
 	private attemptJsonRecovery(source: string): Record<string, unknown> | null {
-		// Binary-search for the longest parseable prefix isn't practical,
-		// but we can try progressively shorter substrings ending at array boundaries.
-		// First, find where JSON.parse fails by trying to parse and catching the position.
 		let errorPos = -1;
 		try {
 			JSON.parse(source);
-			return null; // Shouldn't reach here
+			return null;
 		} catch (e: unknown) {
 			const match = String(e).match(/position (\d+)/);
 			if (match) errorPos = parseInt(match[1], 10);
 		}
 		if (errorPos < 0) return null;
 
-		// Walk backwards from the error to find the last complete array element ('},')
+		// Walk backwards from the error to find the last complete array element
 		let truncateAt = source.lastIndexOf('},{', errorPos);
 		if (truncateAt < 0) truncateAt = source.lastIndexOf('},\n', errorPos);
 		if (truncateAt < 0) return null;
 
-		// Keep everything up to and including the '}' of the last good element
 		let fixed = source.slice(0, truncateAt + 1);
 
 		// Close any open brackets/braces
@@ -209,7 +305,6 @@ export class CodeBlockStore {
 			if (ch === '}' || ch === ']') opens.pop();
 		}
 
-		// Close in reverse order
 		while (opens.length > 0) {
 			const open = opens.pop();
 			fixed += open === '{' ? '}' : ']';

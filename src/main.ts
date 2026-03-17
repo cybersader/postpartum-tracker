@@ -86,8 +86,8 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		// Register the code block processor
 		this.registerMarkdownCodeBlockProcessor(
 			'postpartum-tracker',
-			(source, el, ctx) => {
-				const data = this.store.parse(source);
+			async (source, el, ctx) => {
+				const data = await this.store.load(source, ctx.sourcePath);
 				const widget = new TrackerWidget(el, this, data, ctx);
 				ctx.addChild(widget);
 			}
@@ -295,42 +295,24 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		if (!moduleId) return;
 
 		try {
-			// Find the file containing the tracker code block
-			const files = this.app.vault.getMarkdownFiles();
-			let targetFile: TFile | null = null;
-			for (const file of files) {
-				const content = await this.app.vault.cachedRead(file);
-				if (/```postpartum-tracker\n/.test(content)) {
-					targetFile = file;
-					break;
-				}
-			}
-			if (!targetFile) return;
+			const result = await this.findAndParseTrackerBlock();
+			if (!result) return;
 
-			// Use vault.process() for atomic read-modify-write (same as CodeBlockStore.save)
-			await this.app.vault.process(targetFile, (content) => {
-				const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
-				if (!match?.[1]) return content;
+			const { data, file } = result;
+			const entries = data.trackers[moduleId];
+			if (!Array.isArray(entries)) return;
 
-				const data = this.store.parse(match[1]);
-				const entries = data.trackers[moduleId];
-				if (!Array.isArray(entries)) return content;
+			entries.push(event.entry as never);
 
-				entries.push(event.entry as never);
-
-				// Sort by timestamp/start
-				entries.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-					const aTime = (a.start || a.timestamp) as string;
-					const bTime = (b.start || b.timestamp) as string;
-					return new Date(aTime).getTime() - new Date(bTime).getTime();
-				});
-
-				const json = JSON.stringify(data);
-				return content.replace(
-					/```postpartum-tracker\n[\s\S]*?\n```/,
-					`\`\`\`postpartum-tracker\n${json}\n\`\`\``
-				);
+			// Sort by timestamp/start
+			entries.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+				const aTime = (a.start || a.timestamp) as string;
+				const bTime = (b.start || b.timestamp) as string;
+				return new Date(aTime).getTime() - new Date(bTime).getTime();
 			});
+
+			// Write back using the same external file mechanism
+			await this.writeTrackerBlock(file, result.content, data);
 		} catch (e) {
 			console.warn('Postpartum Tracker: failed to write Todoist entry to vault', e);
 		}
@@ -683,7 +665,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			const content = await this.app.vault.cachedRead(file);
 			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
 			if (match?.[1]) {
-				const data = this.store.parse(match[1]);
+				const data = await this.store.load(match[1], file.path);
 				return { data, file, content };
 			}
 		}
@@ -692,6 +674,28 @@ export default class PostpartumTrackerPlugin extends Plugin {
 
 	/** Write updated data back to the tracker code block. */
 	private async writeTrackerBlock(file: TFile, originalContent: string, data: PostpartumData): Promise<void> {
+		// Check if the code block uses external file storage
+		const match = originalContent.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+		if (match?.[1]) {
+			try {
+				const ref = JSON.parse(match[1]);
+				if (ref.dataFile) {
+					// External file mode: write data to .tracker.json, update ref timestamp
+					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+					const dataPath = dir ? `${dir}/${ref.dataFile}` : ref.dataFile;
+					await this.app.vault.adapter.write(dataPath, this.store.serializeForExternal(data));
+					const newRef = JSON.stringify({ dataFile: ref.dataFile, ts: Date.now() });
+					const newContent = originalContent.replace(
+						/```postpartum-tracker\n[\s\S]*?\n```/,
+						`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
+					);
+					await this.app.vault.modify(file, newContent);
+					return;
+				}
+			} catch { /* not a ref, fall through to inline */ }
+		}
+
+		// Inline mode (legacy or fallback)
 		const json = JSON.stringify(data);
 		const newContent = originalContent.replace(
 			/```postpartum-tracker\n[\s\S]*?\n```/,

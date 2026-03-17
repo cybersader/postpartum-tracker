@@ -1262,6 +1262,19 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(el)
+			.setName('Data storage')
+			.setDesc('External: data in a separate .tracker.json file (sync-safe, instant render). Inline: data inside the code block (legacy, may need scrolling for large datasets).')
+			.addDropdown(dd => dd
+				.addOption('external', 'External file (recommended)')
+				.addOption('inline', 'Inline in code block (legacy)')
+				.setValue(this.plugin.settings.storageMode ?? 'external')
+				.onChange(async (value) => {
+					this.plugin.settings.storageMode = value as 'inline' | 'external';
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Time format')
 			.setDesc('How times are displayed throughout the tracker.')
 			.addDropdown(dd => dd

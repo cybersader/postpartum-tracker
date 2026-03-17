@@ -423,7 +423,11 @@ export const DEFAULT_MEDICATION_BUTTONS: MedicationButtonsConfig = {
 	holdForDetails: false,
 };
 
+export type StorageMode = 'inline' | 'external';
+
 export interface PostpartumTrackerSettings {
+	/** Where to store tracker data. 'inline' = JSON in code block (legacy), 'external' = separate .tracker.json file. */
+	storageMode: StorageMode;
 	timeFormat: '12h' | '24h';
 	hapticFeedback: boolean;
 	showButtonLabels: boolean;
@@ -531,6 +535,7 @@ export interface LibraryTrackerOverride {
 }
 
 export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
+	storageMode: 'external',
 	timeFormat: '12h',
 	hapticFeedback: true,
 	showButtonLabels: true,

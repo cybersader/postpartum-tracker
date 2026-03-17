@@ -808,7 +808,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 		const scrollTop = scroller?.scrollTop ?? null;
 
 		try {
-			await this.store.save(this.ctx, this.containerEl, this.data);
+			await this.store.save(this.ctx, this.containerEl, this.data, this.settings.storageMode ?? 'external');
 		} catch (e) {
 			console.error('Postpartum Tracker: failed to save', e);
 		} finally {

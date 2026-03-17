@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-03-17
+
+### Added
+
+- **External file storage**: Tracker data now stored in a separate `.tracker.json` file next to the markdown note. Code block stays tiny (~80 chars) for instant rendering. External file uses line-per-entry format for sync-safe merges. Fully backwards compatible — old inline data auto-migrates on first save.
+- **Storage mode setting**: Choose between "External file" (recommended) and "Inline in code block" (legacy) in plugin settings.
+- **Auto-repair for external files**: Corrupted `.tracker.json` files are automatically detected and repaired on load.
+
 ## [0.21.3] - 2026-03-17
 
 ### Fixed
