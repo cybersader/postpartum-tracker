@@ -787,6 +787,11 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		} else {
 			new Notice(msg);
 		}
+
+		// Create an immediate backup after migration
+		if (migrated > 0 && targetMode === 'external') {
+			await this.createManualBackup();
+		}
 	}
 
 	/** Let user pick a backup and restore it as the active data. */
@@ -814,7 +819,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		}
 
 		if (backupFiles.length === 0) {
-			new Notice('No backups found. Backups are created automatically every 10 saves or 5 minutes.');
+			new Notice('No backups found yet. Tap "Backup now" in settings, or backups are created automatically after the first save.', 8000);
 			return;
 		}
 

@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.6] - 2026-03-17
+
+### Fixed
+
+- **Restore button now shows a clear message when no backups exist**: Previously showed a brief notice that was easy to miss. Now shows an 8-second notice pointing to "Backup now" button.
+- **First backup created automatically**: A backup is now created on the very first save of each session and immediately after migration. No more empty backup folders.
+- **Migration creates initial backup**: Switching to external storage now automatically creates the first backup snapshot.
+
 ## [0.22.5] - 2026-03-17
 
 ### Fixed

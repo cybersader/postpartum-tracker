@@ -141,6 +141,7 @@ export class CodeBlockStore {
 
 	private saveCount = 0;
 	private lastBackupTime = 0;
+	private hasBackedUp = false; // Force first backup on first save
 	private static readonly BACKUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 	private static readonly BACKUP_SAVE_INTERVAL = 10; // every 10th save
 	private static readonly MAX_BACKUPS = 20;
@@ -151,10 +152,13 @@ export class CodeBlockStore {
 		const now = Date.now();
 		const elapsed = now - this.lastBackupTime;
 
-		if (this.saveCount < CodeBlockStore.BACKUP_SAVE_INTERVAL
+		// Always create a backup on the very first save of this session
+		if (this.hasBackedUp
+			&& this.saveCount < CodeBlockStore.BACKUP_SAVE_INTERVAL
 			&& elapsed < CodeBlockStore.BACKUP_INTERVAL_MS) {
 			return;
 		}
+		this.hasBackedUp = true;
 
 		this.saveCount = 0;
 		this.lastBackupTime = now;
