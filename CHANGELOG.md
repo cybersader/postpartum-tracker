@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-03-17
+
+### Fixed
+
+- **Widget requires scroll to render**: Reverted to single-line JSON storage. Multi-line formats (600+ lines) trigger Obsidian's lazy rendering, requiring users to scroll to the bottom before the widget appears. Single-line keeps the code block at 3 lines total. `JSON.stringify` natively drops `undefined` keys, also fixing the corruption bug from 0.21.1-0.21.2.
+
 ## [0.21.2] - 2026-03-17
 
 ### Fixed

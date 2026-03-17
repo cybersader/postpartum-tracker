@@ -105,11 +105,10 @@ export class CodeBlockStore {
 			return;
 		}
 
-		// Compact-per-entry format: each array entry on its own line, but entry
-		// properties stay on one line. This keeps the code block small (~500 lines
-		// instead of 5000+) so Obsidian renders it without scrolling, while still
-		// giving sync engines line-level granularity per entry.
-		const json = this.serializeCompactEntries(data);
+		// Single-line JSON keeps the code block at 3 lines total (fence + json + fence)
+		// so Obsidian always eagerly renders it without needing to scroll.
+		// Obsidian Sync handles character-level merges on single files.
+		const json = JSON.stringify(data);
 
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
