@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-03-17
+
+### Added
+
+- **Instant migration on setting change**: Changing the "Data storage" setting now immediately migrates all tracker code blocks in the vault to the new format. No need to tap buttons or wait — switch the dropdown and all trackers convert. Shows a notice with migration count.
+
 ## [0.22.1] - 2026-03-17
 
 ### Added

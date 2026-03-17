@@ -666,6 +666,76 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	}
 
 	/** Find the first file with a postpartum-tracker code block and parse it. */
+	/**
+	 * Migrate all tracker code blocks to a new storage mode.
+	 * Called when the user changes the storage mode setting.
+	 */
+	async migrateAllTrackers(targetMode: 'inline' | 'external'): Promise<void> {
+		let migrated = 0;
+		let skipped = 0;
+
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const content = await this.app.vault.cachedRead(file);
+			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+			if (!match?.[1]) continue;
+
+			const blockContent = match[1].trim();
+			let isExternal = false;
+			try {
+				const ref = JSON.parse(blockContent);
+				isExternal = !!ref.dataFile;
+			} catch { /* inline or corrupted */ }
+
+			if (targetMode === 'external' && !isExternal) {
+				// Inline → External: read data from code block, write to file, replace with ref
+				try {
+					const data = await this.store.load(blockContent, file.path);
+					const dataFileName = file.name.replace(/\.md$/, '.tracker.json');
+					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+					const dataPath = dir ? `${dir}/${dataFileName}` : dataFileName;
+
+					await this.app.vault.adapter.write(dataPath, this.store.serializeForExternal(data));
+					const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
+					const newContent = content.replace(
+						/```postpartum-tracker\n[\s\S]*?\n```/,
+						`\`\`\`postpartum-tracker\n${ref}\n\`\`\``
+					);
+					await this.app.vault.modify(file, newContent);
+					migrated++;
+				} catch (e) {
+					console.warn(`Migration failed for ${file.path}`, e);
+					skipped++;
+				}
+			} else if (targetMode === 'inline' && isExternal) {
+				// External → Inline: read from external file, write inline, optionally remove external file
+				try {
+					const data = await this.store.load(blockContent, file.path);
+					const json = JSON.stringify(data);
+					const newContent = content.replace(
+						/```postpartum-tracker\n[\s\S]*?\n```/,
+						`\`\`\`postpartum-tracker\n${json}\n\`\`\``
+					);
+					await this.app.vault.modify(file, newContent);
+					migrated++;
+				} catch (e) {
+					console.warn(`Migration failed for ${file.path}`, e);
+					skipped++;
+				}
+			} else {
+				skipped++; // Already in target format
+			}
+		}
+
+		const msg = migrated > 0
+			? `Migrated ${migrated} tracker${migrated > 1 ? 's' : ''} to ${targetMode} storage.`
+			: 'All trackers already in the target format.';
+		if (skipped > 0 && migrated > 0) {
+			new Notice(`${msg} ${skipped} already migrated.`);
+		} else {
+			new Notice(msg);
+		}
+	}
+
 	/** Let user pick a backup and restore it as the active data. */
 	private async restoreFromBackup(): Promise<void> {
 		// Find tracker files to locate backup directories
