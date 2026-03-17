@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-03-17
+
+### Added
+
+- **Rolling backups**: Automatic timestamped backups every 10 saves or 5 minutes. Stored in `.tracker-backups/` folder next to the data file. Keeps last 20 snapshots, auto-prunes older ones. Backups live in the vault so they sync across devices.
+- **Restore from backup command**: Command palette → "Restore tracker data from backup" shows a picker with all available backup timestamps. Select one to restore.
+
 ## [0.22.0] - 2026-03-17
 
 ### Added
