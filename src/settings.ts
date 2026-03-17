@@ -1278,6 +1278,46 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				})
 			);
 
+		// ── Backup management ──
+		new Setting(el).setName('Backups').setHeading();
+
+		const backupInfoEl = el.createDiv({ cls: 'setting-item-description' });
+		backupInfoEl.style.marginBottom = '12px';
+		backupInfoEl.setText('Loading backup info...');
+		this.loadBackupInfo(backupInfoEl);
+
+		new Setting(el)
+			.setName('Create backup now')
+			.setDesc('Manually create a timestamped snapshot of all tracker data.')
+			.addButton(btn => btn
+				.setButtonText('Backup now')
+				.onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Backing up...');
+					try {
+						await this.plugin.createManualBackup();
+						btn.setButtonText('Done!');
+						this.loadBackupInfo(backupInfoEl);
+						setTimeout(() => { btn.setButtonText('Backup now'); btn.setDisabled(false); }, 2000);
+					} catch (e) {
+						btn.setButtonText('Failed');
+						setTimeout(() => { btn.setButtonText('Backup now'); btn.setDisabled(false); }, 2000);
+					}
+				})
+			);
+
+		new Setting(el)
+			.setName('Restore from backup')
+			.setDesc('Pick a previous snapshot to restore. Current data is backed up first.')
+			.addButton(btn => btn
+				.setButtonText('Restore...')
+				.onClick(() => {
+					(this.plugin.app as any).commands.executeCommandById('postpartum-tracker:restore-from-backup');
+				})
+			);
+
+		new Setting(el).setName('Display').setHeading();
+
 		new Setting(el)
 			.setName('Time format')
 			.setDesc('How times are displayed throughout the tracker.')
@@ -2652,5 +2692,69 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 				text.inputEl.style.textAlign = 'center';
 				text.inputEl.style.fontSize = '1.2rem';
 			});
+	}
+
+	/** Scan vault for backup info and display it. */
+	private async loadBackupInfo(el: HTMLElement): Promise<void> {
+		const app = this.plugin.app;
+		const lines: string[] = [];
+
+		for (const file of app.vault.getMarkdownFiles()) {
+			const content = await app.vault.cachedRead(file);
+			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+			if (!match?.[1]) continue;
+
+			try {
+				const ref = JSON.parse(match[1]);
+				if (ref.dataFile) {
+					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+					const dataPath = dir ? `${dir}/${ref.dataFile}` : ref.dataFile;
+					const backupDir = dataPath.replace('.tracker.json', '.tracker-backups');
+					const mode = 'external';
+
+					let backupCount = 0;
+					let oldest = '';
+					let newest = '';
+					try {
+						const listing = await app.vault.adapter.list(backupDir);
+						const files = listing.files.filter(f => f.endsWith('.json')).sort();
+						backupCount = files.length;
+						if (files.length > 0) {
+							const getName = (p: string) => p.substring(p.lastIndexOf('/') + 1).replace('.json', '');
+							oldest = getName(files[0]).replace(/T/, ' ').replace(/-(\d{2})-(\d{2})-/, ':$1:$2.');
+							newest = getName(files[files.length - 1]).replace(/T/, ' ').replace(/-(\d{2})-(\d{2})-/, ':$1:$2.');
+						}
+					} catch { /* no backups */ }
+
+					lines.push(`📄 ${file.name} — ${mode} storage`);
+					lines.push(`   Data: ${dataPath}`);
+					if (backupCount > 0) {
+						lines.push(`   Backups: ${backupCount} (${oldest} → ${newest})`);
+						lines.push(`   Location: ${backupDir}/`);
+					} else {
+						lines.push(`   Backups: none yet (created every 10 saves or 5 min)`);
+					}
+				} else {
+					lines.push(`📄 ${file.name} — inline storage (no external backups)`);
+				}
+			} catch {
+				lines.push(`📄 ${file.name} — inline storage (legacy)`);
+			}
+		}
+
+		el.empty();
+		if (lines.length === 0) {
+			el.setText('No tracker code blocks found in vault.');
+		} else {
+			const pre = el.createEl('pre');
+			pre.style.fontSize = '0.8rem';
+			pre.style.whiteSpace = 'pre-wrap';
+			pre.style.margin = '0';
+			pre.style.padding = '8px';
+			pre.style.background = 'var(--background-primary)';
+			pre.style.borderRadius = '6px';
+			pre.style.border = '1px solid var(--background-modifier-border)';
+			pre.setText(lines.join('\n'));
+		}
 	}
 }

@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.3] - 2026-03-17
+
+### Added
+
+- **Backup management in settings**: New "Backups" section shows all tracked files, their storage mode, data file paths, backup count, and date range. Includes "Backup now" button for manual snapshots and "Restore..." button.
+
 ## [0.22.2] - 2026-03-17
 
 ### Added

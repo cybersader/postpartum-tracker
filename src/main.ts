@@ -666,6 +666,38 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	}
 
 	/** Find the first file with a postpartum-tracker code block and parse it. */
+	/** Create a manual backup of all external tracker data files. */
+	async createManualBackup(): Promise<void> {
+		let count = 0;
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const content = await this.app.vault.cachedRead(file);
+			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+			if (!match?.[1]) continue;
+
+			try {
+				const ref = JSON.parse(match[1]);
+				if (!ref.dataFile) continue;
+
+				const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+				const dataPath = dir ? `${dir}/${ref.dataFile}` : ref.dataFile;
+				const backupDir = dataPath.replace('.tracker.json', '.tracker-backups');
+				const ts = new Date().toISOString().replace(/[:.]/g, '-');
+				const backupPath = `${backupDir}/${ts}.json`;
+
+				const exists = await this.app.vault.adapter.exists(dataPath);
+				if (!exists) continue;
+
+				const data = await this.app.vault.adapter.read(dataPath);
+				const dirExists = await this.app.vault.adapter.exists(backupDir);
+				if (!dirExists) await this.app.vault.adapter.mkdir(backupDir);
+				await this.app.vault.adapter.write(backupPath, data);
+				count++;
+			} catch { /* skip */ }
+		}
+
+		new Notice(count > 0 ? `Created backup for ${count} tracker${count > 1 ? 's' : ''}.` : 'No external trackers found to backup.');
+	}
+
 	/**
 	 * Migrate all tracker code blocks to a new storage mode.
 	 * Called when the user changes the storage mode setting.
