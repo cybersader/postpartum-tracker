@@ -137,6 +137,12 @@ export class TrackerWidget extends MarkdownRenderChild {
 		const timerColor = this.resolveTimerAnimationColor();
 		this.quickActions = new QuickActions(root, this.settings.hapticFeedback, this.settings.showButtonLabels, this.settings.buttonSize, this.settings.buttonColumns, this.settings.timerAnimation, timerColor);
 
+		// Quick entry after buttons (if configured)
+		const qePos = this.settings.quickEntryPosition ?? 'after-buttons';
+		if (this.settings.showQuickEntry && qePos === 'after-buttons') {
+			this.buildQuickEntry(root);
+		}
+
 		// Summary after buttons
 		if (showSummary && summaryPos === 'after-buttons') {
 			this.dailySummary = new DailySummary(root);
@@ -145,17 +151,9 @@ export class TrackerWidget extends MarkdownRenderChild {
 		// 3. Health alerts
 		this.alertsPanel = new AlertsPanel(root);
 
-		// 3.5. Quick entry (NLP text input)
-		if (this.settings.showQuickEntry) {
-			const medNames = this.settings.medication.medications
-				.filter(m => m.enabled)
-				.map(m => m.name);
-			new QuickEntrySection(
-				root, this.registry, this.settings,
-				() => this.save(),
-				(event) => this.plugin.emitTrackerEvent(event),
-				medNames
-			);
+		// Quick entry before sections (if configured)
+		if (this.settings.showQuickEntry && qePos === 'before-sections') {
+			this.buildQuickEntry(root);
 		}
 
 		// 4. Module sections (collapsible, reorderable)
@@ -443,6 +441,19 @@ export class TrackerWidget extends MarkdownRenderChild {
 			case 'custom': return this.settings.timerAnimationCustomColor || '#ff4444';
 			default:       return null; // 'accent' — use CSS var
 		}
+	}
+
+	/** Build the NLP quick entry text input. */
+	private buildQuickEntry(parent: HTMLElement): void {
+		const medNames = this.settings.medication.medications
+			.filter(m => m.enabled)
+			.map(m => m.name);
+		new QuickEntrySection(
+			parent, this.registry, this.settings,
+			() => this.save(),
+			(event) => this.plugin.emitTrackerEvent(event),
+			medNames
+		);
 	}
 
 	/** Collect quick-action buttons from all modules and render them. */

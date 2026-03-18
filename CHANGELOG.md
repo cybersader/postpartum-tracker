@@ -7,6 +7,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-03-18
+
+### Added
+
+- **Rich quick entry preview**: Typing natural language now shows a detailed field breakdown per tracker type — feeding shows side/duration/volume, diaper shows wet/dirty/color, sleep shows duration, all show parsed timestamp. Timestamps display in the user's configured time format with "Yesterday" prefix when applicable.
+- **Quick entry position setting**: New dropdown in settings: "After buttons" (default, right below the action buttons), "Before sections", or "Hidden". Replaces the old toggle.
+- **"yesterday at 10pm" support**: Time parser now handles "yesterday at [time]" and bare "yesterday".
+- **"seedy" keyword**: Typing "seedy" in diaper entries maps to yellow-seedy color.
+
+### Fixed
+
+- **"at 1am" resolving to future**: If a parsed time is in the future, the parser now assumes yesterday instead of today.
+
+### Changed
+
+- **Quick entry enabled by default**: New installs now have quick entry visible after buttons. Existing users keep their current setting.
+
 ## [0.22.8] - 2026-03-18
 
 ### Improved

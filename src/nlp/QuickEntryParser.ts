@@ -111,11 +111,18 @@ export class QuickEntryParser {
 
 		const data: Record<string, unknown> = { wet, dirty };
 
-		// Color
-		const colors = ['meconium', 'transitional', 'yellow', 'green', 'brown'];
-		for (const c of colors) {
-			if (lower.includes(c)) {
-				data.color = c === 'yellow' ? 'yellow-seedy' : c;
+		// Color — "seedy" alone maps to yellow-seedy, "yellow" also maps to yellow-seedy
+		const colorMap: [string, string][] = [
+			['seedy', 'yellow-seedy'],
+			['meconium', 'meconium'],
+			['transitional', 'transitional'],
+			['yellow', 'yellow-seedy'],
+			['green', 'green'],
+			['brown', 'brown'],
+		];
+		for (const [keyword, color] of colorMap) {
+			if (lower.includes(keyword)) {
+				data.color = color;
 				break;
 			}
 		}
@@ -294,6 +301,25 @@ function extractDuration(tokens: string[], lower: string): DurationResult | null
 }
 
 function extractTimeModifier(_tokens: string[], lower: string): string | null {
+	// "yesterday at 10pm", "yesterday at 3:30am"
+	const yesterdayAtMatch = lower.match(/yesterday\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+	if (yesterdayAtMatch) {
+		let h = parseInt(yesterdayAtMatch[1], 10);
+		const m = parseInt(yesterdayAtMatch[2] || '0', 10);
+		const ampm = yesterdayAtMatch[3]?.toLowerCase();
+		if (ampm === 'pm' && h < 12) h += 12;
+		if (ampm === 'am' && h === 12) h = 0;
+		const d = new Date();
+		d.setDate(d.getDate() - 1);
+		d.setHours(h, m, 0, 0);
+		return d.toISOString();
+	}
+
+	// "yesterday" (bare, no time — use current time minus 24h)
+	if (/\byesterday\b/.test(lower) && !/yesterday\s+at/.test(lower)) {
+		return new Date(Date.now() - 86400000).toISOString();
+	}
+
 	// "at 3pm", "at 3:30pm", "at 14:30"
 	const atMatch = lower.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
 	if (atMatch) {
@@ -303,9 +329,13 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
 
-		const now = new Date();
-		now.setHours(h, m, 0, 0);
-		return now.toISOString();
+		const d = new Date();
+		d.setHours(h, m, 0, 0);
+		// If the parsed time is in the future, assume the user means yesterday
+		if (d.getTime() > Date.now()) {
+			d.setDate(d.getDate() - 1);
+		}
+		return d.toISOString();
 	}
 
 	// "30 min ago", "2 hours ago"

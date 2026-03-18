@@ -7,7 +7,7 @@ import type { TrackerModule } from '../trackers/BaseTracker';
 import type { PostpartumTrackerSettings, TrackerEvent } from '../types';
 import type { TrackerRegistry } from '../data/TrackerRegistry';
 import { QuickEntryParser, type ParsedEntry } from '../nlp/QuickEntryParser';
-import { generateId } from '../utils/formatters';
+import { generateId, formatTime } from '../utils/formatters';
 
 export class QuickEntrySection {
 	private container: HTMLElement;
@@ -123,7 +123,7 @@ export class QuickEntrySection {
 		this.previewEl.empty();
 		this.previewEl.removeClass('pt-hidden');
 
-		// Module icon + name
+		// Module icon + name header
 		const module = this.registry.get(parsed.moduleId);
 		const icon = module?.icon || '';
 		const moduleName = module?.displayName || parsed.moduleId;
@@ -133,6 +133,10 @@ export class QuickEntrySection {
 		headerEl.createSpan({ cls: 'pt-quick-entry-preview-module', text: moduleName });
 		headerEl.createSpan({ text: ' \u2014 ' });
 		headerEl.createSpan({ cls: 'pt-quick-entry-preview-summary', text: parsed.summary });
+
+		// Rich field breakdown
+		const fieldsEl = this.previewEl.createDiv({ cls: 'pt-quick-entry-preview-fields' });
+		this.renderFieldRows(fieldsEl, parsed);
 
 		// Confidence indicator
 		const confCls = `pt-quick-entry-confidence--${parsed.confidence}`;
@@ -146,6 +150,67 @@ export class QuickEntrySection {
 		// Show buttons
 		const btnRow = this.container.querySelector('.pt-quick-entry-buttons');
 		btnRow?.removeClass('pt-hidden');
+	}
+
+	/** Render per-module field rows in the preview. */
+	private renderFieldRows(el: HTMLElement, parsed: ParsedEntry): void {
+		const d = parsed.data;
+		const addField = (label: string, value: string) => {
+			const row = el.createDiv({ cls: 'pt-quick-entry-field' });
+			row.createSpan({ cls: 'pt-quick-entry-field-label', text: label });
+			row.createSpan({ cls: 'pt-quick-entry-field-value', text: value });
+		};
+
+		switch (parsed.moduleId) {
+			case 'feeding': {
+				if (d.type) addField('Type', String(d.type));
+				if (d.side) addField('Side', String(d.side));
+				if (d.durationMs) {
+					const min = Math.round(Number(d.durationMs) / 60000);
+					addField('Duration', `${min}m`);
+				}
+				if (d.volume) addField('Volume', `${d.volume}${d.volumeUnit || 'ml'}`);
+				break;
+			}
+			case 'diaper': {
+				const parts: string[] = [];
+				if (d.wet) parts.push('Wet');
+				if (d.dirty) parts.push('Dirty');
+				if (parts.length) addField('Type', parts.join(' + '));
+				if (d.color) addField('Color', String(d.color).replace(/-/g, ' '));
+				break;
+			}
+			case 'sleep': {
+				if (d.durationMs) {
+					const min = Math.round(Number(d.durationMs) / 60000);
+					const h = Math.floor(min / 60);
+					const m = min % 60;
+					addField('Duration', h > 0 ? `${h}h ${m}m` : `${m}m`);
+				}
+				break;
+			}
+			case 'medication': {
+				if (d.name) addField('Name', String(d.name));
+				break;
+			}
+			default: {
+				if (d.durationMs) {
+					const min = Math.round(Number(d.durationMs) / 60000);
+					addField('Duration', `${min}m`);
+				}
+				if (d.value) addField('Value', `${d.value}${d.unit ? ' ' + d.unit : ''}`);
+				break;
+			}
+		}
+
+		// Timestamp (shared across all types)
+		if (d.timestamp) {
+			const ts = new Date(d.timestamp as string);
+			const now = new Date();
+			const isYesterday = ts.getDate() !== now.getDate() || ts.getMonth() !== now.getMonth();
+			const timeStr = formatTime(d.timestamp as string, this.settings.timeFormat);
+			addField('Time', isYesterday ? `Yesterday ${timeStr}` : timeStr);
+		}
 	}
 
 	private hidePreview(): void {

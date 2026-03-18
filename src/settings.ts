@@ -1252,11 +1252,16 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 
 		new Setting(el)
 			.setName('Quick entry')
-			.setDesc('Show a text input for natural language logging (e.g. "fed left 20 min", "wet diaper").')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showQuickEntry)
+			.setDesc('Natural language input (e.g. "fed left 20 min", "wet diaper at 2pm"). Choose where it appears or hide it.')
+			.addDropdown(dd => dd
+				.addOption('after-buttons', 'After buttons')
+				.addOption('before-sections', 'Before sections')
+				.addOption('hidden', 'Hidden')
+				.setValue(this.plugin.settings.quickEntryPosition ?? (this.plugin.settings.showQuickEntry ? 'after-buttons' : 'hidden'))
 				.onChange(async (value) => {
-					this.plugin.settings.showQuickEntry = value;
+					const pos = value as 'after-buttons' | 'before-sections' | 'hidden';
+					this.plugin.settings.quickEntryPosition = pos;
+					this.plugin.settings.showQuickEntry = pos !== 'hidden';
 					await this.plugin.saveSettings();
 				})
 			);

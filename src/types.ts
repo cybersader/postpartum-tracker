@@ -424,6 +424,7 @@ export const DEFAULT_MEDICATION_BUTTONS: MedicationButtonsConfig = {
 };
 
 export type StorageMode = 'inline' | 'external';
+export type QuickEntryPosition = 'after-buttons' | 'before-sections' | 'hidden';
 
 export interface PostpartumTrackerSettings {
 	/** Where to store tracker data. 'inline' = JSON in code block (legacy), 'external' = separate .tracker.json file. */
@@ -440,8 +441,10 @@ export interface PostpartumTrackerSettings {
 	timerAnimationCustomColor: string;
 	/** How data entry forms are shown: modal popup or inline panel. */
 	inputMode: 'modal' | 'inline';
-	/** Show NLP quick entry text input at top of widget. */
+	/** Show NLP quick entry text input. */
 	showQuickEntry: boolean;
+	/** Where the quick entry input appears in the widget. */
+	quickEntryPosition: QuickEntryPosition;
 	/** Status bar display mode. */
 	statusBarMode: 'badge' | 'live' | 'off';
 	/** Whether to show the daily summary stats bar at all. Default: off. */
@@ -545,7 +548,8 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	timerAnimationColor: 'accent',
 	timerAnimationCustomColor: '#ff4444',
 	inputMode: 'modal',
-	showQuickEntry: false,
+	showQuickEntry: true,
+	quickEntryPosition: 'after-buttons',
 	statusBarMode: 'live',
 	showSummaryBar: false,
 	summaryPosition: 'top',
