@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.7] - 2026-03-18
+
+### Fixed
+
+- **Restore button now works**: Settings "Restore..." button was calling the wrong command ID. Now calls the plugin method directly — backup picker modal opens correctly.
+
 ## [0.22.6] - 2026-03-17
 
 ### Fixed

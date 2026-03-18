@@ -795,7 +795,7 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	}
 
 	/** Let user pick a backup and restore it as the active data. */
-	private async restoreFromBackup(): Promise<void> {
+	async restoreFromBackup(): Promise<void> {
 		// Find tracker files to locate backup directories
 		const files = this.app.vault.getMarkdownFiles();
 		const backupFiles: string[] = [];

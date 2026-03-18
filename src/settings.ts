@@ -1312,7 +1312,7 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			.addButton(btn => btn
 				.setButtonText('Restore...')
 				.onClick(() => {
-					(this.plugin.app as any).commands.executeCommandById('postpartum-tracker:restore-from-backup');
+					(this.plugin as any).restoreFromBackup();
 				})
 			);
 
