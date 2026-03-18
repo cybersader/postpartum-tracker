@@ -181,6 +181,10 @@ export class QuickEntryParser {
 		const data: Record<string, unknown> = {};
 		if (matchedMed) data.name = matchedMed;
 
+		// Dosage: "500mg", "800 mg", "5-325mg"
+		const dosageMatch = lower.match(/(\d+(?:-\d+)?)\s*mg/i);
+		if (dosageMatch) data.dosage = `${dosageMatch[1]}mg`;
+
 		const time = extractTimeModifier(tokens, lower);
 		if (time) data.timestamp = time;
 
@@ -204,7 +208,18 @@ export class QuickEntryParser {
 		if (!this.enabledModuleIds.has('sleep')) return null;
 
 		const data: Record<string, unknown> = {};
-		const parts: string[] = ['Slept'];
+
+		// Infer sleep type from keywords
+		const napWords = ['nap', 'napped', 'napping'];
+		const nightWords = ['night', 'bedtime', 'overnight'];
+		if (napWords.some(w => tokens.includes(w))) {
+			data.type = 'nap';
+		} else if (nightWords.some(w => tokens.includes(w))) {
+			data.type = 'night';
+		}
+
+		const typeLabel = data.type === 'nap' ? 'Napped' : data.type === 'night' ? 'Night sleep' : 'Slept';
+		const parts: string[] = [typeLabel];
 
 		// Try time range first: "started at 1230 woke up at 130", "from 1pm to 3pm"
 		const range = extractTimeRange(lower);
@@ -243,13 +258,18 @@ export class QuickEntryParser {
 			'pumping': ['pumped', 'pump', 'pumping'],
 			'temperature': ['temp', 'temperature', 'fever'],
 			'weight': ['weight', 'weighed'],
-			'pain': ['pain', 'hurts', 'ache', 'cramp', 'cramping'],
-			'mood': ['mood', 'feeling', 'felt'],
-			'walking': ['walked', 'walk', 'walking'],
-			'skin-to-skin': ['skin to skin', 'kangaroo'],
+			'height': ['height', 'length', 'measured'],
+			'head-circumference': ['head circumference', 'head circ', 'head size'],
+			'pain': ['pain', 'hurts', 'ache', 'cramp', 'cramping', 'sore', 'soreness'],
+			'mood': ['mood', 'feeling', 'felt', 'emotional', 'anxious', 'anxiety', 'happy', 'sad', 'overwhelmed'],
+			'walking': ['walked', 'walk', 'walking', 'steps'],
+			'skin-to-skin': ['skin to skin', 'kangaroo', 'chest time'],
 			'hiccups': ['hiccups', 'hiccup'],
-			'bowel-movement': ['bowel', 'bm'],
-			'bleeding': ['bleeding', 'spotting'],
+			'bowel-movement': ['bowel', 'bm', 'pooped', 'constipated'],
+			'bleeding': ['bleeding', 'spotting', 'lochia', 'bled'],
+			'restroom': ['restroom', 'bathroom', 'peed', 'urinated', 'peeing'],
+			'breastfeeding-position': ['position', 'cradle hold', 'football hold', 'cross cradle', 'laid back', 'side lying'],
+			'cord-care': ['cord', 'umbilical', 'cord care', 'stump'],
 		};
 
 		for (const [moduleId, kws] of Object.entries(simpleKeywords)) {
@@ -397,13 +417,39 @@ function extractTimeRange(lower: string): TimeRange | null {
 		const endTime = parseTimeStr(match[2]);
 		if (!startTime || !endTime) continue;
 
-		const startDate = buildDate(startTime);
-		let endDate = buildDate(endTime);
+		// Check if either time has explicit AM/PM
+		const startHasAmPm = /am|pm/i.test(match[1]);
+		const endHasAmPm = /am|pm/i.test(match[2]);
 
-		// If end is before start, end is probably the next day
-		if (endDate.getTime() <= startDate.getTime()) {
-			endDate = new Date(endDate.getTime() + 86400000);
+		// Resolve start to the most recent past occurrence
+		const startDate = buildDate(startTime);
+
+		// For the end time, try multiple interpretations and pick the best one
+		const candidates: Date[] = [];
+
+		// Candidate 1: end time as-is on the same day as start
+		const endSameDay = new Date(startDate);
+		endSameDay.setHours(endTime.h, endTime.m, 0, 0);
+		if (endSameDay.getTime() > startDate.getTime()) candidates.push(endSameDay);
+
+		// Candidate 2: if no AM/PM on end, try adding 12h (PM interpretation)
+		if (!endHasAmPm && endTime.h < 12) {
+			const endPm = new Date(startDate);
+			endPm.setHours(endTime.h + 12, endTime.m, 0, 0);
+			if (endPm.getTime() > startDate.getTime()) candidates.push(endPm);
 		}
+
+		// Candidate 3: next day (for overnight ranges like 11pm to 2am)
+		const endNextDay = new Date(startDate);
+		endNextDay.setDate(endNextDay.getDate() + 1);
+		endNextDay.setHours(endTime.h, endTime.m, 0, 0);
+		if (endNextDay.getTime() > startDate.getTime()) candidates.push(endNextDay);
+
+		if (candidates.length === 0) continue;
+
+		// Pick the candidate with the shortest positive duration (most likely intent)
+		candidates.sort((a, b) => (a.getTime() - startDate.getTime()) - (b.getTime() - startDate.getTime()));
+		const endDate = candidates[0];
 
 		const durationMs = endDate.getTime() - startDate.getTime();
 		// Sanity: skip if duration > 24h or negative

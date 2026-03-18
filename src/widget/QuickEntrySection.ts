@@ -191,6 +191,7 @@ export class QuickEntrySection {
 			}
 			case 'medication': {
 				if (d.name) addField('Name', String(d.name));
+				if (d.dosage) addField('Dosage', String(d.dosage));
 				break;
 			}
 			default: {

@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-03-18
+
+### Fixed
+
+- **Time range picks shortest duration**: "sleep started at 1230 woke up at 130" now correctly resolves to 12:30 PM → 1:30 PM (1h) instead of 12:30 PM → 1:30 AM (13h). When times have no AM/PM, the parser tries all interpretations and picks the shortest positive duration. Explicit AM/PM is always respected.
+
+### Added
+
+- **Sleep type inference**: "napped" / "nap" auto-sets type to nap. "night" / "bedtime" / "overnight" sets to night. Preview shows "Napped 1h" or "Night sleep 8h".
+- **All trackers have NLP keywords**: Added missing triggers for height, head circumference, restroom, breastfeeding position, cord care. Expanded mood (anxious, overwhelmed, happy, sad), pain (sore), bleeding (lochia, bled), bowel movement (pooped, constipated), walking (steps).
+- **Medication dosage parsing**: "took tylenol 500mg at 3pm" extracts dosage and shows it in preview.
+
 ## [0.24.0] - 2026-03-18
 
 ### Added
