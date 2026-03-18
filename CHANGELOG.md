@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-03-18
+
+### Fixed
+
+- **Bare time parsing**: "3pm", "2:30pm" now work without requiring the word "at". So "fed left 30 minutes 3pm" parses correctly.
+
 ## [0.23.0] - 2026-03-18
 
 ### Added

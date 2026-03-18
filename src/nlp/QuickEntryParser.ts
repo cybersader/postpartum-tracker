@@ -320,14 +320,17 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		return new Date(Date.now() - 86400000).toISOString();
 	}
 
-	// "at 3pm", "at 3:30pm", "at 14:30"
-	const atMatch = lower.match(/at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+	// "at 3pm", "at 3:30pm", "at 14:30", or bare "3pm", "2:30pm"
+	// The "at" prefix is optional — "3pm" alone works too
+	const atMatch = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
+		|| lower.match(/at\s+(\d{1,2})(?::(\d{2}))?(?:\s*(am|pm))?/i);
 	if (atMatch) {
 		let h = parseInt(atMatch[1], 10);
 		const m = parseInt(atMatch[2] || '0', 10);
 		const ampm = atMatch[3]?.toLowerCase();
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
+		// For "at 14:30" (no am/pm), h is already 24h format
 
 		const d = new Date();
 		d.setHours(h, m, 0, 0);
