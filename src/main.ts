@@ -823,10 +823,33 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			return;
 		}
 
-		// Show picker
-		const modal = new BackupPickerModal(this.app, backupFiles, async (chosen) => {
+		// Preload summaries for each backup
+		const backupItems: BackupItem[] = [];
+		for (const path of backupFiles) {
 			try {
-				const content = await this.app.vault.adapter.read(chosen);
+				const raw = await this.app.vault.adapter.read(path);
+				const data = JSON.parse(raw);
+				const trackers = data.trackers || {};
+				const counts: Record<string, number> = {};
+				let latestEntry = '';
+				for (const [k, v] of Object.entries(trackers)) {
+					if (!Array.isArray(v) || v.length === 0) continue;
+					counts[k] = v.length;
+					for (const e of v as Record<string, unknown>[]) {
+						const ts = (e.start || e.timestamp || '') as string;
+						if (ts > latestEntry) latestEntry = ts;
+					}
+				}
+				backupItems.push({ path, counts, latestEntry });
+			} catch {
+				backupItems.push({ path, counts: {}, latestEntry: '' });
+			}
+		}
+
+		// Show picker
+		const modal = new BackupPickerModal(this.app, backupItems, async (chosen) => {
+			try {
+				const content = await this.app.vault.adapter.read(chosen.path);
 				JSON.parse(content); // validate
 
 				// Find the active tracker's data file and overwrite it
@@ -1380,30 +1403,72 @@ class DailySummaryModal extends Modal {
 	}
 }
 
-/** Simple picker for backup files. */
-class BackupPickerModal extends SuggestModal<string> {
-	private items: string[];
-	private onChooseItem: (item: string) => void;
+interface BackupItem {
+	path: string;
+	counts: Record<string, number>;
+	latestEntry: string;
+}
 
-	constructor(app: import('obsidian').App, items: string[], onChoose: (item: string) => void) {
+/** Backup picker with entry counts and latest event info. */
+class BackupPickerModal extends SuggestModal<BackupItem> {
+	private items: BackupItem[];
+	private onChooseItem: (item: BackupItem) => void;
+
+	constructor(app: import('obsidian').App, items: BackupItem[], onChoose: (item: BackupItem) => void) {
 		super(app);
 		this.items = items;
 		this.onChooseItem = onChoose;
 		this.setPlaceholder('Pick a backup to restore...');
 	}
 
-	getSuggestions(query: string): string[] {
+	getSuggestions(query: string): BackupItem[] {
 		const q = query.toLowerCase();
-		return this.items.filter(f => f.toLowerCase().includes(q));
+		return this.items.filter(item => {
+			const name = item.path.substring(item.path.lastIndexOf('/') + 1);
+			return name.toLowerCase().includes(q);
+		});
 	}
 
-	renderSuggestion(item: string, el: HTMLElement): void {
-		const name = item.substring(item.lastIndexOf('/') + 1).replace('.json', '');
+	renderSuggestion(item: BackupItem, el: HTMLElement): void {
+		// Timestamp line
+		const name = item.path.substring(item.path.lastIndexOf('/') + 1).replace('.json', '');
 		const readable = name.replace(/T/, ' ').replace(/-(\d{2})-(\d{2})-/, ':$1:$2.');
-		el.createDiv({ text: readable });
+		const titleEl = el.createDiv({ cls: 'pt-backup-title' });
+		titleEl.style.fontWeight = '600';
+		titleEl.style.marginBottom = '2px';
+		titleEl.setText(readable);
+
+		// Entry counts
+		const countsEl = el.createDiv({ cls: 'pt-backup-counts' });
+		countsEl.style.fontSize = '0.8em';
+		countsEl.style.color = 'var(--text-muted)';
+		const icons: Record<string, string> = {
+			feeding: '🤱', sleep: '😴', diaper: '🧷', medication: '💊',
+			hiccups: '🫁', pain: '😣', 'tummy-time': '👶', bleeding: '🩸',
+		};
+		const parts: string[] = [];
+		for (const [k, count] of Object.entries(item.counts)) {
+			if (k === 'medicationConfig' || k === 'logNotes' || k === 'comments') continue;
+			const icon = icons[k] || '📋';
+			parts.push(`${icon} ${count} ${k}`);
+		}
+		countsEl.setText(parts.join('  '));
+
+		// Latest entry
+		if (item.latestEntry) {
+			const latestEl = el.createDiv({ cls: 'pt-backup-latest' });
+			latestEl.style.fontSize = '0.75em';
+			latestEl.style.color = 'var(--text-faint)';
+			const d = new Date(item.latestEntry);
+			const timeStr = d.toLocaleString(undefined, {
+				month: 'short', day: 'numeric',
+				hour: 'numeric', minute: '2-digit',
+			});
+			latestEl.setText(`Latest entry: ${timeStr}`);
+		}
 	}
 
-	onChooseSuggestion(item: string): void {
+	onChooseSuggestion(item: BackupItem): void {
 		this.onChooseItem(item);
 	}
 }

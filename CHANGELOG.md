@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.22.8] - 2026-03-18
+
+### Improved
+
+- **Restore picker shows backup details**: Each backup in the restore modal now shows entry counts per tracker (feeding, sleep, diaper, etc. with icons), plus the timestamp of the most recent entry. Makes it easy to pick the right backup without guessing.
+
 ## [0.22.7] - 2026-03-18
 
 ### Fixed
