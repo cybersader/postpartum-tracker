@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.2] - 2026-03-18
+
+### Added
+
+- **More feeding keywords**: "boob", "breast", "latch", "latched", "nipple" now trigger the feeding parser. Breast vs bottle is determined by explicit bottle/formula keywords — everything else defaults to breast. So "left boob 20 min 3pm" logs a breast feeding, while "bottle 4oz" logs a bottle feeding.
+
 ## [0.23.1] - 2026-03-18
 
 ### Fixed

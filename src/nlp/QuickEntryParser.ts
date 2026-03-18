@@ -39,7 +39,8 @@ export class QuickEntryParser {
 	// ── Feeding ──
 
 	private tryFeeding(tokens: string[], lower: string, _raw: string): ParsedEntry | null {
-		const keywords = ['fed', 'feed', 'nurse', 'nursed', 'breastfed', 'breastfeed', 'bottle', 'formula'];
+		const keywords = ['fed', 'feed', 'nurse', 'nursed', 'breastfed', 'breastfeed',
+			'bottle', 'formula', 'boob', 'breast', 'nipple', 'latch', 'latched'];
 		if (!keywords.some(k => tokens.includes(k))) return null;
 		if (!this.enabledModuleIds.has('feeding')) return null;
 
@@ -51,8 +52,9 @@ export class QuickEntryParser {
 		else if (lower.includes('right')) { data.side = 'right'; parts.push('right'); }
 		else if (lower.includes('both')) { data.side = 'both'; parts.push('both sides'); }
 
-		// Type
-		const isBottle = tokens.includes('bottle') || tokens.includes('formula');
+		// Type — bottle/formula are bottle, everything else is breast
+		const bottleWords = ['bottle', 'formula'];
+		const isBottle = bottleWords.some(w => tokens.includes(w));
 		if (isBottle) {
 			data.type = 'bottle';
 			parts.unshift('Bottle');
