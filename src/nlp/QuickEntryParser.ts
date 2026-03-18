@@ -112,18 +112,7 @@ export class QuickEntryParser {
 		const hasDiaper = diaperWords.some(w => tokens.includes(w));
 		const hasBoth = tokens.includes('both');
 
-		if (!hasWet && !hasDirty && (!hasDiaper && !hasBoth)) return null;
-		if (!this.enabledModuleIds.has('diaper')) return null;
-
-		let wet = false, dirty = false;
-		if (hasBoth || (hasWet && hasDirty)) { wet = true; dirty = true; }
-		else if (hasWet) { wet = true; }
-		else if (hasDirty) { dirty = true; }
-		else if (hasDiaper) { wet = true; } // "diaper" alone defaults to wet
-
-		const data: Record<string, unknown> = { wet, dirty };
-
-		// Color — "seedy" alone maps to yellow-seedy, "yellow" also maps to yellow-seedy
+		// Color keywords — stool colors also trigger the diaper parser
 		const colorMap: [string, string][] = [
 			['seedy', 'yellow-seedy'],
 			['meconium', 'meconium'],
@@ -132,12 +121,27 @@ export class QuickEntryParser {
 			['green', 'green'],
 			['brown', 'brown'],
 		];
+		let detectedColor: string | null = null;
 		for (const [keyword, color] of colorMap) {
 			if (lower.includes(keyword)) {
-				data.color = color;
+				detectedColor = color;
 				break;
 			}
 		}
+
+		if (!hasWet && !hasDirty && !hasDiaper && !hasBoth && !detectedColor) return null;
+		if (!this.enabledModuleIds.has('diaper')) return null;
+
+		let wet = false, dirty = false;
+		if (hasBoth || (hasWet && hasDirty)) { wet = true; dirty = true; }
+		else if (hasWet && detectedColor) { wet = true; dirty = true; } // "wet + color" = both
+		else if (hasWet) { wet = true; }
+		else if (hasDirty) { dirty = true; }
+		else if (detectedColor) { dirty = true; } // color alone = dirty (colors describe stool)
+		else if (hasDiaper) { wet = true; } // "diaper" alone defaults to wet
+
+		const data: Record<string, unknown> = { wet, dirty };
+		if (detectedColor) data.color = detectedColor;
 
 		// Time
 		const time = extractTimeModifier(tokens, lower);

@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-03-18
+
+### Fixed
+
+- **Color keywords imply dirty diaper**: "yellow seedy diaper" now correctly sets dirty=true. Any stool color (yellow, seedy, green, brown, meconium, transitional) automatically implies poop. "yellow seedy and wet" sets both. Color keywords alone (without "diaper" or "wet"/"dirty") also trigger the diaper parser.
+
 ## [0.24.1] - 2026-03-18
 
 ### Fixed
