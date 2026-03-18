@@ -281,12 +281,17 @@ interface DurationResult { ms: number; label: string; }
 
 function extractDuration(tokens: string[], lower: string): DurationResult | null {
 	// "20 min", "2h", "1.5 hours", "45m", "1h 30m", "30 minutes"
+	// Exclude matches followed by "ago" — those are time modifiers, not durations
 	const pattern = /(\d+(?:\.\d+)?)\s*(h(?:ours?|r)?|m(?:in(?:utes?)?)?)/gi;
 	let totalMs = 0;
 	let match: RegExpExecArray | null;
 	const parts: string[] = [];
 
 	while ((match = pattern.exec(lower)) !== null) {
+		// Check if this match is followed by "ago" — if so, skip it (time modifier)
+		const afterMatch = lower.slice(match.index + match[0].length).trimStart();
+		if (afterMatch.startsWith('ago')) continue;
+
 		const val = parseFloat(match[1]);
 		const unit = match[2].toLowerCase();
 		if (unit.startsWith('h')) {

@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.23.3] - 2026-03-18
+
+### Fixed
+
+- **"20 minutes 5 minutes ago" parsed incorrectly**: Duration extractor was consuming "5 minutes" as part of the duration (showing 25m) instead of leaving it for the "ago" time parser. Now skips any `N minutes/hours` that is followed by "ago".
+
 ## [0.23.2] - 2026-03-18
 
 ### Added
