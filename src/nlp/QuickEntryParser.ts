@@ -63,11 +63,25 @@ export class QuickEntryParser {
 			parts.unshift('Fed');
 		}
 
-		// Duration
-		const dur = extractDuration(tokens, lower);
-		if (dur) {
-			data.durationMs = dur.ms;
-			parts.push(dur.label);
+		// Try time range first: "fed from 2pm to 2:30pm"
+		const range = extractTimeRange(lower);
+		if (range) {
+			data.timestamp = range.start;
+			data.endTimestamp = range.end;
+			data.durationMs = range.durationMs;
+			const min = Math.round(range.durationMs / 60000);
+			parts.push(`${min}m`);
+		} else {
+			// Duration
+			const dur = extractDuration(tokens, lower);
+			if (dur) {
+				data.durationMs = dur.ms;
+				parts.push(dur.label);
+			}
+
+			// Time modifier
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
 		}
 
 		// Volume (for bottle)
@@ -78,15 +92,11 @@ export class QuickEntryParser {
 			parts.push(vol.label);
 		}
 
-		// Time modifier
-		const time = extractTimeModifier(tokens, lower);
-		if (time) data.timestamp = time;
-
 		return {
 			moduleId: 'feeding',
 			summary: parts.join(' '),
 			data,
-			confidence: dur || vol ? 'high' : 'medium',
+			confidence: range || data.durationMs || vol ? 'high' : 'medium',
 		};
 	}
 
@@ -189,27 +199,39 @@ export class QuickEntryParser {
 	// ── Sleep ──
 
 	private trySleep(tokens: string[], lower: string): ParsedEntry | null {
-		const keywords = ['slept', 'sleep', 'nap', 'napped', 'asleep'];
+		const keywords = ['slept', 'sleep', 'nap', 'napped', 'asleep', 'woke', 'started'];
 		if (!keywords.some(k => tokens.includes(k))) return null;
 		if (!this.enabledModuleIds.has('sleep')) return null;
 
 		const data: Record<string, unknown> = {};
 		const parts: string[] = ['Slept'];
 
-		const dur = extractDuration(tokens, lower);
-		if (dur) {
-			data.durationMs = dur.ms;
-			parts.push(dur.label);
-		}
+		// Try time range first: "started at 1230 woke up at 130", "from 1pm to 3pm"
+		const range = extractTimeRange(lower);
+		if (range) {
+			data.timestamp = range.start;
+			data.endTimestamp = range.end;
+			data.durationMs = range.durationMs;
+			const min = Math.round(range.durationMs / 60000);
+			const h = Math.floor(min / 60);
+			const m = min % 60;
+			parts.push(h > 0 ? `${h}h ${m}m` : `${m}m`);
+		} else {
+			const dur = extractDuration(tokens, lower);
+			if (dur) {
+				data.durationMs = dur.ms;
+				parts.push(dur.label);
+			}
 
-		const time = extractTimeModifier(tokens, lower);
-		if (time) data.timestamp = time;
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
+		}
 
 		return {
 			moduleId: 'sleep',
 			summary: parts.join(' '),
 			data,
-			confidence: dur ? 'high' : 'medium',
+			confidence: range ? 'high' : (data.durationMs ? 'high' : 'medium'),
 		};
 	}
 
@@ -307,6 +329,96 @@ function extractDuration(tokens: string[], lower: string): DurationResult | null
 	return { ms: totalMs, label: parts.join(' ') };
 }
 
+/** Parse a bare numeric time like "1230" → {h:12, m:30} or "130" → {h:1, m:30} */
+function parseBareTime(s: string): { h: number; m: number } | null {
+	const n = parseInt(s, 10);
+	if (isNaN(n) || n < 0) return null;
+	if (s.length === 3 || s.length === 4) {
+		// 130 → 1:30, 1230 → 12:30
+		const m = n % 100;
+		const h = Math.floor(n / 100);
+		if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { h, m };
+	}
+	return null;
+}
+
+/** Parse a time string that may be "3pm", "3:30pm", "1430", "1230", or bare "130" */
+function parseTimeStr(s: string): { h: number; m: number } | null {
+	s = s.trim();
+	// "3pm", "3:30pm", "14:30"
+	const clockMatch = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+	if (clockMatch) {
+		let h = parseInt(clockMatch[1], 10);
+		const m = parseInt(clockMatch[2] || '0', 10);
+		const ampm = clockMatch[3]?.toLowerCase();
+		if (ampm === 'pm' && h < 12) h += 12;
+		if (ampm === 'am' && h === 12) h = 0;
+		return { h, m };
+	}
+	// Bare numeric: "1230", "130"
+	return parseBareTime(s);
+}
+
+/** Build a Date from {h, m}, assuming today. If in the future, assume yesterday. */
+function buildDate(hm: { h: number; m: number }): Date {
+	const d = new Date();
+	d.setHours(hm.h, hm.m, 0, 0);
+	if (d.getTime() > Date.now()) {
+		d.setDate(d.getDate() - 1);
+	}
+	return d;
+}
+
+interface TimeRange { start: string; end: string; durationMs: number; }
+
+/**
+ * Extract a time range from patterns like:
+ *   "started at 1230 woke up at 130"
+ *   "from 12:30 to 1:30"
+ *   "12:30am-1:30am"
+ *   "slept 1230 to 130"
+ */
+function extractTimeRange(lower: string): TimeRange | null {
+	// Pattern: "started at X ... (woke up|ended|stopped|until|to|til|-) Y"
+	const rangePatterns = [
+		// "started at 1230 woke up at 130"
+		/(?:started?|began?|from)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(?:woke\s+up|ended?|stopped?|until|to|til|-)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+		// "from X to Y" / "X to Y" / "X-Y"
+		/(?:from\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:to|-|til|until|thru)\s*(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+		// "woke up at Y" with "at X" earlier
+		/(?:at\s+)(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?).*?(?:woke\s+up|ended?|stopped?)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+	];
+
+	for (const pattern of rangePatterns) {
+		const match = lower.match(pattern);
+		if (!match) continue;
+
+		const startTime = parseTimeStr(match[1]);
+		const endTime = parseTimeStr(match[2]);
+		if (!startTime || !endTime) continue;
+
+		const startDate = buildDate(startTime);
+		let endDate = buildDate(endTime);
+
+		// If end is before start, end is probably the next day
+		if (endDate.getTime() <= startDate.getTime()) {
+			endDate = new Date(endDate.getTime() + 86400000);
+		}
+
+		const durationMs = endDate.getTime() - startDate.getTime();
+		// Sanity: skip if duration > 24h or negative
+		if (durationMs <= 0 || durationMs > 86400000) continue;
+
+		return {
+			start: startDate.toISOString(),
+			end: endDate.toISOString(),
+			durationMs,
+		};
+	}
+
+	return null;
+}
+
 function extractTimeModifier(_tokens: string[], lower: string): string | null {
 	// "yesterday at 10pm", "yesterday at 3:30am"
 	const yesterdayAtMatch = lower.match(/yesterday\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
@@ -355,6 +467,15 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		const unit = agoMatch[2].toLowerCase();
 		const ms = unit.startsWith('h') ? val * 3600000 : val * 60000;
 		return new Date(Date.now() - ms).toISOString();
+	}
+
+	// Bare numeric time: "at 1230" → 12:30
+	const bareMatch = lower.match(/at\s+(\d{3,4})(?!\s*(?:am|pm))/i);
+	if (bareMatch) {
+		const parsed = parseBareTime(bareMatch[1]);
+		if (parsed) {
+			return buildDate(parsed).toISOString();
+		}
 	}
 
 	return null;

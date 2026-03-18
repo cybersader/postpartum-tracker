@@ -204,7 +204,17 @@ export class QuickEntrySection {
 		}
 
 		// Timestamp (shared across all types)
-		if (d.timestamp) {
+		if (d.timestamp && d.endTimestamp) {
+			// Time range (e.g. sleep from 12:30 to 1:30)
+			const fmt = this.settings.timeFormat;
+			const startStr = formatTime(d.timestamp as string, fmt);
+			const endStr = formatTime(d.endTimestamp as string, fmt);
+			const startDate = new Date(d.timestamp as string);
+			const now = new Date();
+			const isYesterday = startDate.getDate() !== now.getDate() || startDate.getMonth() !== now.getMonth();
+			const prefix = isYesterday ? 'Yesterday ' : '';
+			addField('Time', `${prefix}${startStr} → ${endStr}`);
+		} else if (d.timestamp) {
 			const ts = new Date(d.timestamp as string);
 			const now = new Date();
 			const isYesterday = ts.getDate() !== now.getDate() || ts.getMonth() !== now.getMonth();

@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-03-18
+
+### Added
+
+- **Time range parsing**: "sleep started at 1230 woke up at 130", "slept from 1pm to 3pm", "fed left 2pm-2:30pm" now parse as completed entries with start time, end time, and auto-calculated duration. Works for both sleep and feeding.
+- **Bare numeric times**: "1230" parses as 12:30, "130" as 1:30. Works in ranges and standalone "at 1230".
+- **Smart AM/PM inference**: When no AM/PM is specified, times resolve to the most recent past occurrence. If end is before start, it's assumed to be the next day.
+- **Preview shows time ranges**: "TIME 12:30 PM → 1:30 PM" with duration auto-calculated.
+- **"woke up" as sleep keyword**: "woke up" now triggers the sleep parser for range patterns.
+
 ## [0.23.3] - 2026-03-18
 
 ### Fixed
