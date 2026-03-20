@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.2] - 2026-03-20
+
+### Fixed
+
+- **Average label no longer overlaps peak label**: Moved the average line label below the dashed line (left-aligned) instead of above it (right-aligned) where it collided with the peak annotation.
+
 ## [0.26.1] - 2026-03-20
 
 ### Added
