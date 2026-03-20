@@ -160,9 +160,11 @@ export function renderActivityProfile(
 			'stroke-dasharray': '1.5,1',
 		}, svg);
 		const avgLabel = opts.formatAvg ? opts.formatAvg(avg) : `avg ${Math.round(avg * 10) / 10}`;
+		// Place label below the avg line to avoid collision with peak label above
+		const avgLabelY = Math.min(avgY + 3.5, PLOT_BOTTOM - 1);
 		svgEl('text', {
-			x: PLOT_RIGHT - 1, y: avgY - 1.5,
-			'text-anchor': 'end', 'font-size': 2.8,
+			x: PLOT_LEFT + 1, y: avgLabelY,
+			'text-anchor': 'start', 'font-size': 2.6,
 			fill: 'var(--text-muted)',
 		}, svg).textContent = avgLabel;
 	}
