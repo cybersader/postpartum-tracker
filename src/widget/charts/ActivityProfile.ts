@@ -15,6 +15,8 @@ export interface ActivityProfileOptions {
 	formatAvg?: (avg: number) => string;
 	/** Format a raw value for Y-axis ticks. When provided, Y-axis labels are shown. */
 	formatValue?: (v: number) => string;
+	/** Show interval labels ("every 2h 30m") on peak and Y-axis. */
+	showIntervalLabels?: boolean;
 	/** Second dataset to overlay (e.g. stop events on top of start events). */
 	overlayGrid?: number[][];
 	/** Color for the overlay curve. Default: 'var(--color-orange)'. */
@@ -171,7 +173,9 @@ export function renderActivityProfile(
 	svgEl('circle', { cx: peakX, cy: peakY, r: 1.5, fill: color }, svg);
 
 	const peakTime = formatHour(peakHour);
-	const labelText = opts.peakLabel ? `${opts.peakLabel} ${peakTime}` : `peak ${peakTime}`;
+	const intervalSuffix = opts.showIntervalLabels && smoothed[peakHour] > 0
+		? ` (${formatInterval(smoothed[peakHour])})` : '';
+	const labelText = (opts.peakLabel ? `${opts.peakLabel} ${peakTime}` : `peak ${peakTime}`) + intervalSuffix;
 	const anchor = peakHour >= 20 ? 'end' : peakHour <= 4 ? 'start' : 'middle';
 	svgEl('text', {
 		x: peakX, y: Math.max(peakY - 3, 4),
@@ -288,4 +292,43 @@ function formatHour(h: number): string {
 	if (h === 0 || h === 24) return '12am';
 	if (h === 12) return '12pm';
 	return h < 12 ? `${h}am` : `${h - 12}pm`;
+}
+
+/** Convert events-per-hour to a human-readable interval. */
+export function formatInterval(eventsPerHour: number): string {
+	if (eventsPerHour <= 0) return '—';
+	const minsBetween = 60 / eventsPerHour;
+	if (minsBetween >= 120) {
+		const h = Math.floor(minsBetween / 60);
+		const m = Math.round(minsBetween % 60);
+		return m > 0 ? `every ${h}h ${m}m` : `every ${h}h`;
+	}
+	if (minsBetween >= 60) {
+		const m = Math.round(minsBetween % 60);
+		return m > 0 ? `every 1h ${m}m` : `every 1h`;
+	}
+	return `every ${Math.round(minsBetween)}m`;
+}
+
+/**
+ * Find the N-hour window with the highest/lowest average in a smoothed 24h array.
+ * Returns { startHour, avg }.
+ */
+export function findWindow(
+	smoothed: number[], windowSize: number, mode: 'max' | 'min'
+): { startHour: number; avg: number } {
+	let best = mode === 'max' ? -Infinity : Infinity;
+	let bestStart = 0;
+	for (let h = 0; h < 24; h++) {
+		let sum = 0;
+		for (let d = 0; d < windowSize; d++) {
+			sum += smoothed[(h + d) % 24];
+		}
+		const avg = sum / windowSize;
+		if (mode === 'max' ? avg > best : (avg < best && avg > 0)) {
+			best = avg;
+			bestStart = h;
+		}
+	}
+	return { startHour: bestStart, avg: best === -Infinity || best === Infinity ? 0 : best };
 }

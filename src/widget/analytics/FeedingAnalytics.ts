@@ -9,7 +9,7 @@ import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
 import { renderHeatmapChart } from '../charts/HeatmapChart';
-import { renderActivityProfile } from '../charts/ActivityProfile';
+import { renderActivityProfile, formatInterval, findWindow } from '../charts/ActivityProfile';
 
 export class FeedingAnalytics {
 	private el: HTMLElement;
@@ -159,21 +159,51 @@ export class FeedingAnalytics {
 		}
 
 		// ── Average feeding profile ──
-		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Average feedings by hour' });
+		this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding frequency by hour' });
 		const profileContainer = this.el.createDiv({ cls: 'pt-chart-container' });
 		renderActivityProfile(profileContainer, heatGrid, {
 			color: 'var(--color-blue)',
 			peakLabel: 'busiest',
 			showAvgLine: true,
+			showIntervalLabels: true,
 			formatAvg: (v) => {
 				const r = Math.round(v * 10) / 10;
-				return `avg ${r}/hr`;
+				return `avg ${r}/hr (${formatInterval(v)})`;
 			},
 			formatValue: (v) => {
 				const r = Math.round(v * 10) / 10;
 				return `${r}/hr`;
 			},
 		});
+
+		// Comparative insights: busiest vs quietest windows
+		{
+			// Compute smoothed data (same as inside renderActivityProfile)
+			const hourAvg = new Array<number>(24).fill(0);
+			for (const row of heatGrid) {
+				for (let h = 0; h < 24 && h < row.length; h++) hourAvg[h] += row[h];
+			}
+			for (let h = 0; h < 24; h++) hourAvg[h] /= heatGrid.length;
+
+			const busiest = findWindow(hourAvg, 3, 'max');
+			const quietest = findWindow(hourAvg, 3, 'min');
+
+			if (busiest.avg > 0) {
+				const insights = this.el.createDiv({ cls: 'pt-insights' });
+				const bEnd = (busiest.startHour + 3) % 24;
+				insights.createDiv({
+					cls: 'pt-insight pt-insight--neutral',
+					text: `Busiest: ${fmtH(busiest.startHour)}–${fmtH(bEnd)} (${formatInterval(busiest.avg)})`,
+				});
+				if (quietest.avg > 0 && quietest.avg < busiest.avg) {
+					const qEnd = (quietest.startHour + 3) % 24;
+					insights.createDiv({
+						cls: 'pt-insight pt-insight--neutral',
+						text: `Quietest: ${fmtH(quietest.startHour)}–${fmtH(qEnd)} (${formatInterval(quietest.avg)})`,
+					});
+				}
+			}
+		}
 
 		// ── Feeding rhythm (start/stop frequency) ──
 		{
@@ -352,4 +382,10 @@ function toDecimalHour(iso: string): number {
 
 function addInsight(parent: HTMLElement, text: string, type: string): void {
 	parent.createDiv({ cls: `pt-insight pt-insight--${type}`, text });
+}
+
+function fmtH(h: number): string {
+	if (h === 0 || h === 24) return '12am';
+	if (h === 12) return '12pm';
+	return h < 12 ? `${h}am` : `${h - 12}pm`;
 }

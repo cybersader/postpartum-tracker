@@ -9,7 +9,7 @@ import { renderBarChart, type BarDatum } from '../charts/BarChart';
 import { renderTimelineChart, type TimelineRow, type TimelineChartOptions } from '../charts/TimelineChart';
 import { renderSparkLine } from '../charts/SparkLine';
 import { renderHeatmapChart } from '../charts/HeatmapChart';
-import { renderActivityProfile } from '../charts/ActivityProfile';
+import { renderActivityProfile, formatInterval, findWindow } from '../charts/ActivityProfile';
 
 interface SleepEntry {
 	id: string;
@@ -166,6 +166,7 @@ export class SleepAnalytics {
 			renderActivityProfile(rhythmContainer, startGrid, {
 				color: 'var(--color-purple)',
 				peakLabel: 'falls asleep',
+				showIntervalLabels: true,
 				formatValue: (v) => `${Math.round(v * 10) / 10}/hr`,
 				overlayGrid: wakeGrid,
 				overlayColor: 'var(--color-orange)',
@@ -179,6 +180,32 @@ export class SleepAnalytics {
 			const wakeItem = legend.createDiv({ cls: 'pt-legend-item' });
 			wakeItem.createSpan({ cls: 'pt-legend-swatch' }).style.cssText = 'background: var(--color-orange); opacity: 0.6';
 			wakeItem.createSpan({ text: 'Wakes up' });
+
+			// Comparative insights
+			const wakeHourAvg = new Array<number>(24).fill(0);
+			for (const row of wakeGrid) {
+				for (let h = 0; h < 24 && h < row.length; h++) wakeHourAvg[h] += row[h];
+			}
+			for (let h = 0; h < 24; h++) wakeHourAvg[h] /= wakeGrid.length;
+
+			const mostWakes = findWindow(wakeHourAvg, 3, 'max');
+			const bestStretch = findWindow(wakeHourAvg, 3, 'min');
+
+			if (mostWakes.avg > 0) {
+				const insights = this.el.createDiv({ cls: 'pt-insights' });
+				const mEnd = (mostWakes.startHour + 3) % 24;
+				insights.createDiv({
+					cls: 'pt-insight pt-insight--neutral',
+					text: `Most wake-ups: ${fmtH(mostWakes.startHour)}–${fmtH(mEnd)} (${formatInterval(mostWakes.avg)})`,
+				});
+				if (bestStretch.avg > 0 && bestStretch.avg < mostWakes.avg) {
+					const bEnd = (bestStretch.startHour + 3) % 24;
+					insights.createDiv({
+						cls: 'pt-insight pt-insight--positive',
+						text: `Best stretch: ${fmtH(bestStretch.startHour)}–${fmtH(bEnd)} (${formatInterval(bestStretch.avg)})`,
+					});
+				}
+			}
 		}
 
 		// ── Sleep timeline (last 3 days) ──
@@ -577,4 +604,10 @@ function distributeHourSpan(startH: number, endH: number, totalHours: number, ou
 		const bucketEnd = Math.min(endH, h + 1);
 		out[h] += (bucketEnd - bucketStart) / span * totalHours;
 	}
+}
+
+function fmtH(h: number): string {
+	if (h === 0 || h === 24) return '12am';
+	if (h === 12) return '12pm';
+	return h < 12 ? `${h}am` : `${h - 12}pm`;
 }

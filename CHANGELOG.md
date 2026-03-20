@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-03-20
+
+### Added
+
+- **Interval labels on charts**: Peak annotations now show the interval ("busiest 2am (every 1h 15m)") instead of just the hour. Average line also shows interval. Makes frequency immediately intuitive.
+- **Busiest vs quietest insights**: Below the feeding frequency chart: "Busiest: 2am–5am (every 45m)" and "Quietest: 10am–1pm (every 4h)". Below sleep rhythm: "Most wake-ups: 3am–6am (every 30m)" and "Best stretch: 9pm–12am (every 3h)".
+- **`formatInterval()` and `findWindow()` utilities**: Exported from ActivityProfile for reuse. Convert events/hr to "every Xh Ym" and find best/worst N-hour windows.
+
 ## [0.26.0] - 2026-03-20
 
 ### Added
