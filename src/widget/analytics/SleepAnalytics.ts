@@ -140,6 +140,47 @@ export class SleepAnalytics {
 			formatValue: (v) => `${Math.round(v * 100)}%`,
 		});
 
+		// ── Sleep rhythm (start/stop frequency) ──
+		{
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Sleep rhythm' });
+			this.el.createDiv({ cls: 'pt-analytics-subtitle', text: 'When sleep starts (solid) and baby wakes (dashed)' });
+
+			const startGrid = keys.map(k => {
+				const hourBuckets = new Array<number>(24).fill(0);
+				for (const e of byDay.get(k)!.filter(e => e.end != null)) {
+					const h = Math.floor(toDecimalHour(e.timestamp));
+					if (h >= 0 && h < 24) hourBuckets[h]++;
+				}
+				return hourBuckets;
+			});
+			const wakeGrid = keys.map(k => {
+				const hourBuckets = new Array<number>(24).fill(0);
+				for (const e of byDay.get(k)!.filter(e => e.end != null)) {
+					const h = Math.floor(toDecimalHour(e.end!));
+					if (h >= 0 && h < 24) hourBuckets[h]++;
+				}
+				return hourBuckets;
+			});
+
+			const rhythmContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderActivityProfile(rhythmContainer, startGrid, {
+				color: 'var(--color-purple)',
+				peakLabel: 'falls asleep',
+				formatValue: (v) => `${Math.round(v * 10) / 10}/hr`,
+				overlayGrid: wakeGrid,
+				overlayColor: 'var(--color-orange)',
+				overlayLabel: 'wakes',
+			});
+
+			const legend = this.el.createDiv({ cls: 'pt-chart-legend' });
+			const startItem = legend.createDiv({ cls: 'pt-legend-item' });
+			startItem.createSpan({ cls: 'pt-legend-swatch' }).style.cssText = 'background: var(--color-purple)';
+			startItem.createSpan({ text: 'Falls asleep' });
+			const wakeItem = legend.createDiv({ cls: 'pt-legend-item' });
+			wakeItem.createSpan({ cls: 'pt-legend-swatch' }).style.cssText = 'background: var(--color-orange); opacity: 0.6';
+			wakeItem.createSpan({ text: 'Wakes up' });
+		}
+
 		// ── Sleep timeline (last 3 days) ──
 		const parentEnabled = settings.sleep?.parentWindowEnabled ?? false;
 		const bed = settings.sleep?.parentBedtimeHour ?? 22;

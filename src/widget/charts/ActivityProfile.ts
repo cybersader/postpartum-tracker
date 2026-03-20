@@ -15,6 +15,12 @@ export interface ActivityProfileOptions {
 	formatAvg?: (avg: number) => string;
 	/** Format a raw value for Y-axis ticks. When provided, Y-axis labels are shown. */
 	formatValue?: (v: number) => string;
+	/** Second dataset to overlay (e.g. stop events on top of start events). */
+	overlayGrid?: number[][];
+	/** Color for the overlay curve. Default: 'var(--color-orange)'. */
+	overlayColor?: string;
+	/** Peak label for the overlay. Default: 'stops peak'. */
+	overlayLabel?: string;
 }
 
 const VIEW_W = 100;
@@ -166,7 +172,6 @@ export function renderActivityProfile(
 
 	const peakTime = formatHour(peakHour);
 	const labelText = opts.peakLabel ? `${opts.peakLabel} ${peakTime}` : `peak ${peakTime}`;
-	// Position label above the dot, shift left/right near edges
 	const anchor = peakHour >= 20 ? 'end' : peakHour <= 4 ? 'start' : 'middle';
 	svgEl('text', {
 		x: peakX, y: Math.max(peakY - 3, 4),
@@ -174,6 +179,77 @@ export function renderActivityProfile(
 		fill: color,
 		'font-weight': '600',
 	}, svg).textContent = labelText;
+
+	// ── Overlay (second dataset, e.g. stop events) ──
+	if (opts.overlayGrid && opts.overlayGrid.length > 0) {
+		const oColor = opts.overlayColor ?? 'var(--color-orange)';
+		const oNumDays = opts.overlayGrid.length;
+
+		// Average overlay hours
+		const oHourAvg = new Array<number>(24).fill(0);
+		for (const row of opts.overlayGrid) {
+			for (let h = 0; h < 24 && h < row.length; h++) {
+				oHourAvg[h] += row[h];
+			}
+		}
+		for (let h = 0; h < 24; h++) oHourAvg[h] /= oNumDays;
+
+		const oSmoothed = gaussianSmooth(oHourAvg, 2);
+		// Use SAME max as primary so both curves are comparable
+		const oMax = max;
+		const oPeakHour = oSmoothed.indexOf(Math.max(...oSmoothed));
+
+		// Overlay gradient
+		const oGradId = `pt-ap-ograd-${Math.random().toString(36).slice(2, 8)}`;
+		const oDefs = svgEl('defs', {}, svg);
+		const oGrad = svgEl('linearGradient', { id: oGradId, x1: 0, y1: 0, x2: 0, y2: 1 }, oDefs);
+		svgEl('stop', { offset: '0%', 'stop-color': oColor, 'stop-opacity': 0.25 }, oGrad);
+		svgEl('stop', { offset: '100%', 'stop-color': oColor, 'stop-opacity': 0.02 }, oGrad);
+
+		// Overlay points
+		const oPoints: [number, number][] = [];
+		for (let h = 0; h < 24; h++) {
+			const x = PLOT_LEFT + ((h + 0.5) / 24) * PLOT_W;
+			const y = PLOT_BOTTOM - (oSmoothed[h] / oMax) * PLOT_H;
+			oPoints.push([x, y]);
+		}
+
+		// Overlay area
+		const oAreaStr = [
+			`${oPoints[0][0]},${PLOT_BOTTOM}`,
+			...oPoints.map(([x, y]) => `${x},${y}`),
+			`${oPoints[23][0]},${PLOT_BOTTOM}`,
+		].join(' ');
+		svgEl('polygon', { points: oAreaStr, fill: `url(#${oGradId})` }, svg);
+
+		// Overlay line (dashed)
+		svgEl('polyline', {
+			points: oPoints.map(([x, y]) => `${x},${y}`).join(' '),
+			fill: 'none',
+			stroke: oColor,
+			'stroke-width': 0.7,
+			'stroke-dasharray': '1.5,1',
+			'stroke-linejoin': 'round',
+			'stroke-linecap': 'round',
+		}, svg);
+
+		// Overlay peak dot + label
+		const oPeakX = oPoints[oPeakHour][0];
+		const oPeakY = oPoints[oPeakHour][1];
+		svgEl('circle', { cx: oPeakX, cy: oPeakY, r: 1.2, fill: oColor }, svg);
+
+		const oPeakTime = formatHour(oPeakHour);
+		const oLabelText = opts.overlayLabel ? `${opts.overlayLabel} ${oPeakTime}` : `stops ${oPeakTime}`;
+		const oAnchor = oPeakHour >= 20 ? 'end' : oPeakHour <= 4 ? 'start' : 'middle';
+		// Offset label below primary peak to avoid collision
+		const oLabelY = Math.min(oPeakY + 4, PLOT_BOTTOM - 2);
+		svgEl('text', {
+			x: oPeakX, y: oLabelY,
+			'text-anchor': oAnchor, 'font-size': 2.8,
+			fill: oColor,
+			'font-weight': '500',
+		}, svg).textContent = oLabelText;
+	}
 
 	parent.appendChild(svg);
 }

@@ -175,6 +175,49 @@ export class FeedingAnalytics {
 			},
 		});
 
+		// ── Feeding rhythm (start/stop frequency) ──
+		{
+			this.el.createDiv({ cls: 'pt-analytics-title', text: 'Feeding rhythm' });
+			this.el.createDiv({ cls: 'pt-analytics-subtitle', text: 'When feedings start (solid) and stop (dashed) across the day' });
+
+			// Build start/stop grids
+			const startGrid = keys.map(k => {
+				const hourBuckets = new Array<number>(24).fill(0);
+				for (const e of byDay.get(k)!.filter(e => e.end !== null)) {
+					const h = Math.floor(toDecimalHour(e.start));
+					if (h >= 0 && h < 24) hourBuckets[h]++;
+				}
+				return hourBuckets;
+			});
+			const stopGrid = keys.map(k => {
+				const hourBuckets = new Array<number>(24).fill(0);
+				for (const e of byDay.get(k)!.filter(e => e.end !== null)) {
+					const h = Math.floor(toDecimalHour(e.end!));
+					if (h >= 0 && h < 24) hourBuckets[h]++;
+				}
+				return hourBuckets;
+			});
+
+			const rhythmContainer = this.el.createDiv({ cls: 'pt-chart-container' });
+			renderActivityProfile(rhythmContainer, startGrid, {
+				color: 'var(--color-blue)',
+				peakLabel: 'starts',
+				formatValue: (v) => `${Math.round(v * 10) / 10}/hr`,
+				overlayGrid: stopGrid,
+				overlayColor: 'var(--color-orange)',
+				overlayLabel: 'stops',
+			});
+
+			// Legend
+			const legend = this.el.createDiv({ cls: 'pt-chart-legend' });
+			const startItem = legend.createDiv({ cls: 'pt-legend-item' });
+			startItem.createSpan({ cls: 'pt-legend-swatch' }).style.cssText = 'background: var(--color-blue)';
+			startItem.createSpan({ text: 'Starts' });
+			const stopItem = legend.createDiv({ cls: 'pt-legend-item' });
+			stopItem.createSpan({ cls: 'pt-legend-swatch' }).style.cssText = 'background: var(--color-orange); opacity: 0.6';
+			stopItem.createSpan({ text: 'Stops' });
+		}
+
 		// ── L/R Balance bar ──
 		const allCompleted = entries.filter(e => e.end !== null && e.type !== 'bottle');
 		const recentCompleted = allCompleted.filter(e => {

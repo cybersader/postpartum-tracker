@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-03-20
+
+### Added
+
+- **Feeding rhythm chart**: New "Feeding rhythm" section in feeding analytics shows when feedings start (solid blue curve) and stop (dashed orange curve) across the 24-hour day. Gaussian-smoothed for clear pattern visibility. Reveals feeding clusters and natural schedules that volume charts miss.
+- **Sleep rhythm chart**: New "Sleep rhythm" section in sleep analytics shows when baby falls asleep (solid purple) and wakes up (dashed orange). See nap/nighttime patterns at a glance.
+- **Activity profile overlay support**: The `renderActivityProfile` chart component now supports overlaying a second dataset with different color and dashed line style. Both curves share the same Y scale for direct comparison.
+
 ## [0.25.1] - 2026-03-20
 
 ### Added
