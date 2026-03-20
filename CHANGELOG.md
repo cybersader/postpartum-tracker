@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-03-20
+
+### Added
+
+- **Auto-migrate on startup**: Plugin now automatically migrates tracker blocks to per-device format 2 seconds after Obsidian loads. No need to tap a button first.
+- **"Migrate tracker to per-device sync" command**: Manual command in command palette for immediate migration.
+
 ## [0.25.0] - 2026-03-20
 
 ### Added

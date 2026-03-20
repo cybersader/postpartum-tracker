@@ -117,6 +117,18 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			callback: () => this.restoreFromBackup(),
 		});
 
+		// Command: force migrate to multi-device
+		this.addCommand({
+			id: 'migrate-multi-device',
+			name: 'Migrate tracker to per-device sync',
+			callback: () => this.migrateToMultiDevice(),
+		});
+
+		// Auto-migrate on startup (after vault is ready)
+		this.app.workspace.onLayoutReady(() => {
+			setTimeout(() => this.migrateToMultiDevice(true), 2000);
+		});
+
 		// Add ribbon icon
 		this.addRibbonIcon('baby', 'Insert postpartum tracker', () => {
 			const activeEditor = this.app.workspace.activeEditor;
@@ -671,6 +683,78 @@ export default class PostpartumTrackerPlugin extends Plugin {
 	}
 
 	/** Find the first file with a postpartum-tracker code block and parse it. */
+	/** Migrate all tracker blocks to per-device multi-device format. */
+	async migrateToMultiDevice(silent = false): Promise<void> {
+		let migrated = 0;
+		for (const file of this.app.vault.getMarkdownFiles()) {
+			const content = await this.app.vault.cachedRead(file);
+			const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+			if (!match?.[1]) continue;
+
+			try {
+				const ref = JSON.parse(match[1].trim());
+
+				// Already multi-device
+				if (ref.multiDevice) continue;
+
+				// Has a single-file dataFile ref — migrate it
+				if (ref.dataFile) {
+					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+					const prefix = dir ? `${dir}/` : '';
+					const baseName = ref.dataFile.replace(/\.json$/, '');
+					const legacyPath = `${prefix}${ref.dataFile}`;
+					const devicePath = `${prefix}${baseName}.${this.deviceShortId}.json`;
+
+					// Copy legacy to device file if it exists
+					const legacyExists = await this.app.vault.adapter.exists(legacyPath);
+					const deviceExists = await this.app.vault.adapter.exists(devicePath);
+					if (legacyExists && !deviceExists) {
+						const data = await this.app.vault.adapter.read(legacyPath);
+						await this.app.vault.adapter.write(devicePath, data);
+					}
+
+					// Update code block ref
+					const newRef = JSON.stringify({ dataFile: baseName, multiDevice: true });
+					const newContent = content.replace(
+						/```postpartum-tracker\n[\s\S]*?\n```/,
+						`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
+					);
+					await this.app.vault.modify(file, newContent);
+					migrated++;
+					continue;
+				}
+
+				// Inline data (no dataFile) — migrate to external + multi-device
+				const data = await this.store.load(match[1].trim(), file.path);
+				const entryCount = Object.values(data.trackers).reduce(
+					(sum: number, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0 as number);
+				if (entryCount === 0 && !data.meta.babyName) continue;
+
+				const baseName = file.name.replace(/\.md$/, '.tracker');
+				const dir = file.path.substring(0, file.path.lastIndexOf('/'));
+				const prefix = dir ? `${dir}/` : '';
+				const devicePath = `${prefix}${baseName}.${this.deviceShortId}.json`;
+
+				await this.app.vault.adapter.write(devicePath, this.store.serializeForExternal(data));
+				const newRef = JSON.stringify({ dataFile: baseName, multiDevice: true });
+				const newContent = content.replace(
+					/```postpartum-tracker\n[\s\S]*?\n```/,
+					`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
+				);
+				await this.app.vault.modify(file, newContent);
+				migrated++;
+			} catch (e) {
+				if (!silent) console.warn(`Migration failed for ${file.path}`, e);
+			}
+		}
+
+		if (!silent && migrated > 0) {
+			new Notice(`Migrated ${migrated} tracker${migrated > 1 ? 's' : ''} to per-device sync.`);
+		} else if (!silent && migrated === 0) {
+			new Notice('All trackers already using per-device sync.');
+		}
+	}
+
 	/** Create a manual backup of all external tracker data files. */
 	async createManualBackup(): Promise<void> {
 		let count = 0;
