@@ -1267,8 +1267,13 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(el)
+			.setName('Device ID')
+			.setDesc(`This device: ${this.plugin.deviceShortId}. Each device writes its own file — data merges automatically. No sync conflicts.`)
+			.setDisabled(true);
+
+		new Setting(el)
 			.setName('Data storage')
-			.setDesc('External: data in a separate .tracker.json file (sync-safe, instant render). Inline: data inside the code block (legacy, may need scrolling for large datasets). Changing this migrates all trackers immediately.')
+			.setDesc('External: per-device files with auto-merge (sync-safe). Inline: JSON in code block (legacy).')
 			.addDropdown(dd => dd
 				.addOption('external', 'External file (recommended)')
 				.addOption('inline', 'Inline in code block (legacy)')

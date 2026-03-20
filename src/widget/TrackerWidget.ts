@@ -64,7 +64,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 		this.plugin = plugin;
 		this.data = data;
 		this.ctx = ctx;
-		this.store = new CodeBlockStore(plugin.app);
+		this.store = new CodeBlockStore(plugin.app, plugin.deviceShortId);
 		this.registry = plugin.registry;
 		this.settings = data.settingsOverrides
 			? deepMerge(plugin.settings, data.settingsOverrides as Record<string, unknown>)

@@ -7,6 +7,24 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-03-20
+
+### Added
+
+- **Per-device journal storage (conflict-free sync)**: Each device now writes to its own file (`note.tracker.{deviceId}.json`). No two devices ever touch the same file, making sync conflicts structurally impossible. On load, all device files are discovered and merged by entry ID with timestamp-based deduplication.
+- **Automatic merge**: Entries from all devices are unioned by unique ID. Duplicate IDs (edits) keep the version with more fields or later timestamp. Deleted entries tracked via `_deleted` array per device.
+- **Device ID**: Auto-generated UUID on first run, stored in plugin data.json (per-device, not synced). Last 8 chars shown in settings as the device identifier.
+- **Meta conflict resolution**: Baby name, layout, medication config use last-modified-wins timestamps per device file.
+
+### Changed
+
+- **Code block ref format**: Now `{"dataFile":"note.tracker","multiDevice":true}` (no .json suffix). Backwards compatible with old single-file refs.
+- **Backup directory**: Renamed from `.tracker-backups` to `.tracker-backups` using base name pattern.
+
+### Migration
+
+- First save auto-migrates: copies legacy `.tracker.json` to device-specific file, updates code block ref. Legacy file kept for other devices that haven't updated yet.
+
 ## [0.24.2] - 2026-03-18
 
 ### Fixed

@@ -5,22 +5,26 @@ import { EMPTY_DATA, DEFAULT_LAYOUT, DEFAULT_MEDICATIONS } from '../types';
 /**
  * Handles reading and writing tracker data.
  *
- * Storage strategy:
- *   - Code block contains a tiny JSON ref: {"dataFile":"name.tracker.json","ts":123}
- *   - Actual data lives in an external .tracker.json file next to the markdown
- *   - External file uses compact-per-entry format (one entry per line) for sync safety
- *   - Backwards compatible: old inline JSON is auto-migrated on first save
+ * Storage strategy (per-device journals):
+ *   - Code block: {"dataFile":"note.tracker","multiDevice":true}
+ *   - Each device writes: note.tracker.{deviceShortId}.json
+ *   - On load: read ALL note.tracker.*.json files, merge by entry ID
+ *   - No two devices ever write to the same file → sync conflicts impossible
+ *   - Backwards compatible: old single-file and inline formats auto-migrate
  */
 export class CodeBlockStore {
 	private app: App;
+	readonly deviceShortId: string;
 
-	constructor(app: App) {
+	constructor(app: App, deviceShortId: string) {
 		this.app = app;
+		this.deviceShortId = deviceShortId;
 	}
 
 	/**
-	 * Load tracker data. Handles both:
-	 *   - External file ref: {"dataFile": "x.tracker.json", "ts": N}
+	 * Load tracker data. Handles:
+	 *   - Multi-device ref: {"dataFile":"note.tracker","multiDevice":true}
+	 *   - Single-file ref: {"dataFile":"note.tracker.json","ts":N}
 	 *   - Inline data (legacy): full JSON blob in code block
 	 */
 	async load(source: string, sourcePath: string): Promise<PostpartumData> {
@@ -33,21 +37,23 @@ export class CodeBlockStore {
 			try {
 				parsed = JSON.parse(trimmed);
 			} catch (jsonErr) {
-				// Attempt recovery on corrupted inline data
 				console.warn('Postpartum Tracker: JSON parse failed, attempting recovery...', jsonErr);
 				parsed = this.attemptJsonRecovery(trimmed);
-				if (!parsed) {
-					throw jsonErr;
-				}
+				if (!parsed) throw jsonErr;
 				console.warn('Postpartum Tracker: recovery succeeded — some entries may be lost.');
 			}
 
-			// External file ref
 			if (parsed.dataFile && typeof parsed.dataFile === 'string') {
-				return await this.loadFromFile(parsed.dataFile, sourcePath);
+				if (parsed.multiDevice) {
+					return await this.loadMultiDevice(parsed.dataFile, sourcePath);
+				}
+				// Legacy single-file ref — load it, but merge with any device files too
+				return await this.loadMultiDevice(
+					parsed.dataFile.replace(/\.json$/, ''), sourcePath
+				);
 			}
 
-			// Legacy inline data
+			// Inline data
 			return this.parseData(parsed);
 		} catch (e) {
 			console.error('Postpartum Tracker: failed to load data', e);
@@ -56,7 +62,8 @@ export class CodeBlockStore {
 	}
 
 	/**
-	 * Save tracker data to external file, then update code block ref to trigger re-render.
+	 * Save tracker data to this device's journal file.
+	 * Never touches other devices' files.
 	 */
 	async save(
 		ctx: MarkdownPostProcessorContext,
@@ -80,172 +87,343 @@ export class CodeBlockStore {
 			return;
 		}
 
-		// External mode: store data in a separate .tracker.json file
-		const dataFileName = this.getDataFileName(sourcePath);
+		// Per-device external file
+		const baseName = this.getBaseName(sourcePath);
 		const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
-		const dataFilePath = dir ? `${dir}/${dataFileName}` : dataFileName;
+		const prefix = dir ? `${dir}/` : '';
+		const deviceFileName = `${baseName}.${this.deviceShortId}.json`;
+		const deviceFilePath = `${prefix}${deviceFileName}`;
 
-		// 1. Write data to external file (compact-per-entry for sync safety)
-		const dataJson = this.serializeCompactEntries(data);
+		// Stamp with device metadata for merge conflict resolution
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const fileData: any = {
+			...data,
+			_deviceId: this.deviceShortId,
+			_metaModified: Date.now(),
+			_layoutModified: Date.now(),
+			_configModified: Date.now(),
+		};
+
+		// Preserve _deleted list from previous saves
+		if ((data as any)._deleted) {
+			fileData._deleted = (data as any)._deleted;
+		}
+
+		const dataJson = this.serializeCompactEntries(fileData);
+
+		// Write to this device's file
 		try {
-			await this.app.vault.adapter.write(dataFilePath, dataJson);
+			await this.app.vault.adapter.write(deviceFilePath, dataJson);
 		} catch (e) {
-			console.error('Postpartum Tracker: failed to write data file, falling back to inline', e);
+			console.error('Postpartum Tracker: failed to write device file, falling back to inline', e);
 			await this.saveInline(file, sectionInfo, data);
 			return;
 		}
 
-		// 2. Verify the file was actually written (catch silent failures)
+		// Verify
 		try {
-			const exists = await this.app.vault.adapter.exists(dataFilePath);
+			const exists = await this.app.vault.adapter.exists(deviceFilePath);
 			if (!exists) {
-				console.error('Postpartum Tracker: data file not found after write, falling back to inline');
+				console.error('Postpartum Tracker: device file not found after write');
 				await this.saveInline(file, sectionInfo, data);
 				return;
 			}
-		} catch {
-			// If we can't verify, proceed anyway — the write likely succeeded
-		}
+		} catch { /* proceed */ }
 
-		// 3. Rolling backup (every 10th save or every 5 minutes)
-		await this.maybeWriteBackup(dataFilePath, dataJson);
+		// Backup merged data periodically
+		await this.maybeWriteBackup(prefix, baseName, dataJson);
 
-		// 4. Only update the code block ref if it doesn't already point to
-		//    this file (i.e., during initial migration from inline).
-		//    On regular saves, skip the code block update entirely — the widget
-		//    already refreshed its own DOM, so re-rendering is unnecessary and
-		//    causes scroll jumps.
+		// Migrate legacy: update code block ref to multi-device format if needed
 		await this.app.vault.process(file, (content) => {
 			const lines = content.split('\n');
 			const { lineStart, lineEnd } = sectionInfo;
 			const currentBlock = lines.slice(lineStart + 1, lineEnd).join('\n').trim();
 
-			// Check if the code block already has the right ref
 			try {
 				const existing = JSON.parse(currentBlock);
-				if (existing.dataFile === dataFileName) {
-					// Already pointing to the right file — no change needed
-					return content;
+				if (existing.multiDevice && existing.dataFile === baseName) {
+					return content; // Already correct
 				}
-			} catch { /* not valid JSON or inline data — needs migration */ }
+			} catch { /* needs migration */ }
 
-			// Migration: replace inline data with the external file ref
-			const ref = JSON.stringify({ dataFile: dataFileName, ts: Date.now() });
+			// Write multi-device ref
+			const ref = JSON.stringify({ dataFile: baseName, multiDevice: true });
 			const before = lines.slice(0, lineStart + 1);
 			const after = lines.slice(lineEnd);
 			return [...before, ref, ...after].join('\n');
 		});
+
+		// Clean up legacy single file (copy to device file if not done)
+		await this.migrateLegacyFile(prefix, baseName);
+	}
+
+	/** Public access to compact serialization for writeTrackerBlock in main.ts. */
+	serializeForExternal(data: PostpartumData): string {
+		return this.serializeCompactEntries(data);
+	}
+
+	// ── Multi-device load + merge ──
+
+	/** Load all device files and merge them. */
+	private async loadMultiDevice(baseName: string, sourcePath: string): Promise<PostpartumData> {
+		const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+		const prefix = dir ? `${dir}/` : '';
+
+		try {
+			const listing = await this.app.vault.adapter.list(dir || '/');
+			const fileNames = listing.files.map(f => f.substring(f.lastIndexOf('/') + 1));
+
+			// Match: baseName.{8hexchars}.json
+			const devicePattern = new RegExp(
+				`^${this.escapeRegex(baseName)}\\.([a-f0-9]{8})\\.json$`
+			);
+			const deviceFiles = fileNames.filter(f => devicePattern.test(f));
+
+			// Also check legacy single file
+			const legacyName = `${baseName}.json`;
+			const hasLegacy = fileNames.includes(legacyName);
+
+			// Load all
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const allSources: any[] = [];
+			for (const fn of deviceFiles) {
+				const raw = await this.loadRawFile(`${prefix}${fn}`);
+				if (raw) allSources.push(raw);
+			}
+			if (hasLegacy) {
+				const raw = await this.loadRawFile(`${prefix}${legacyName}`);
+				if (raw) allSources.push(raw);
+			}
+
+			if (allSources.length === 0) return this.makeEmpty();
+			if (allSources.length === 1) return this.parseData(allSources[0]);
+
+			return this.mergeDeviceData(allSources);
+		} catch (e) {
+			console.error('Postpartum Tracker: multi-device load failed', e);
+			return this.makeEmpty();
+		}
+	}
+
+	/** Load and parse a single JSON file, with recovery. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private async loadRawFile(filePath: string): Promise<any | null> {
+		try {
+			const exists = await this.app.vault.adapter.exists(filePath);
+			if (!exists) return null;
+			const content = await this.app.vault.adapter.read(filePath);
+			try {
+				return JSON.parse(content);
+			} catch {
+				const recovered = this.attemptJsonRecovery(content);
+				if (recovered) {
+					console.warn(`Postpartum Tracker: recovered corrupted file ${filePath}`);
+					return recovered;
+				}
+				console.error(`Postpartum Tracker: unrecoverable corruption in ${filePath}`);
+				return null;
+			}
+		} catch {
+			return null;
+		}
+	}
+
+	/** Merge data from multiple device files into a single PostpartumData. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private mergeDeviceData(sources: any[]): PostpartumData {
+		const merged = this.makeEmpty();
+
+		// Collect all _deleted IDs across all devices
+		const deletedIds = new Set<string>();
+		for (const src of sources) {
+			if (Array.isArray(src._deleted)) {
+				for (const id of src._deleted) deletedIds.add(id);
+			}
+		}
+
+		// Meta: last-modified-wins
+		let latestMeta = 0;
+		for (const src of sources) {
+			const ts = src._metaModified || 0;
+			if (ts >= latestMeta && src.meta) {
+				latestMeta = ts;
+				merged.meta = { ...src.meta };
+			}
+		}
+		// Fallback: pick first non-empty meta
+		if (!merged.meta.babyName) {
+			for (const src of sources) {
+				if (src.meta?.babyName) { merged.meta = { ...src.meta }; break; }
+			}
+		}
+
+		// Layout: last-modified-wins
+		let latestLayout = 0;
+		for (const src of sources) {
+			const ts = src._layoutModified || 0;
+			if (ts >= latestLayout && Array.isArray(src.layout) && src.layout.length > 0) {
+				latestLayout = ts;
+				merged.layout = [...src.layout];
+			}
+		}
+		// Ensure layout has defaults
+		if (merged.layout.length === 0) merged.layout = [...DEFAULT_LAYOUT];
+		const savedSet = new Set(merged.layout);
+		for (const id of DEFAULT_LAYOUT) {
+			if (!savedSet.has(id)) merged.layout.push(id);
+		}
+
+		// Tracker entries: union by ID, deduplicate, exclude deleted
+		const allTrackerKeys = new Set<string>();
+		for (const src of sources) {
+			if (src.trackers && typeof src.trackers === 'object') {
+				for (const key of Object.keys(src.trackers)) allTrackerKeys.add(key);
+			}
+		}
+
+		for (const key of allTrackerKeys) {
+			if (key === 'medicationConfig') {
+				// Config: last-modified-wins
+				let latestConfig = 0;
+				for (const src of sources) {
+					const ts = src._configModified || 0;
+					if (ts >= latestConfig && Array.isArray(src.trackers?.[key])) {
+						latestConfig = ts;
+						merged.trackers[key] = [...src.trackers[key]];
+					}
+				}
+				if (!merged.trackers[key]) merged.trackers[key] = [...DEFAULT_MEDICATIONS];
+				continue;
+			}
+
+			// Entry arrays: union by ID
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const entryMap = new Map<string, any>();
+			for (const src of sources) {
+				const arr = src.trackers?.[key];
+				if (!Array.isArray(arr)) continue;
+				for (const entry of arr) {
+					if (!entry.id) continue;
+					if (deletedIds.has(entry.id)) continue;
+
+					const existing = entryMap.get(entry.id);
+					if (!existing) {
+						entryMap.set(entry.id, entry);
+					} else {
+						// Keep the version with more fields or later timestamp
+						const existingTs = existing.start || existing.timestamp || '';
+						const newTs = entry.start || entry.timestamp || '';
+						const existingFields = Object.keys(existing).length;
+						const newFields = Object.keys(entry).length;
+						if (newFields > existingFields || (newFields === existingFields && newTs > existingTs)) {
+							entryMap.set(entry.id, entry);
+						}
+					}
+				}
+			}
+
+			// Sort by timestamp ascending
+			merged.trackers[key] = Array.from(entryMap.values()).sort((a, b) => {
+				const aT = a.start || a.timestamp || '';
+				const bT = b.start || b.timestamp || '';
+				return aT < bT ? -1 : aT > bT ? 1 : 0;
+			});
+		}
+
+		// analyticsWindows: last-modified-wins
+		for (const src of sources) {
+			if (src.analyticsWindows && typeof src.analyticsWindows === 'object') {
+				merged.analyticsWindows = { ...merged.analyticsWindows, ...src.analyticsWindows };
+			}
+		}
+
+		// settingsOverrides / logicPackId: last-modified-wins
+		let latestOverride = 0;
+		for (const src of sources) {
+			const ts = src._metaModified || 0;
+			if (ts >= latestOverride) {
+				latestOverride = ts;
+				if (src.settingsOverrides) merged.settingsOverrides = src.settingsOverrides;
+				if (src.logicPackId) merged.logicPackId = src.logicPackId;
+			}
+		}
+
+		return merged;
+	}
+
+	// ── Migration ──
+
+	/** If legacy single file exists, copy its data into the current device's file. */
+	private async migrateLegacyFile(prefix: string, baseName: string): Promise<void> {
+		const legacyPath = `${prefix}${baseName}.json`;
+		try {
+			const exists = await this.app.vault.adapter.exists(legacyPath);
+			if (!exists) return;
+
+			const devicePath = `${prefix}${baseName}.${this.deviceShortId}.json`;
+			const deviceExists = await this.app.vault.adapter.exists(devicePath);
+			if (deviceExists) return; // Already migrated
+
+			// Copy legacy to device file
+			const content = await this.app.vault.adapter.read(legacyPath);
+			await this.app.vault.adapter.write(devicePath, content);
+			console.log(`Postpartum Tracker: migrated legacy file to ${devicePath}`);
+		} catch { /* best effort */ }
 	}
 
 	// ── Backup system ──
 
 	private saveCount = 0;
 	private lastBackupTime = 0;
-	private hasBackedUp = false; // Force first backup on first save
-	private static readonly BACKUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-	private static readonly BACKUP_SAVE_INTERVAL = 10; // every 10th save
+	private hasBackedUp = false;
+	private static readonly BACKUP_INTERVAL_MS = 5 * 60 * 1000;
+	private static readonly BACKUP_SAVE_INTERVAL = 10;
 	private static readonly MAX_BACKUPS = 20;
 
-	/** Write a timestamped backup if enough time/saves have passed. */
-	private async maybeWriteBackup(dataFilePath: string, dataJson: string): Promise<void> {
+	private async maybeWriteBackup(prefix: string, baseName: string, dataJson: string): Promise<void> {
 		this.saveCount++;
 		const now = Date.now();
 		const elapsed = now - this.lastBackupTime;
 
-		// Always create a backup on the very first save of this session
 		if (this.hasBackedUp
 			&& this.saveCount < CodeBlockStore.BACKUP_SAVE_INTERVAL
 			&& elapsed < CodeBlockStore.BACKUP_INTERVAL_MS) {
 			return;
 		}
 		this.hasBackedUp = true;
-
 		this.saveCount = 0;
 		this.lastBackupTime = now;
 
 		try {
-			// Store backups next to the data file: name.tracker.backups/
-			const backupDir = dataFilePath.replace('.tracker.json', '.tracker-backups');
+			const backupDir = `${prefix}${baseName}-backups`;
 			const ts = new Date().toISOString().replace(/[:.]/g, '-');
 			const backupPath = `${backupDir}/${ts}.json`;
 
-			// Ensure backup directory exists
 			const dirExists = await this.app.vault.adapter.exists(backupDir);
-			if (!dirExists) {
-				await this.app.vault.adapter.mkdir(backupDir);
-			}
+			if (!dirExists) await this.app.vault.adapter.mkdir(backupDir);
 
-			// Write backup
 			await this.app.vault.adapter.write(backupPath, dataJson);
-
-			// Prune old backups (keep last N)
 			await this.pruneBackups(backupDir);
 		} catch (e) {
-			// Backup failure is non-critical
 			console.warn('Postpartum Tracker: backup write failed', e);
 		}
 	}
 
-	/** Remove old backups, keeping only the most recent MAX_BACKUPS. */
 	private async pruneBackups(backupDir: string): Promise<void> {
 		try {
 			const listing = await this.app.vault.adapter.list(backupDir);
-			const files = listing.files
-				.filter(f => f.endsWith('.json'))
-				.sort(); // ISO timestamps sort lexicographically
-
+			const files = listing.files.filter(f => f.endsWith('.json')).sort();
 			const excess = files.length - CodeBlockStore.MAX_BACKUPS;
 			if (excess <= 0) return;
-
 			for (let i = 0; i < excess; i++) {
 				await this.app.vault.adapter.remove(files[i]);
 			}
 		} catch { /* best effort */ }
 	}
 
-	// ── Private helpers ──
+	// ── Helpers ──
 
-	/** Load data from an external .tracker.json file. */
-	private async loadFromFile(dataFileName: string, sourcePath: string): Promise<PostpartumData> {
-		const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
-		const filePath = dir ? `${dir}/${dataFileName}` : dataFileName;
-
-		try {
-			const exists = await this.app.vault.adapter.exists(filePath);
-			if (!exists) {
-				console.error(`Postpartum Tracker: data file ${filePath} not found! Use "Restore from backup" command to recover.`);
-				return this.makeEmpty();
-			}
-
-			const content = await this.app.vault.adapter.read(filePath);
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			let parsed: any;
-			try {
-				parsed = JSON.parse(content);
-			} catch (jsonErr) {
-				// Auto-repair corrupted external file
-				console.warn('Postpartum Tracker: external file corrupted, attempting recovery...', jsonErr);
-				parsed = this.attemptJsonRecovery(content);
-				if (!parsed) {
-					console.error('Postpartum Tracker: recovery failed for', filePath);
-					return this.makeEmpty();
-				}
-				// Write repaired data back
-				try {
-					await this.app.vault.adapter.write(filePath, JSON.stringify(parsed, null, 2));
-					console.warn('Postpartum Tracker: repaired and saved', filePath);
-				} catch { /* best effort */ }
-			}
-
-			return this.parseData(parsed);
-		} catch (e) {
-			console.error(`Postpartum Tracker: failed to load ${filePath}`, e);
-			return this.makeEmpty();
-		}
-	}
-
-	/** Fallback: save data inline in the code block (old behavior). */
+	/** Fallback: save data inline in the code block. */
 	private async saveInline(
 		file: TFile,
 		sectionInfo: { lineStart: number; lineEnd: number },
@@ -261,16 +439,15 @@ export class CodeBlockStore {
 		});
 	}
 
-	/** Derive the data file name from the markdown file path. */
-	private getDataFileName(sourcePath: string): string {
+	/** Get the base name for tracker files (without .json or device suffix). */
+	private getBaseName(sourcePath: string): string {
 		const fileName = sourcePath.substring(sourcePath.lastIndexOf('/') + 1);
-		return fileName.replace(/\.md$/, '.tracker.json');
+		return fileName.replace(/\.md$/, '.tracker');
 	}
 
 	/** Parse a raw object into validated PostpartumData. */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	private parseData(parsed: any): PostpartumData {
-		// Merge saved layout with defaults: preserve all saved IDs, append missing defaults
 		let layout: string[] = [...DEFAULT_LAYOUT];
 		if (Array.isArray(parsed.layout) && parsed.layout.length > 0) {
 			const savedSet = new Set(parsed.layout as string[]);
@@ -279,21 +456,17 @@ export class CodeBlockStore {
 		}
 
 		const trackers = parsed.trackers && typeof parsed.trackers === 'object'
-			? parsed.trackers
-			: {};
+			? parsed.trackers : {};
 
-		// Build tracker data: known keys with defaults, then preserve extra keys
 		const trackerData: PostpartumData['trackers'] = {
 			feeding: Array.isArray(trackers.feeding) ? trackers.feeding : [],
 			diaper: Array.isArray(trackers.diaper) ? trackers.diaper : [],
 			medication: Array.isArray(trackers.medication) ? trackers.medication : [],
 			medicationConfig: Array.isArray(trackers.medicationConfig)
-				? trackers.medicationConfig
-				: [...DEFAULT_MEDICATIONS],
+				? trackers.medicationConfig : [...DEFAULT_MEDICATIONS],
 			logNotes: Array.isArray(trackers.logNotes) ? trackers.logNotes : [],
 		};
 
-		// Preserve arbitrary tracker keys (library trackers like sleep, pain, etc.)
 		const knownKeys = new Set(['feeding', 'diaper', 'medication', 'medicationConfig', 'logNotes', 'comments']);
 		for (const key of Object.keys(trackers)) {
 			if (!knownKeys.has(key)) {
@@ -307,30 +480,21 @@ export class CodeBlockStore {
 			layout,
 			trackers: trackerData,
 			settingsOverrides: parsed.settingsOverrides && typeof parsed.settingsOverrides === 'object'
-				? parsed.settingsOverrides
-				: undefined,
+				? parsed.settingsOverrides : undefined,
 			logicPackId: typeof parsed.logicPackId === 'string' ? parsed.logicPackId : undefined,
 			analyticsWindows: parsed.analyticsWindows && typeof parsed.analyticsWindows === 'object'
-				? parsed.analyticsWindows as Record<string, number>
-				: {},
+				? parsed.analyticsWindows as Record<string, number> : {},
 		};
-	}
-
-	/** Public access to compact serialization for writeTrackerBlock in main.ts. */
-	serializeForExternal(data: PostpartumData): string {
-		return this.serializeCompactEntries(data);
 	}
 
 	/**
 	 * Serialize data with one array entry per line.
-	 * Top-level keys get light indentation, but array elements are kept as
-	 * single-line JSON so the file stays compact for sync merges.
 	 */
-	private serializeCompactEntries(data: PostpartumData): string {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private serializeCompactEntries(data: any): string {
 		const lines: string[] = ['{'];
+		const topKeys = Object.keys(data).filter(k => data[k] !== undefined);
 
-		const topKeys = (Object.keys(data) as (keyof PostpartumData)[])
-			.filter(k => data[k] !== undefined);
 		for (let i = 0; i < topKeys.length; i++) {
 			const key = topKeys[i];
 			const val = data[key];
@@ -341,7 +505,7 @@ export class CodeBlockStore {
 				const tKeys = Object.keys(val);
 				for (let j = 0; j < tKeys.length; j++) {
 					const tk = tKeys[j];
-					const arr = (val as Record<string, unknown>)[tk];
+					const arr = val[tk];
 					const tComma = j < tKeys.length - 1 ? ',' : '';
 
 					if (Array.isArray(arr) && arr.length > 0) {
@@ -365,11 +529,7 @@ export class CodeBlockStore {
 		return lines.join('\n');
 	}
 
-	/**
-	 * Attempt to recover data from corrupted JSON (e.g. sync conflict splicing).
-	 * Strategy: find the corruption point, truncate the broken array element,
-	 * and close all open brackets/braces to produce valid JSON.
-	 */
+	/** Attempt to recover corrupted JSON. */
 	private attemptJsonRecovery(source: string): Record<string, unknown> | null {
 		let errorPos = -1;
 		try {
@@ -381,14 +541,11 @@ export class CodeBlockStore {
 		}
 		if (errorPos < 0) return null;
 
-		// Walk backwards from the error to find the last complete array element
 		let truncateAt = source.lastIndexOf('},{', errorPos);
 		if (truncateAt < 0) truncateAt = source.lastIndexOf('},\n', errorPos);
 		if (truncateAt < 0) return null;
 
 		let fixed = source.slice(0, truncateAt + 1);
-
-		// Close any open brackets/braces
 		const opens: string[] = [];
 		let inString = false;
 		let escape = false;
@@ -400,7 +557,6 @@ export class CodeBlockStore {
 			if (ch === '{' || ch === '[') opens.push(ch);
 			if (ch === '}' || ch === ']') opens.pop();
 		}
-
 		while (opens.length > 0) {
 			const open = opens.pop();
 			fixed += open === '{' ? '}' : ']';
@@ -411,6 +567,10 @@ export class CodeBlockStore {
 		} catch {
 			return null;
 		}
+	}
+
+	private escapeRegex(s: string): string {
+		return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 
 	private makeEmpty(): PostpartumData {

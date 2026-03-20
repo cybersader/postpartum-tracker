@@ -427,6 +427,8 @@ export type StorageMode = 'inline' | 'external';
 export type QuickEntryPosition = 'after-buttons' | 'before-sections' | 'hidden';
 
 export interface PostpartumTrackerSettings {
+	/** Unique device ID for per-device journal storage. Generated on first run, stored in data.json (not synced). */
+	deviceId: string;
 	/** Where to store tracker data. 'inline' = JSON in code block (legacy), 'external' = separate .tracker.json file. */
 	storageMode: StorageMode;
 	timeFormat: '12h' | '24h';
@@ -538,6 +540,7 @@ export interface LibraryTrackerOverride {
 }
 
 export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
+	deviceId: '',
 	storageMode: 'external',
 	timeFormat: '12h',
 	hapticFeedback: true,

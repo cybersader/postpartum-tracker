@@ -58,9 +58,14 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.eventListeners.get(type)!.push(listener);
 	}
 
+	/** Last 8 chars of deviceId for file naming. */
+	get deviceShortId(): string {
+		return this.settings.deviceId.slice(-8);
+	}
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
-		this.store = new CodeBlockStore(this.app);
+		this.store = new CodeBlockStore(this.app, this.deviceShortId);
 
 		// Register core tracker modules
 		this.registry.register(new FeedingTracker());
@@ -896,24 +901,44 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		return null;
 	}
 
-	/** Write updated data back to the tracker code block. */
+	/** Write updated data back to the tracker. Uses per-device file in multi-device mode. */
 	private async writeTrackerBlock(file: TFile, originalContent: string, data: PostpartumData): Promise<void> {
-		// Check if the code block uses external file storage
 		const match = originalContent.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
 		if (match?.[1]) {
 			try {
 				const ref = JSON.parse(match[1]);
 				if (ref.dataFile) {
-					// External file mode: write data to .tracker.json, update ref timestamp
 					const dir = file.path.substring(0, file.path.lastIndexOf('/'));
-					const dataPath = dir ? `${dir}/${ref.dataFile}` : ref.dataFile;
-					await this.app.vault.adapter.write(dataPath, this.store.serializeForExternal(data));
-					const newRef = JSON.stringify({ dataFile: ref.dataFile, ts: Date.now() });
-					const newContent = originalContent.replace(
-						/```postpartum-tracker\n[\s\S]*?\n```/,
-						`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
-					);
-					await this.app.vault.modify(file, newContent);
+					const prefix = dir ? `${dir}/` : '';
+
+					// Multi-device mode: write to THIS device's file
+					const baseName = ref.multiDevice
+						? ref.dataFile
+						: ref.dataFile.replace(/\.json$/, '');
+					const deviceFile = `${baseName}.${this.deviceShortId}.json`;
+					const devicePath = `${prefix}${deviceFile}`;
+
+					// Stamp with device metadata
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const fileData: any = {
+						...data,
+						_deviceId: this.deviceShortId,
+						_metaModified: Date.now(),
+						_layoutModified: Date.now(),
+						_configModified: Date.now(),
+					};
+
+					await this.app.vault.adapter.write(devicePath, this.store.serializeForExternal(fileData));
+
+					// Update ref to multi-device format if needed
+					if (!ref.multiDevice) {
+						const newRef = JSON.stringify({ dataFile: baseName, multiDevice: true });
+						const newContent = originalContent.replace(
+							/```postpartum-tracker\n[\s\S]*?\n```/,
+							`\`\`\`postpartum-tracker\n${newRef}\n\`\`\``
+						);
+						await this.app.vault.modify(file, newContent);
+					}
 					return;
 				}
 			} catch { /* not a ref, fall through to inline */ }
@@ -1140,6 +1165,17 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.settings = deepMerge(DEFAULT_SETTINGS, await this.loadData());
 		this.reconcileMedications();
 		this.migrateNotificationPreset();
+
+		// Generate device ID on first run (stored in data.json which is per-device)
+		if (!this.settings.deviceId) {
+			this.settings.deviceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+				? crypto.randomUUID()
+				: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+					const r = (Math.random() * 16) | 0;
+					return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+				});
+			await this.saveData(this.settings);
+		}
 	}
 
 	/** Migrate old single webhookPreset to per-service toggles. */
