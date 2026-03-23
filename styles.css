@@ -2280,3 +2280,60 @@
 .pt-window-pill:not(.pt-window-pill--active):hover {
 	background: var(--background-modifier-hover);
 }
+
+/* --- Full History Section --- */
+.pt-full-history-empty {
+	font-size: 0.85rem;
+	color: var(--text-faint);
+	font-style: italic;
+	padding: 8px 0;
+}
+.pt-full-history-day {
+	margin-bottom: 12px;
+}
+.pt-full-history-day-header {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 4px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 4px;
+}
+.pt-full-history-day-label {
+	font-weight: 700;
+	font-size: 0.85rem;
+	color: var(--text-normal);
+}
+.pt-full-history-day-counts {
+	font-size: 0.75rem;
+	color: var(--text-muted);
+}
+.pt-full-history-entries {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.pt-full-history-entry {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	font-size: 0.8rem;
+	padding: 2px 0;
+}
+.pt-full-history-time {
+	color: var(--text-muted);
+	font-size: 0.75rem;
+	min-width: 55px;
+	font-variant-numeric: tabular-nums;
+}
+.pt-full-history-icon {
+	font-size: 0.8rem;
+	flex-shrink: 0;
+}
+.pt-full-history-text {
+	color: var(--text-normal);
+}
+.pt-full-history-subtext {
+	color: var(--text-faint);
+	font-size: 0.75rem;
+}

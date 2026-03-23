@@ -9,6 +9,7 @@ import { QuickActions } from './QuickActions';
 import { DailySummary, type SummaryCard } from './DailySummary';
 import { AlertsPanel } from './AlertsPanel';
 import { EventHistorySection } from './EventHistorySection';
+import { FullHistorySection } from './FullHistorySection';
 import { QuickEntrySection } from './QuickEntrySection';
 import { InlineEditPanel, type EditField } from './shared/InlineEditPanel';
 import { deepMerge } from '../utils/deepMerge';
@@ -46,6 +47,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 	private quickActions!: QuickActions;
 	private alertsPanel!: AlertsPanel;
 	private eventHistory: EventHistorySection | null = null;
+	private fullHistory: FullHistorySection | null = null;
 	private sectionsContainer!: HTMLElement;
 	private sectionCollapsibles: Map<string, CollapsibleSection> = new Map();
 
@@ -166,6 +168,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		// Event history is now a first-class section inside sectionsContainer (see buildSections)
 		this.eventHistory = null;
+		this.fullHistory = null;
 
 		// Initialize all modules with their data and build UI
 		this.initializeModules();
@@ -174,6 +177,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 		this.updateDailySummary();
 		this.updateAlerts();
 		this.updateEventHistory();
+		this.updateFullHistory();
 	}
 
 	/** Render the baby info bar at the top of the widget. */
@@ -332,6 +336,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 	}
 
 	private static readonly HISTORY_ID = 'event-history';
+	private static readonly FULL_HISTORY_ID = 'full-history';
 	private static readonly ANALYTICS_IDS: Record<string, string> = {
 		'feeding-analytics': 'Feeding analytics',
 		'sleep-analytics': 'Sleep analytics',
@@ -356,6 +361,11 @@ export class TrackerWidget extends MarkdownRenderChild {
 			this.data.layout.push(TrackerWidget.HISTORY_ID);
 		}
 
+		// Ensure full-history is in the layout if enabled
+		if (this.settings.showFullHistory && !this.data.layout.includes(TrackerWidget.FULL_HISTORY_ID)) {
+			this.data.layout.push(TrackerWidget.FULL_HISTORY_ID);
+		}
+
 		// Ensure enabled analytics sections are in the layout
 		const enabledAnalytics = this.settings.enabledAnalytics || [];
 		for (const aId of enabledAnalytics) {
@@ -366,6 +376,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 		const activeLayout = this.data.layout.filter(id => {
 			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			if (id === TrackerWidget.FULL_HISTORY_ID) return this.settings.showFullHistory;
 			if (id in TrackerWidget.ANALYTICS_IDS) return enabledAnalytics.includes(id);
 			return this.settings.enabledModules.includes(id);
 		});
@@ -394,6 +405,28 @@ export class TrackerWidget extends MarkdownRenderChild {
 
 				this.eventHistory = new EventHistorySection(
 					collapsible.getBodyEl(), this.registry, this.settings, () => this.save(), this.plugin.app
+				);
+				continue;
+			}
+
+			// Full history — day-by-day breakdown going back N days
+			if (itemId === TrackerWidget.FULL_HISTORY_ID) {
+				const days = this.settings.fullHistoryDays ?? 7;
+				const collapsible = new CollapsibleSection(
+					this.sectionsContainer,
+					`Full history (${days}d)`,
+					TrackerWidget.FULL_HISTORY_ID,
+					false
+				);
+				collapsible.enableMove(
+					() => this.moveSection(TrackerWidget.FULL_HISTORY_ID, -1),
+					() => this.moveSection(TrackerWidget.FULL_HISTORY_ID, 1)
+				);
+				collapsible.enableDrag((dir) => this.moveSection(TrackerWidget.FULL_HISTORY_ID, dir));
+				this.sectionCollapsibles.set(TrackerWidget.FULL_HISTORY_ID, collapsible);
+
+				this.fullHistory = new FullHistorySection(
+					collapsible.getBodyEl(), this.registry, this.settings
 				);
 				continue;
 			}
@@ -599,6 +632,10 @@ export class TrackerWidget extends MarkdownRenderChild {
 		if (this.eventHistory) this.eventHistory.refresh();
 	}
 
+	private updateFullHistory(): void {
+		if (this.fullHistory) this.fullHistory.refresh();
+	}
+
 	/** Resolve the effective analytics window (days) for a given module. */
 	private getAnalyticsWindow(analyticsId: string): number {
 		const perModule = this.data.analyticsWindows?.[analyticsId];
@@ -785,6 +822,7 @@ export class TrackerWidget extends MarkdownRenderChild {
 		const enabledAnalytics = this.settings.enabledAnalytics || [];
 		const activeLayout = this.data.layout.filter(id => {
 			if (id === TrackerWidget.HISTORY_ID) return this.settings.showEventHistory;
+			if (id === TrackerWidget.FULL_HISTORY_ID) return this.settings.showFullHistory;
 			if (id in TrackerWidget.ANALYTICS_IDS) return enabledAnalytics.includes(id);
 			return this.settings.enabledModules.includes(id);
 		});

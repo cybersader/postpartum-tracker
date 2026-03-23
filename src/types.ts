@@ -462,6 +462,10 @@ export interface PostpartumTrackerSettings {
 	entryWindowHours: number;
 	/** Show the unified event history feed below the module sections. */
 	showEventHistory: boolean;
+	/** Show extended history module with full day-by-day breakdown. Off by default. */
+	showFullHistory: boolean;
+	/** How many days back the full history shows. Default 7. */
+	fullHistoryDays: number;
 
 	/** Which analytics modules are enabled (layout IDs: 'feeding-analytics', etc.) */
 	enabledAnalytics: string[];
@@ -561,6 +565,8 @@ export const DEFAULT_SETTINGS: PostpartumTrackerSettings = {
 	enableDebugLog: false,
 	entryWindowHours: 24,
 	showEventHistory: true,
+	showFullHistory: false,
+	fullHistoryDays: 7,
 	enabledAnalytics: [],
 	analyticsWindowDays: 7,
 	chartSize: 'normal',

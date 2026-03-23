@@ -1368,6 +1368,32 @@ export class PostpartumTrackerSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(el)
+			.setName('Full history')
+			.setDesc('Show a day-by-day breakdown of ALL entries going back multiple days. Useful for verifying data across devices.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showFullHistory ?? false)
+				.onChange(async (value) => {
+					this.plugin.settings.showFullHistory = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
+			.setName('Full history days')
+			.setDesc('How many days back the full history section shows.')
+			.addDropdown(dd => dd
+				.addOption('3', '3 days')
+				.addOption('7', '7 days')
+				.addOption('14', '14 days')
+				.addOption('30', '30 days')
+				.setValue(String(this.plugin.settings.fullHistoryDays ?? 7))
+				.onChange(async (value) => {
+					this.plugin.settings.fullHistoryDays = parseInt(value);
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(el)
 			.setName('Haptic feedback')
 			.setDesc('Vibrate on button presses (mobile only).')
 			.addToggle(toggle => toggle

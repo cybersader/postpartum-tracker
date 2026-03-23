@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.5] - 2026-03-23
+
+### Added
+
+- **Full history module**: New collapsible section showing ALL entries grouped by day, going back 3/7/14/30 days. Each day shows entry count summary and chronological list with timestamps, icons, and details. Off by default — enable in Settings → "Full history" toggle. Useful for verifying data across devices and finding missing entries.
+
 ## [0.26.4] - 2026-03-23
 
 ### Fixed
