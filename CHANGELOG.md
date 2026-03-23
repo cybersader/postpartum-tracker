@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.4] - 2026-03-23
+
+### Fixed
+
+- **Bare numeric times work anywhere in input**: "620 wet diaper", "wet diaper 620", "1230 nap" — 3-4 digit numbers are now recognized as times even without "at" prefix or am/pm suffix. Won't false-match durations (20min), volumes (4oz), or dosages (500mg).
+
 ## [0.26.3] - 2026-03-23
 
 ### Fixed

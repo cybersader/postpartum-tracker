@@ -577,9 +577,9 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		if (parsed) return buildDate(parsed).toISOString();
 	}
 
-	// Bare numeric/dot time without "at" but with digits that look like a time: "620", "6.20"
-	// Only match if it looks like a time (3-4 digits or digit.digit pattern) and not a duration
-	const bareTimeMatch = lower.match(/\b(\d{1,2}\.\d{2})\b/);
+	// Bare numeric/dot time without "at": "620", "6.20", "1230", "0620"
+	// Match 3-4 digit numbers or digit.digit that aren't followed by duration units
+	const bareTimeMatch = lower.match(/\b(\d{1,2}\.\d{2}|\d{3,4})\b(?!\s*(?:m(?:in|l)|h(?:r|our)|oz|mg|am|pm|ago))/i);
 	if (bareTimeMatch) {
 		const parsed = parseTimeStr(bareTimeMatch[1]);
 		if (parsed) return buildDate(parsed).toISOString();
