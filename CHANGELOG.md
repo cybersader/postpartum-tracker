@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.26.3] - 2026-03-23
+
+### Fixed
+
+- **Flexible time formats**: NLP now parses `6:20pm`, `6.20pm`, `620pm`, `0620`, `6.20`, `620`, `6 20` — all resolve correctly. Dot, space, and colon separators all work. Zero-padded times (0620) work.
+- **"now" keyword**: "slept from 620 until now", "fed left from 3pm to now" — "now" resolves to the current time. Works in both time ranges and standalone.
+- **Range patterns expanded**: Time range detection now matches all the flexible formats including dot-separated and bare numeric times within range expressions.
+
 ## [0.26.2] - 2026-03-20
 
 ### Fixed

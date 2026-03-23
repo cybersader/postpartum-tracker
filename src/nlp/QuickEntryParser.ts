@@ -353,12 +353,16 @@ function extractDuration(tokens: string[], lower: string): DurationResult | null
 	return { ms: totalMs, label: parts.join(' ') };
 }
 
-/** Parse a bare numeric time like "1230" → {h:12, m:30} or "130" → {h:1, m:30} */
+/**
+ * Parse a bare numeric/dotted time into {h, m}.
+ * Handles: "1230", "130", "0620", "6.20", "6 20", "620"
+ */
 function parseBareTime(s: string): { h: number; m: number } | null {
-	const n = parseInt(s, 10);
+	// Normalize: replace dots/spaces with nothing, treat as HHMM or HMM
+	const cleaned = s.replace(/[.\s]/g, '');
+	const n = parseInt(cleaned, 10);
 	if (isNaN(n) || n < 0) return null;
-	if (s.length === 3 || s.length === 4) {
-		// 130 → 1:30, 1230 → 12:30
+	if (cleaned.length >= 3 && cleaned.length <= 4) {
 		const m = n % 100;
 		const h = Math.floor(n / 100);
 		if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { h, m };
@@ -366,20 +370,54 @@ function parseBareTime(s: string): { h: number; m: number } | null {
 	return null;
 }
 
-/** Parse a time string that may be "3pm", "3:30pm", "1430", "1230", or bare "130" */
+/**
+ * Parse a time string into {h, m}. Handles many formats:
+ * "3pm", "3:30pm", "6:20pm", "6.20pm", "620pm", "14:30",
+ * "1430", "1230", "130", "0620", "6.20", "6 20"
+ */
 function parseTimeStr(s: string): { h: number; m: number } | null {
 	s = s.trim();
-	// "3pm", "3:30pm", "14:30"
-	const clockMatch = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
-	if (clockMatch) {
-		let h = parseInt(clockMatch[1], 10);
-		const m = parseInt(clockMatch[2] || '0', 10);
-		const ampm = clockMatch[3]?.toLowerCase();
+
+	// "now" → current time
+	if (s.toLowerCase() === 'now') {
+		const d = new Date();
+		return { h: d.getHours(), m: d.getMinutes() };
+	}
+
+	// With colon or dot separator + optional am/pm: "6:20pm", "6.20pm", "14:30"
+	const sepMatch = s.match(/^(\d{1,2})[:.]\s*(\d{2})\s*(am|pm)?$/i);
+	if (sepMatch) {
+		let h = parseInt(sepMatch[1], 10);
+		const m = parseInt(sepMatch[2], 10);
+		const ampm = sepMatch[3]?.toLowerCase();
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
-		return { h, m };
+		if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { h, m };
 	}
-	// Bare numeric: "1230", "130"
+
+	// Bare digits + am/pm: "620pm", "1230am"
+	const bareAmPm = s.match(/^(\d{3,4})\s*(am|pm)$/i);
+	if (bareAmPm) {
+		const parsed = parseBareTime(bareAmPm[1]);
+		if (parsed) {
+			const ampm = bareAmPm[2].toLowerCase();
+			if (ampm === 'pm' && parsed.h < 12) parsed.h += 12;
+			if (ampm === 'am' && parsed.h === 12) parsed.h = 0;
+			return parsed;
+		}
+	}
+
+	// Hour only + am/pm: "3pm", "12am"
+	const hourOnly = s.match(/^(\d{1,2})\s*(am|pm)$/i);
+	if (hourOnly) {
+		let h = parseInt(hourOnly[1], 10);
+		const ampm = hourOnly[2].toLowerCase();
+		if (ampm === 'pm' && h < 12) h += 12;
+		if (ampm === 'am' && h === 12) h = 0;
+		return { h, m: 0 };
+	}
+
+	// Bare numeric/dotted: "1230", "130", "0620", "6.20", "6 20"
 	return parseBareTime(s);
 }
 
@@ -398,19 +436,21 @@ interface TimeRange { start: string; end: string; durationMs: number; }
 /**
  * Extract a time range from patterns like:
  *   "started at 1230 woke up at 130"
- *   "from 12:30 to 1:30"
- *   "12:30am-1:30am"
+ *   "from 12:30 to 1:30", "from 6.20 to now"
+ *   "12:30am-1:30am", "620pm-now"
  *   "slept 1230 to 130"
  */
 function extractTimeRange(lower: string): TimeRange | null {
-	// Pattern: "started at X ... (woke up|ended|stopped|until|to|til|-) Y"
+	// Time token pattern: matches "6:20pm", "6.20pm", "620", "0620", "1230", "3pm", "now"
+	const T = `(?:now|\\d{1,2}[.:]\s*\\d{2}\\s*(?:am|pm)?|\\d{3,4}\\s*(?:am|pm)?|\\d{1,2}\\s*(?:am|pm))`;
+
 	const rangePatterns = [
-		// "started at 1230 woke up at 130"
-		/(?:started?|began?|from)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+(?:woke\s+up|ended?|stopped?|until|to|til|-)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
-		// "from X to Y" / "X to Y" / "X-Y"
-		/(?:from\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:to|-|til|until|thru)\s*(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
-		// "woke up at Y" with "at X" earlier
-		/(?:at\s+)(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?).*?(?:woke\s+up|ended?|stopped?)\s+(?:at\s+)?(\d{3,4}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+		// "started at X woke up at Y", "from X ended Y"
+		new RegExp(`(?:started?|began?|from)\\s+(?:at\\s+)?(${T})\\s+(?:woke\\s+up|ended?|stopped?|until|to|til|-)\\s+(?:at\\s+)?(${T})`, 'i'),
+		// "from X to Y" / "X to Y" / "X-Y" / "X til now"
+		new RegExp(`(?:from\\s+)?(${T})\\s*(?:to|-|til|until|thru)\\s*(${T})`, 'i'),
+		// "at X ... woke up at Y"
+		new RegExp(`(?:at\\s+)(${T}).*?(?:woke\\s+up|ended?|stopped?)\\s+(?:at\\s+)?(${T})`, 'i'),
 	];
 
 	for (const pattern of rangePatterns) {
@@ -421,39 +461,43 @@ function extractTimeRange(lower: string): TimeRange | null {
 		const endTime = parseTimeStr(match[2]);
 		if (!startTime || !endTime) continue;
 
-		// Check if either time has explicit AM/PM
+		const isEndNow = match[2].trim().toLowerCase() === 'now';
 		const startHasAmPm = /am|pm/i.test(match[1]);
 		const endHasAmPm = /am|pm/i.test(match[2]);
 
 		// Resolve start to the most recent past occurrence
 		const startDate = buildDate(startTime);
 
-		// For the end time, try multiple interpretations and pick the best one
-		const candidates: Date[] = [];
+		let endDate: Date;
+		if (isEndNow) {
+			// "now" = current time, no ambiguity
+			endDate = new Date();
+		} else {
+			// Try multiple interpretations and pick the shortest positive duration
+			const candidates: Date[] = [];
 
-		// Candidate 1: end time as-is on the same day as start
-		const endSameDay = new Date(startDate);
-		endSameDay.setHours(endTime.h, endTime.m, 0, 0);
-		if (endSameDay.getTime() > startDate.getTime()) candidates.push(endSameDay);
+			// Candidate 1: end time as-is on the same day as start
+			const endSameDay = new Date(startDate);
+			endSameDay.setHours(endTime.h, endTime.m, 0, 0);
+			if (endSameDay.getTime() > startDate.getTime()) candidates.push(endSameDay);
 
-		// Candidate 2: if no AM/PM on end, try adding 12h (PM interpretation)
-		if (!endHasAmPm && endTime.h < 12) {
-			const endPm = new Date(startDate);
-			endPm.setHours(endTime.h + 12, endTime.m, 0, 0);
-			if (endPm.getTime() > startDate.getTime()) candidates.push(endPm);
+			// Candidate 2: if no AM/PM on end, try adding 12h (PM interpretation)
+			if (!endHasAmPm && endTime.h < 12) {
+				const endPm = new Date(startDate);
+				endPm.setHours(endTime.h + 12, endTime.m, 0, 0);
+				if (endPm.getTime() > startDate.getTime()) candidates.push(endPm);
+			}
+
+			// Candidate 3: next day (for overnight ranges like 11pm to 2am)
+			const endNextDay = new Date(startDate);
+			endNextDay.setDate(endNextDay.getDate() + 1);
+			endNextDay.setHours(endTime.h, endTime.m, 0, 0);
+			if (endNextDay.getTime() > startDate.getTime()) candidates.push(endNextDay);
+
+			if (candidates.length === 0) continue;
+			candidates.sort((a, b) => (a.getTime() - startDate.getTime()) - (b.getTime() - startDate.getTime()));
+			endDate = candidates[0];
 		}
-
-		// Candidate 3: next day (for overnight ranges like 11pm to 2am)
-		const endNextDay = new Date(startDate);
-		endNextDay.setDate(endNextDay.getDate() + 1);
-		endNextDay.setHours(endTime.h, endTime.m, 0, 0);
-		if (endNextDay.getTime() > startDate.getTime()) candidates.push(endNextDay);
-
-		if (candidates.length === 0) continue;
-
-		// Pick the candidate with the shortest positive duration (most likely intent)
-		candidates.sort((a, b) => (a.getTime() - startDate.getTime()) - (b.getTime() - startDate.getTime()));
-		const endDate = candidates[0];
 
 		const durationMs = endDate.getTime() - startDate.getTime();
 		// Sanity: skip if duration > 24h or negative
@@ -489,8 +533,23 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		return new Date(Date.now() - 86400000).toISOString();
 	}
 
-	// "at 3pm", "at 3:30pm", "at 14:30", or bare "3pm", "2:30pm"
-	// The "at" prefix is optional — "3pm" alone works too
+	// "now" → current time
+	if (/\bnow\b/.test(lower)) {
+		return new Date().toISOString();
+	}
+
+	// Time with colon/dot separator + am/pm: "6:20pm", "6.20pm", "at 6:20pm"
+	const sepTimeMatch = lower.match(/(?:at\s+)?(\d{1,2})[.:]\s*(\d{2})\s*(am|pm)/i);
+	if (sepTimeMatch) {
+		let h = parseInt(sepTimeMatch[1], 10);
+		const m = parseInt(sepTimeMatch[2], 10);
+		const ampm = sepTimeMatch[3].toLowerCase();
+		if (ampm === 'pm' && h < 12) h += 12;
+		if (ampm === 'am' && h === 12) h = 0;
+		return buildDate({ h, m }).toISOString();
+	}
+
+	// "at 3pm", "3pm", "at 3:30pm", "at 14:30" — hour with optional minutes + optional am/pm
 	const atMatch = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
 		|| lower.match(/at\s+(\d{1,2})(?::(\d{2}))?(?:\s*(am|pm))?/i);
 	if (atMatch) {
@@ -499,15 +558,7 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		const ampm = atMatch[3]?.toLowerCase();
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
-		// For "at 14:30" (no am/pm), h is already 24h format
-
-		const d = new Date();
-		d.setHours(h, m, 0, 0);
-		// If the parsed time is in the future, assume the user means yesterday
-		if (d.getTime() > Date.now()) {
-			d.setDate(d.getDate() - 1);
-		}
-		return d.toISOString();
+		return buildDate({ h, m }).toISOString();
 	}
 
 	// "30 min ago", "2 hours ago"
@@ -519,13 +570,19 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		return new Date(Date.now() - ms).toISOString();
 	}
 
-	// Bare numeric time: "at 1230" → 12:30
-	const bareMatch = lower.match(/at\s+(\d{3,4})(?!\s*(?:am|pm))/i);
-	if (bareMatch) {
-		const parsed = parseBareTime(bareMatch[1]);
-		if (parsed) {
-			return buildDate(parsed).toISOString();
-		}
+	// Bare numeric/dot time with "at": "at 1230", "at 6.20", "at 620"
+	const bareAtMatch = lower.match(/at\s+(\d{1,2}[.:]\s*\d{2}|\d{3,4})(?!\s*(?:am|pm))/i);
+	if (bareAtMatch) {
+		const parsed = parseTimeStr(bareAtMatch[1]);
+		if (parsed) return buildDate(parsed).toISOString();
+	}
+
+	// Bare numeric/dot time without "at" but with digits that look like a time: "620", "6.20"
+	// Only match if it looks like a time (3-4 digits or digit.digit pattern) and not a duration
+	const bareTimeMatch = lower.match(/\b(\d{1,2}\.\d{2})\b/);
+	if (bareTimeMatch) {
+		const parsed = parseTimeStr(bareTimeMatch[1]);
+		if (parsed) return buildDate(parsed).toISOString();
 	}
 
 	return null;
