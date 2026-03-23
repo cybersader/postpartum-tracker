@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-03-23
+
+### Fixed
+
+- **Critical: all devices had the same device ID**: `deviceId` was stored in `data.json` which Obsidian Sync copies across devices, giving every device the same UUID. Moved to `localStorage` (like TaskNotes plugin's DeviceIdentityManager pattern) — localStorage is per-device and never synced. Each device now gets a truly unique ID on first run after this update.
+- **Data safe**: The old shared device file (`tracker.f9e3e5a3.json`) stays in place and is readable by merge. After updating, each device creates its OWN new file on first save. All existing entries are preserved through merge-on-read.
+
 ## [0.26.5] - 2026-03-23
 
 ### Added

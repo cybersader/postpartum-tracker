@@ -60,7 +60,23 @@ export default class PostpartumTrackerPlugin extends Plugin {
 
 	/** Last 8 chars of deviceId for file naming. */
 	get deviceShortId(): string {
-		return this.settings.deviceId.slice(-8);
+		return this.getDeviceId().slice(-8);
+	}
+
+	/** Get device ID from localStorage (per-device, never synced). */
+	private getDeviceId(): string {
+		const STORAGE_KEY = 'postpartum-tracker-device-id';
+		let id = localStorage.getItem(STORAGE_KEY);
+		if (!id) {
+			id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+				? crypto.randomUUID()
+				: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+					const r = (Math.random() * 16) | 0;
+					return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+				});
+			localStorage.setItem(STORAGE_KEY, id);
+		}
+		return id;
 	}
 
 	async onload(): Promise<void> {
@@ -1250,16 +1266,8 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		this.reconcileMedications();
 		this.migrateNotificationPreset();
 
-		// Generate device ID on first run (stored in data.json which is per-device)
-		if (!this.settings.deviceId) {
-			this.settings.deviceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-				? crypto.randomUUID()
-				: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-					const r = (Math.random() * 16) | 0;
-					return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-				});
-			await this.saveData(this.settings);
-		}
+		// Device ID is now in localStorage (per-device, never synced).
+		// The old data.json deviceId is ignored — each device gets its own via getDeviceId().
 	}
 
 	/** Migrate old single webhookPreset to per-service toggles. */
