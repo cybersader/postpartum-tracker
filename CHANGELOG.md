@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-03-24
+
+### Fixed
+
+- **"230 am" now parses as 2:30 AM**: Bare digit times with a space before am/pm (e.g. "230 am", "1230 pm", "530 pm") are now recognized. Works in both standalone times and range expressions.
+
 ## [0.27.0] - 2026-03-23
 
 ### Fixed

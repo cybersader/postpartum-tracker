@@ -549,6 +549,18 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		return buildDate({ h, m }).toISOString();
 	}
 
+	// Bare digits + am/pm with space: "230 am", "1230 pm", "230am", "1230pm"
+	const bareAmPmMatch = lower.match(/(?:at\s+)?(\d{3,4})\s*(am|pm)/i);
+	if (bareAmPmMatch) {
+		const parsed = parseBareTime(bareAmPmMatch[1]);
+		if (parsed) {
+			const ampm = bareAmPmMatch[2].toLowerCase();
+			if (ampm === 'pm' && parsed.h < 12) parsed.h += 12;
+			if (ampm === 'am' && parsed.h === 12) parsed.h = 0;
+			return buildDate(parsed).toISOString();
+		}
+	}
+
 	// "at 3pm", "3pm", "at 3:30pm", "at 14:30" — hour with optional minutes + optional am/pm
 	const atMatch = lower.match(/(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i)
 		|| lower.match(/at\s+(\d{1,2})(?::(\d{2}))?(?:\s*(am|pm))?/i);
