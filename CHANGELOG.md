@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-03-25
+
+### Added
+
+- **Auto-refresh on synced data**: Widget now watches for changes to `.tracker.*.json` files. When another device's data syncs in via Obsidian Sync, the widget automatically reloads and re-merges all device files within ~1 second. No more clicking the code block to force a re-render.
+- **Anti-loop protection**: Own saves are tracked for 3 seconds so the file watcher doesn't trigger a reload loop when this device saves.
+- **Debounced refresh**: Multiple file changes within 1 second are batched into a single reload.
+
 ## [0.27.1] - 2026-03-24
 
 ### Fixed

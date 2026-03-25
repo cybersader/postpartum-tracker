@@ -15,10 +15,22 @@ import { EMPTY_DATA, DEFAULT_LAYOUT, DEFAULT_MEDICATIONS } from '../types';
 export class CodeBlockStore {
 	private app: App;
 	readonly deviceShortId: string;
+	private recentSavePaths = new Set<string>();
 
 	constructor(app: App, deviceShortId: string) {
 		this.app = app;
 		this.deviceShortId = deviceShortId;
+	}
+
+	/** Check if a path was recently written by this device (to avoid reload loops). */
+	isOwnRecentSave(path: string): boolean {
+		return this.recentSavePaths.has(path);
+	}
+
+	/** Mark a path as recently saved by this device. Auto-clears after 3s. */
+	private markOwnSave(path: string): void {
+		this.recentSavePaths.add(path);
+		setTimeout(() => this.recentSavePaths.delete(path), 3000);
 	}
 
 	/**
@@ -112,6 +124,7 @@ export class CodeBlockStore {
 		const dataJson = this.serializeCompactEntries(fileData);
 
 		// Write to this device's file
+		this.markOwnSave(deviceFilePath);
 		try {
 			await this.app.vault.adapter.write(deviceFilePath, dataJson);
 		} catch (e) {

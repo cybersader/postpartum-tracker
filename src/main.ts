@@ -114,6 +114,15 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			}
 		);
 
+		// Watch for external tracker file changes (synced from other devices)
+		this.registerEvent(
+			this.app.vault.on('modify', (file) => {
+				if (file instanceof TFile && /\.tracker\.[a-f0-9]{8}\.json$/.test(file.path)) {
+					this.onTrackerFileChanged(file);
+				}
+			})
+		);
+
 		// Command: insert a new postpartum tracker code block
 		this.addCommand({
 			id: 'insert-postpartum-tracker',
@@ -897,6 +906,25 @@ export default class PostpartumTrackerPlugin extends Plugin {
 		if (migrated > 0 && targetMode === 'external') {
 			await this.createManualBackup();
 		}
+	}
+
+	// ── File watcher for multi-device sync ──
+
+	private refreshDebounce: ReturnType<typeof setTimeout> | null = null;
+
+	/** Called when a .tracker.{deviceId}.json file is modified (possibly by sync). */
+	private onTrackerFileChanged(file: TFile): void {
+		// Skip our own saves to prevent reload loops
+		if (this.store.isOwnRecentSave(file.path)) return;
+
+		// Debounce: multiple files may sync at once
+		if (this.refreshDebounce) clearTimeout(this.refreshDebounce);
+		this.refreshDebounce = setTimeout(() => {
+			this.refreshDebounce = null;
+			for (const widget of this.activeWidgets) {
+				widget.reloadData();
+			}
+		}, 1000);
 	}
 
 	/** Let user pick a backup and restore it as the active data. */

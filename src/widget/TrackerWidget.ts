@@ -1,4 +1,4 @@
-import { MarkdownRenderChild, MarkdownPostProcessorContext } from 'obsidian';
+import { MarkdownRenderChild, MarkdownPostProcessorContext, TFile } from 'obsidian';
 import type { PostpartumData, PostpartumTrackerSettings, HealthAlert } from '../types';
 import type { TrackerModule } from '../trackers/BaseTracker';
 import { CodeBlockStore } from '../data/CodeBlockStore';
@@ -108,6 +108,32 @@ export class TrackerWidget extends MarkdownRenderChild {
 	 * Refresh the widget in-place: re-read settings and rebuild the entire UI
 	 * without rewriting the code block JSON. Called when plugin settings change.
 	 */
+	/**
+	 * Reload data from disk (all device files), re-merge, and update UI sections.
+	 * Called by the file watcher when an external device file syncs in.
+	 * Does NOT rebuild the full DOM — just re-reads data and refreshes data-driven sections.
+	 */
+	async reloadData(): Promise<void> {
+		const file = this.plugin.app.vault.getAbstractFileByPath(this.ctx.sourcePath);
+		if (!(file instanceof TFile)) return;
+
+		const content = await this.plugin.app.vault.cachedRead(file);
+		const match = content.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+		if (!match?.[1]) return;
+
+		const newData = await this.store.load(match[1], this.ctx.sourcePath);
+
+		// Update in-memory data and re-initialize modules
+		this.data = newData;
+		this.initializeModules();
+
+		// Refresh data-driven UI sections (no scroll jump — layout stays intact)
+		this.updateDailySummary();
+		this.updateAlerts();
+		this.updateEventHistory();
+		this.updateFullHistory();
+	}
+
 	refresh(): void {
 		// Re-merge settings (global may have changed)
 		this.settings = this.data.settingsOverrides
