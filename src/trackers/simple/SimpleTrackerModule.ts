@@ -983,9 +983,24 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			notes: (data.notes as string) || '',
 		};
 
-		// Map duration if provided
-		if (data.durationMs) {
+		// Map explicit end timestamp (from NLP time ranges)
+		if (data.endTimestamp) {
+			entry.end = data.endTimestamp as string;
+			entry.durationSec = Math.round(
+				(new Date(entry.end).getTime() - new Date(ts).getTime()) / 1000
+			);
+		}
+		// Map duration if provided (calculates end from start + duration)
+		else if (data.durationMs) {
 			entry.end = new Date(new Date(ts).getTime() + (data.durationMs as number)).toISOString();
+			entry.durationSec = Math.round((data.durationMs as number) / 1000);
+		}
+
+		// Map string fields (type, location, etc.) from NLP data
+		for (const f of this.def.fields) {
+			if (data[f.key] !== undefined) {
+				entry.fields[f.key] = data[f.key] as string | number | boolean;
+			}
 		}
 
 		// Map value/unit to first matching field

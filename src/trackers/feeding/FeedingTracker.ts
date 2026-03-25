@@ -697,13 +697,22 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 
 	addEntry(data: Record<string, unknown>): void {
 		const start = (data.timestamp as string) || new Date().toISOString();
-		const end = data.durationMs
-			? new Date(new Date(start).getTime() + (data.durationMs as number)).toISOString()
-			: start;
+		// Use explicit endTimestamp (from NLP range) or compute from duration
+		const end = data.endTimestamp
+			? (data.endTimestamp as string)
+			: data.durationMs
+				? new Date(new Date(start).getTime() + (data.durationMs as number)).toISOString()
+				: start;
+		const durationSec = data.endTimestamp
+			? Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000)
+			: data.durationMs
+				? Math.round((data.durationMs as number) / 1000)
+				: undefined;
 		const entry: FeedingEntry = {
 			id: generateId(),
 			start,
 			end,
+			durationSec,
 			side: (data.side as 'left' | 'right' | 'both') || undefined,
 			type: (data.type as 'breast' | 'bottle') || 'breast',
 			notes: (data.notes as string) || '',

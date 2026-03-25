@@ -7,6 +7,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-03-25
+
+### Fixed
+
+- **NLP entries now save correctly**: `addEntry()` on SimpleTrackerModule (sleep, hiccups, etc.) and FeedingTracker now properly handles NLP-parsed data:
+  - `endTimestamp` from time ranges is used directly instead of being ignored
+  - `durationSec` is calculated and stored (was missing, causing entries to show no duration)
+  - String fields like `type` (nap/night) and `location` are mapped to the entry's fields
+  - Feeding entries also get `durationSec` set from NLP data
+- **Regex escaping fix**: Fixed inconsistent `\s` escaping in time range token pattern (harmless in practice but technically wrong).
+
 ## [0.27.2] - 2026-03-25
 
 ### Added

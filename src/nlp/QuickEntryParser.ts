@@ -442,7 +442,7 @@ interface TimeRange { start: string; end: string; durationMs: number; }
  */
 function extractTimeRange(lower: string): TimeRange | null {
 	// Time token pattern: matches "6:20pm", "6.20pm", "620", "0620", "1230", "3pm", "now"
-	const T = `(?:now|\\d{1,2}[.:]\s*\\d{2}\\s*(?:am|pm)?|\\d{3,4}\\s*(?:am|pm)?|\\d{1,2}\\s*(?:am|pm))`;
+	const T = `(?:now|\\d{1,2}[.:]\\s*\\d{2}\\s*(?:am|pm)?|\\d{3,4}\\s*(?:am|pm)?|\\d{1,2}\\s*(?:am|pm))`;
 
 	const rangePatterns = [
 		// "started at X woke up at Y", "from X ended Y"
