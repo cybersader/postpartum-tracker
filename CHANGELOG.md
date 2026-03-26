@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-03-26
+
+### Fixed
+
+- **Bare times resolve to most proximate past**: "433" at 4:55 PM now resolves to 4:33 PM instead of 4:33 AM. When no AM/PM is specified and the hour is < 12, both AM and PM interpretations are tried and the one closest to now (without being in the future) is picked. Explicit AM/PM is always respected.
+
+### Added
+
+- **Average time between feeds**: New insight in feeding analytics showing the average gap between feeding sessions across the analytics window (e.g. "Avg time between feeds: 2h 15m"). Skips overnight gaps > 12h to avoid skewing the average.
+
 ## [0.27.3] - 2026-03-25
 
 ### Fixed

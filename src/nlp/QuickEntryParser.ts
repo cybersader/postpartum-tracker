@@ -421,14 +421,34 @@ function parseTimeStr(s: string): { h: number; m: number } | null {
 	return parseBareTime(s);
 }
 
-/** Build a Date from {h, m}, assuming today. If in the future, assume yesterday. */
-function buildDate(hm: { h: number; m: number }): Date {
-	const d = new Date();
-	d.setHours(hm.h, hm.m, 0, 0);
-	if (d.getTime() > Date.now()) {
-		d.setDate(d.getDate() - 1);
+/**
+ * Build a Date from {h, m}, resolving to the most proximate past time.
+ * If h < 12 and no AM/PM was specified, tries both AM and PM and picks
+ * whichever is closest to now without being in the future.
+ * e.g. at 4:55 PM: {h:4, m:33} → 4:33 PM today (not 4:33 AM)
+ */
+function buildDate(hm: { h: number; m: number }, hasAmPm = false): Date {
+	const now = Date.now();
+
+	// If AM/PM was explicit, just use the time directly
+	if (hasAmPm || hm.h >= 12) {
+		const d = new Date();
+		d.setHours(hm.h, hm.m, 0, 0);
+		if (d.getTime() > now) d.setDate(d.getDate() - 1);
+		return d;
 	}
-	return d;
+
+	// No AM/PM and h < 12: try both AM and PM, pick most proximate past
+	const am = new Date();
+	am.setHours(hm.h, hm.m, 0, 0);
+	if (am.getTime() > now) am.setDate(am.getDate() - 1);
+
+	const pm = new Date();
+	pm.setHours(hm.h + 12, hm.m, 0, 0);
+	if (pm.getTime() > now) pm.setDate(pm.getDate() - 1);
+
+	// Pick whichever is more recent (closer to now)
+	return pm.getTime() > am.getTime() ? pm : am;
 }
 
 interface TimeRange { start: string; end: string; durationMs: number; }
@@ -465,8 +485,8 @@ function extractTimeRange(lower: string): TimeRange | null {
 		const startHasAmPm = /am|pm/i.test(match[1]);
 		const endHasAmPm = /am|pm/i.test(match[2]);
 
-		// Resolve start to the most recent past occurrence
-		const startDate = buildDate(startTime);
+		// Resolve start to the most proximate past occurrence
+		const startDate = buildDate(startTime, startHasAmPm);
 
 		let endDate: Date;
 		if (isEndNow) {
@@ -546,7 +566,7 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		const ampm = sepTimeMatch[3].toLowerCase();
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
-		return buildDate({ h, m }).toISOString();
+		return buildDate({ h, m }, true).toISOString();
 	}
 
 	// Bare digits + am/pm with space: "230 am", "1230 pm", "230am", "1230pm"
@@ -557,7 +577,7 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 			const ampm = bareAmPmMatch[2].toLowerCase();
 			if (ampm === 'pm' && parsed.h < 12) parsed.h += 12;
 			if (ampm === 'am' && parsed.h === 12) parsed.h = 0;
-			return buildDate(parsed).toISOString();
+			return buildDate(parsed, true).toISOString();
 		}
 	}
 
@@ -570,7 +590,7 @@ function extractTimeModifier(_tokens: string[], lower: string): string | null {
 		const ampm = atMatch[3]?.toLowerCase();
 		if (ampm === 'pm' && h < 12) h += 12;
 		if (ampm === 'am' && h === 12) h = 0;
-		return buildDate({ h, m }).toISOString();
+		return buildDate({ h, m }, !!ampm).toISOString();
 	}
 
 	// "30 min ago", "2 hours ago"

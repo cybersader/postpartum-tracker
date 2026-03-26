@@ -315,6 +315,31 @@ export class FeedingAnalytics {
 			addInsight(insightsEl, `Longest gap today: ${gapH}h ${gapM}m`, 'neutral');
 		}
 
+		// Average time between feeds (across all days in window)
+		if (allSessions.length >= 2) {
+			const sorted = [...allSessions].sort(
+				(a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+			);
+			let totalGap = 0;
+			let gapCount = 0;
+			for (let i = 1; i < sorted.length; i++) {
+				const prevEnd = sorted[i - 1].end;
+				if (!prevEnd) continue;
+				const gap = new Date(sorted[i].start).getTime() - new Date(prevEnd).getTime();
+				if (gap > 0 && gap < 12 * 3600000) { // skip gaps > 12h (overnight)
+					totalGap += gap;
+					gapCount++;
+				}
+			}
+			if (gapCount > 0) {
+				const avgGapMs = totalGap / gapCount;
+				const avgH = Math.floor(avgGapMs / 3600000);
+				const avgM = Math.round((avgGapMs % 3600000) / 60000);
+				const label = avgH > 0 ? `${avgH}h ${avgM}m` : `${avgM}m`;
+				addInsight(insightsEl, `Avg time between feeds: ${label}`, 'neutral');
+			}
+		}
+
 		// Next side suggestion (uses last session's last side)
 		const lastSession = allSessions[allSessions.length - 1];
 		if (lastSession?.lastSide) {
