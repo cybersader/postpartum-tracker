@@ -16,6 +16,8 @@ export class QuickActions {
 	private timerColor: string | null;
 	private buttonEls: Map<string, HTMLButtonElement> = new Map();
 	private btnRow: HTMLElement | null = null;
+	/** Debounce guard: prevent duplicate handler calls within 600ms. */
+	private lastActionTime = 0;
 
 	// Clock / past-time state
 	private clockActive = false;
@@ -172,10 +174,19 @@ export class QuickActions {
 		let pressTimer: ReturnType<typeof setTimeout> | null = null;
 		let longPressed = false;
 		const LONG_PRESS_MS = 500;
+		const ACTION_DEBOUNCE_MS = 600;
+
+		const guardedHandler = () => {
+			const now = Date.now();
+			if (now - this.lastActionTime < ACTION_DEBOUNCE_MS) return;
+			this.lastActionTime = now;
+			handler();
+		};
 
 		el.addEventListener('pointerdown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
+			e.stopImmediatePropagation();
 			longPressed = false;
 			if (longPressHandler) {
 				pressTimer = setTimeout(() => {
@@ -196,9 +207,10 @@ export class QuickActions {
 		el.addEventListener('pointerup', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
+			e.stopImmediatePropagation();
 			if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 			handledByPointer = true;
-			if (!longPressed) handler();
+			if (!longPressed) guardedHandler();
 			setTimeout(() => { handledByPointer = false; longPressed = false; }, 400);
 		});
 		el.addEventListener('pointercancel', () => {
@@ -208,7 +220,7 @@ export class QuickActions {
 		// Fallback for non-pointer environments (keyboard, accessibility)
 		el.addEventListener('click', (e) => {
 			e.stopPropagation();
-			if (!handledByPointer && !longPressed) handler();
+			if (!handledByPointer && !longPressed) guardedHandler();
 		});
 	}
 }

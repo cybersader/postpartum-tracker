@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.27.5] - 2026-03-27
+
+### Fixed
+
+- **Button flickering / multiple clicks required**: The root cause was `vault.process()` being called on EVERY save even when the code block ref was already correct. This always triggered an Obsidian re-render, destroying and recreating the widget. Now reads the file first and only calls `vault.process()` when the ref actually needs migration. After migration, saves never touch the markdown file.
+- **Queued phantom clicks**: Added 600ms debounce guard on quick action buttons. If CodeMirror ate the first click but the handler still fired, subsequent clicks within 600ms are ignored. Prevents duplicate entries from rapid re-clicking.
+- **Better event isolation**: Added `stopImmediatePropagation()` to `pointerdown` and `pointerup` handlers (was only `stopPropagation`). This prevents CodeMirror's capture-phase handlers from intercepting the events.
+
 ## [0.27.4] - 2026-03-26
 
 ### Fixed

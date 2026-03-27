@@ -146,25 +146,32 @@ export class CodeBlockStore {
 		// Backup merged data periodically
 		await this.maybeWriteBackup(prefix, baseName, dataJson);
 
-		// Migrate legacy: update code block ref to multi-device format if needed
-		await this.app.vault.process(file, (content) => {
-			const lines = content.split('\n');
-			const { lineStart, lineEnd } = sectionInfo;
-			const currentBlock = lines.slice(lineStart + 1, lineEnd).join('\n').trim();
-
+		// Migrate legacy: update code block ref to multi-device format if needed.
+		// IMPORTANT: Only call vault.process() if the ref actually needs changing.
+		// vault.process() always triggers a file write even if content is unchanged,
+		// which causes Obsidian to re-render the code block (destroying the widget).
+		const fileContent = await this.app.vault.read(file);
+		const blockMatch = fileContent.match(/```postpartum-tracker\n([\s\S]*?)\n```/);
+		let needsMigration = true;
+		if (blockMatch?.[1]) {
 			try {
-				const existing = JSON.parse(currentBlock);
+				const existing = JSON.parse(blockMatch[1].trim());
 				if (existing.multiDevice && existing.dataFile === baseName) {
-					return content; // Already correct
+					needsMigration = false;
 				}
 			} catch { /* needs migration */ }
+		}
 
-			// Write multi-device ref
-			const ref = JSON.stringify({ dataFile: baseName, multiDevice: true });
-			const before = lines.slice(0, lineStart + 1);
-			const after = lines.slice(lineEnd);
-			return [...before, ref, ...after].join('\n');
-		});
+		if (needsMigration) {
+			await this.app.vault.process(file, (content) => {
+				const lines = content.split('\n');
+				const { lineStart, lineEnd } = sectionInfo;
+				const ref = JSON.stringify({ dataFile: baseName, multiDevice: true });
+				const before = lines.slice(0, lineStart + 1);
+				const after = lines.slice(lineEnd);
+				return [...before, ref, ...after].join('\n');
+			});
+		}
 
 		// Clean up legacy single file (copy to device file if not done)
 		await this.migrateLegacyFile(prefix, baseName);
