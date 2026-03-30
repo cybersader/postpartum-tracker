@@ -7,6 +7,29 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-03-30
+
+### Added
+
+- **Deep diaper analytics**: Now matches feeding/sleep depth with:
+  - Hour × day heatmap (weekly collapse for long windows)
+  - Change frequency by hour (activity profile with interval labels)
+  - Wet vs dirty rhythm chart (overlaid blue/yellow curves with legend)
+  - 3 sparklines: total changes/day, wet/day, dirty/day trends
+  - Busiest/quietest 3-hour window insights
+  - Average time between changes
+  - Wet/dirty ratio percentage
+  - Stool color progression (inline colored dots with context labels)
+
+- **"Didn't sleep" NLP subtraction**: Say "didn't sleep from 2am to 3am" or "didn't sleep past 30 min" or "awake from 230 to now" and the plugin finds the overlapping sleep entry and trims/splits it:
+  - **Trim end**: "didn't sleep past 30 min" removes 30m from the end of the most recent sleep
+  - **Trim start**: subtraction covers the beginning of an entry
+  - **Split**: "didn't sleep from 2am to 3am" splits a sleep entry into two pieces (before 2am + after 3am)
+  - **Delete**: subtraction covers the entire entry
+  - Keywords: "didn't sleep", "didnt sleep", "did not sleep", "wasn't sleeping", "awake", "woke up for"
+  - Preview shows: Action (Subtract), duration removed, time range
+  - Works with all time formats (bare digits, dots, am/pm, "now")
+
 ## [0.27.5] - 2026-03-27
 
 ### Fixed

@@ -1015,4 +1015,88 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 		this.refreshUI();
 		this.save?.();
 	}
+
+	/**
+	 * Subtract time from an existing entry. Handles 4 cases:
+	 * - Trim end: subtraction starts inside entry, extends past end
+	 * - Trim start: subtraction covers start, ends inside entry
+	 * - Split: subtraction is fully inside entry → two entries
+	 * - Delete: subtraction covers entire entry
+	 */
+	subtractEntry(data: Record<string, unknown>): void {
+		let subtractStart: number;
+		let subtractEnd: number;
+
+		if (data.timestamp && data.endTimestamp) {
+			// Explicit range: "didn't sleep from 2am to 3am"
+			subtractStart = new Date(data.timestamp as string).getTime();
+			subtractEnd = new Date(data.endTimestamp as string).getTime();
+		} else if (data.durationMs) {
+			// Duration from end: "didn't sleep past 30 min"
+			// Find most recent completed entry and trim from its end
+			const recent = [...this.entries]
+				.filter(e => e.end != null)
+				.sort((a, b) => new Date(b.end!).getTime() - new Date(a.end!).getTime())[0];
+			if (!recent?.end) return;
+			subtractEnd = new Date(recent.end).getTime();
+			subtractStart = subtractEnd - (data.durationMs as number);
+		} else {
+			return;
+		}
+
+		if (subtractStart >= subtractEnd) return;
+
+		// Find overlapping entries
+		const toRemove: string[] = [];
+		const toAdd: SimpleTrackerEntry[] = [];
+
+		for (const entry of this.entries) {
+			const entryStart = new Date(entry.timestamp).getTime();
+			const entryEnd = entry.end ? new Date(entry.end).getTime() : null;
+			if (entryEnd === null) continue; // Skip active timers
+
+			// Check overlap
+			if (entryStart >= subtractEnd || entryEnd <= subtractStart) continue; // No overlap
+
+			if (subtractStart <= entryStart && subtractEnd >= entryEnd) {
+				// Case 4: Delete — subtraction covers entire entry
+				toRemove.push(entry.id);
+			} else if (subtractStart > entryStart && subtractEnd < entryEnd) {
+				// Case 3: Split — subtraction is fully inside entry
+				// Shorten original to end at subtractStart
+				entry.end = new Date(subtractStart).toISOString();
+				entry.durationSec = Math.round((subtractStart - entryStart) / 1000);
+				// Create new entry from subtractEnd to original end
+				toAdd.push({
+					id: generateId(),
+					timestamp: new Date(subtractEnd).toISOString(),
+					end: new Date(entryEnd).toISOString(),
+					durationSec: Math.round((entryEnd - subtractEnd) / 1000),
+					fields: { ...entry.fields },
+					notes: entry.notes,
+				});
+			} else if (subtractStart <= entryStart) {
+				// Case 2: Trim start — subtraction covers beginning
+				entry.timestamp = new Date(subtractEnd).toISOString();
+				entry.durationSec = Math.round((entryEnd - subtractEnd) / 1000);
+			} else {
+				// Case 1: Trim end — subtraction covers end
+				entry.end = new Date(subtractStart).toISOString();
+				entry.durationSec = Math.round((subtractStart - entryStart) / 1000);
+			}
+		}
+
+		// Apply removals
+		if (toRemove.length > 0) {
+			this.entries = this.entries.filter(e => !toRemove.includes(e.id));
+		}
+
+		// Apply additions (from splits)
+		for (const e of toAdd) this.entries.push(e);
+
+		// Re-sort and refresh
+		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+		this.refreshUI();
+		this.save?.();
+	}
 }

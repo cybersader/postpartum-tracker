@@ -161,6 +161,25 @@ export class QuickEntrySection {
 			row.createSpan({ cls: 'pt-quick-entry-field-value', text: value });
 		};
 
+		// Subtraction action
+		if (d.action === 'subtract') {
+			addField('Action', 'Subtract from sleep');
+			if (d.durationMs) {
+				const min = Math.round(Number(d.durationMs) / 60000);
+				const h = Math.floor(min / 60);
+				const m = min % 60;
+				addField('Remove', h > 0 ? `${h}h ${m}m` : `${m}m`);
+			}
+			// Show time range if both timestamps present
+			if (d.timestamp && d.endTimestamp) {
+				const fmt = this.settings.timeFormat;
+				const startStr = formatTime(d.timestamp as string, fmt);
+				const endStr = formatTime(d.endTimestamp as string, fmt);
+				addField('From', `${startStr} → ${endStr}`);
+			}
+			return;
+		}
+
 		switch (parsed.moduleId) {
 			case 'feeding': {
 				if (d.type) addField('Type', String(d.type));
@@ -239,8 +258,9 @@ export class QuickEntrySection {
 		const module = this.registry.get(parsed.moduleId);
 		if (!module) return;
 
-		// Route through addEntry if available
-		if (module.addEntry) {
+		if (parsed.data.action === 'subtract' && module.subtractEntry) {
+			module.subtractEntry(parsed.data);
+		} else if (module.addEntry) {
 			module.addEntry(parsed.data);
 		}
 

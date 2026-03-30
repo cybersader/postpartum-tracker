@@ -30,6 +30,7 @@ export class QuickEntryParser {
 			this.tryFeeding(tokens, lower, text) ||
 			this.tryDiaper(tokens, lower) ||
 			this.tryMedication(tokens, lower, text) ||
+			this.tryDidntSleep(tokens, lower) ||
 			this.trySleep(tokens, lower) ||
 			this.trySimpleTracker(tokens, lower) ||
 			this.tryComment(text)
@@ -201,6 +202,61 @@ export class QuickEntryParser {
 			summary,
 			data,
 			confidence: matchedMed ? 'high' : 'low',
+		};
+	}
+
+	// ── Didn't Sleep (subtraction) ──
+
+	private tryDidntSleep(tokens: string[], lower: string): ParsedEntry | null {
+		// Match negation patterns
+		const negPatterns = [
+			/didn'?t\s+sleep/, /did\s+not\s+sleep/, /wasn'?t\s+sleeping/,
+			/no\s+sleep/, /woke\s+up\s+for/, /\bawake\b/,
+		];
+		if (!negPatterns.some(p => p.test(lower))) return null;
+		if (!this.enabledModuleIds.has('sleep')) return null;
+
+		const data: Record<string, unknown> = { action: 'subtract' };
+		const parts: string[] = [];
+
+		// Try time range: "didn't sleep from 2am to 3am"
+		const range = extractTimeRange(lower);
+		if (range) {
+			data.timestamp = range.start;
+			data.endTimestamp = range.end;
+			data.durationMs = range.durationMs;
+			const min = Math.round(range.durationMs / 60000);
+			const h = Math.floor(min / 60);
+			const m = min % 60;
+			parts.push(`Remove ${h > 0 ? `${h}h ${m}m` : `${m}m`}`);
+		} else {
+			// Try duration: "didn't sleep past 30 min"
+			const dur = extractDuration(tokens, lower);
+			if (dur) {
+				data.durationMs = dur.ms;
+				parts.push(`Remove last ${dur.label}`);
+			} else {
+				// Try single time to now: "awake since 230"
+				const time = extractTimeModifier(tokens, lower);
+				if (time) {
+					data.timestamp = time;
+					data.endTimestamp = new Date().toISOString();
+					data.durationMs = Date.now() - new Date(time).getTime();
+					const min = Math.round((data.durationMs as number) / 60000);
+					const h = Math.floor(min / 60);
+					const m = min % 60;
+					parts.push(`Remove ${h > 0 ? `${h}h ${m}m` : `${m}m`}`);
+				} else {
+					return null; // No time info to work with
+				}
+			}
+		}
+
+		return {
+			moduleId: 'sleep',
+			summary: parts[0] || 'Remove sleep time',
+			data,
+			confidence: range ? 'high' : 'medium',
 		};
 	}
 

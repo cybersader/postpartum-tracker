@@ -112,6 +112,12 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 	addEntry?(data: Record<string, unknown>): void;
 
 	/**
+	 * Subtract time from an existing entry (trim, split, or delete).
+	 * Used by NLP "didn't sleep" patterns.
+	 */
+	subtractEntry?(data: Record<string, unknown>): void;
+
+	/**
 	 * Clean up any resources (timers, event listeners).
 	 */
 	destroy?(): void;
