@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-03-31
+
+### Added
+
+- **Offset + duration subtraction**: "30 min ago awake for 20 min" now correctly computes the awake window (30 min ago → 10 min ago) and subtracts it from the overlapping sleep entry. Also handles reverse phrasing ("awake 20 min ago for 15 min") and natural language ("1 hour ago she was awake for 30 minutes").
+- **"past" duration to now**: "awake for the past 20 minutes" or "didn't sleep past 20 min" now explicitly creates a range from 20 min ago to now (instead of just trimming from end of most recent entry).
+
 ## [0.28.0] - 2026-03-30
 
 ### Added

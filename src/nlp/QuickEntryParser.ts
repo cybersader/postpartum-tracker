@@ -229,12 +229,29 @@ export class QuickEntryParser {
 			const h = Math.floor(min / 60);
 			const m = min % 60;
 			parts.push(`Remove ${h > 0 ? `${h}h ${m}m` : `${m}m`}`);
+		}
+		// Try offset + duration: "30 min ago awake for 20 min", "awake 20 min ago for 15 min"
+		else if (this.tryOffsetDuration(lower, data, parts)) {
+			// handled
 		} else {
-			// Try duration: "didn't sleep past 30 min"
+			// Try duration: "didn't sleep past 30 min", "awake for past 20 min"
 			const dur = extractDuration(tokens, lower);
 			if (dur) {
-				data.durationMs = dur.ms;
-				parts.push(`Remove last ${dur.label}`);
+				// Check if "past" is present — means "from N min ago to now"
+				if (/\bpast\b/.test(lower)) {
+					const endTs = new Date();
+					const startTs = new Date(endTs.getTime() - dur.ms);
+					data.timestamp = startTs.toISOString();
+					data.endTimestamp = endTs.toISOString();
+					data.durationMs = dur.ms;
+					const min = Math.round(dur.ms / 60000);
+					const h = Math.floor(min / 60);
+					const m = min % 60;
+					parts.push(`Remove ${h > 0 ? `${h}h ${m}m` : `${m}m`} (to now)`);
+				} else {
+					data.durationMs = dur.ms;
+					parts.push(`Remove last ${dur.label}`);
+				}
 			} else {
 				// Try single time to now: "awake since 230"
 				const time = extractTimeModifier(tokens, lower);
@@ -258,6 +275,73 @@ export class QuickEntryParser {
 			data,
 			confidence: range ? 'high' : 'medium',
 		};
+	}
+
+	/**
+	 * Parse "30 min ago awake for 20 min" or "awake 20 min ago for 15 min".
+	 * Offset = when the awake period started (relative to now).
+	 * Duration = how long they were awake.
+	 * Awake range = (now - offset) to (now - offset + duration).
+	 */
+	private tryOffsetDuration(
+		lower: string,
+		data: Record<string, unknown>,
+		parts: string[]
+	): boolean {
+		// Pattern: "<N> <unit> ago ... for <M> <unit>"
+		const match = lower.match(
+			/(\d+(?:\.\d+)?)\s*(h(?:ours?|r)?|m(?:in(?:utes?)?)?)\s+ago\b.*?\bfor\s+(\d+(?:\.\d+)?)\s*(h(?:ours?|r)?|m(?:in(?:utes?)?)?)/i
+		);
+		if (!match) {
+			// Try reverse: "for <M> <unit> ... <N> <unit> ago"
+			const rev = lower.match(
+				/\bfor\s+(\d+(?:\.\d+)?)\s*(h(?:ours?|r)?|m(?:in(?:utes?)?)?)\b.*?(\d+(?:\.\d+)?)\s*(h(?:ours?|r)?|m(?:in(?:utes?)?)?)\s+ago/i
+			);
+			if (!rev) return false;
+			// In reverse pattern: group 1-2 = duration, group 3-4 = offset
+			return this.applyOffsetDuration(
+				parseFloat(rev[3]), rev[4],
+				parseFloat(rev[1]), rev[2],
+				data, parts
+			);
+		}
+		// In forward pattern: group 1-2 = offset, group 3-4 = duration
+		return this.applyOffsetDuration(
+			parseFloat(match[1]), match[2],
+			parseFloat(match[3]), match[4],
+			data, parts
+		);
+	}
+
+	private applyOffsetDuration(
+		offsetVal: number, offsetUnit: string,
+		durVal: number, durUnit: string,
+		data: Record<string, unknown>,
+		parts: string[]
+	): boolean {
+		const offsetMs = offsetUnit.toLowerCase().startsWith('h')
+			? offsetVal * 3600000 : offsetVal * 60000;
+		const durMs = durUnit.toLowerCase().startsWith('h')
+			? durVal * 3600000 : durVal * 60000;
+
+		const awakeStart = new Date(Date.now() - offsetMs);
+		const awakeEnd = new Date(awakeStart.getTime() + durMs);
+
+		// Don't allow end in the future
+		const now = Date.now();
+		if (awakeEnd.getTime() > now) {
+			awakeEnd.setTime(now);
+		}
+
+		data.timestamp = awakeStart.toISOString();
+		data.endTimestamp = awakeEnd.toISOString();
+		data.durationMs = awakeEnd.getTime() - awakeStart.getTime();
+
+		const min = Math.round((data.durationMs as number) / 60000);
+		const h = Math.floor(min / 60);
+		const m = min % 60;
+		parts.push(`Remove ${h > 0 ? `${h}h ${m}m` : `${m}m`}`);
+		return true;
 	}
 
 	// ── Sleep ──
