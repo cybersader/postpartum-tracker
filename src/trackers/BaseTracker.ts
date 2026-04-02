@@ -118,6 +118,11 @@ export interface TrackerModule<TEntry = unknown, TStats = unknown> {
 	subtractEntry?(data: Record<string, unknown>): void;
 
 	/**
+	 * Stop the active timer at a given time. Used by NLP "stopped sleeping", "woke up".
+	 */
+	stopActiveTimer?(data: Record<string, unknown>): void;
+
+	/**
 	 * Clean up any resources (timers, event listeners).
 	 */
 	destroy?(): void;

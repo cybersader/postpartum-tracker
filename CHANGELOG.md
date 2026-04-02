@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-04-02
+
+### Added
+
+- **NLP start/stop timer control**: Start and stop sleep timers via text input:
+  - **Start**: "started sleeping 15 min ago", "started nap at 3pm", "fell asleep at 830pm", "put her to sleep 20 min ago" → creates active timer entry (`end: null`) with retroactive start time
+  - **Stop**: "stopped sleeping just now", "stopped sleeping 15 min ago", "woke up at 3am", "done napping" → finds active sleep entry, sets end time, calculates duration
+  - Preview shows action (Start/Stop), type (nap/night), and resolved time
+  - "woke up" without "for" = stop timer; "woke up for 20 min" = subtraction (existing behavior preserved)
+
 ## [0.28.1] - 2026-03-31
 
 ### Added

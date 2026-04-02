@@ -347,7 +347,7 @@ export class QuickEntryParser {
 	// ── Sleep ──
 
 	private trySleep(tokens: string[], lower: string): ParsedEntry | null {
-		const keywords = ['slept', 'sleep', 'nap', 'napped', 'asleep', 'woke', 'started'];
+		const keywords = ['slept', 'sleep', 'nap', 'napped', 'asleep', 'woke', 'started', 'stopped', 'fell', 'done'];
 		if (!keywords.some(k => tokens.includes(k))) return null;
 		if (!this.enabledModuleIds.has('sleep')) return null;
 
@@ -362,6 +362,48 @@ export class QuickEntryParser {
 			data.type = 'night';
 		}
 
+		// ── Start timer patterns: "started sleeping 15 min ago", "fell asleep at 3pm" ──
+		const startPatterns = [
+			/started?\s+(?:sleeping|nap(?:ping)?|sleep)/, /fell\s+asleep/,
+			/put\s+(?:her|him|baby|down)\s+to\s+sleep/,
+		];
+		if (startPatterns.some(p => p.test(lower))) {
+			data.startTimer = true;
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
+
+			const typeLabel = data.type === 'nap' ? 'Start nap' : 'Start sleep';
+			return {
+				moduleId: 'sleep',
+				summary: time ? typeLabel : `${typeLabel} now`,
+				data,
+				confidence: 'high',
+			};
+		}
+
+		// ── Stop timer patterns: "stopped sleeping", "woke up at 3am", "done napping" ──
+		const stopPatterns = [
+			/stopped?\s+(?:sleeping|nap(?:ping)?|sleep)/,
+			/done\s+(?:sleeping|nap(?:ping)?|sleep)/,
+			/no\s+longer\s+(?:sleeping|asleep|nap(?:ping)?)/,
+		];
+		// "woke up" WITHOUT "for" (which is subtraction, handled by tryDidntSleep)
+		const isWokeUp = /woke\s+up/.test(lower) && !/woke\s+up\s+for/.test(lower);
+
+		if (stopPatterns.some(p => p.test(lower)) || isWokeUp) {
+			data.stopTimer = true;
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
+
+			return {
+				moduleId: 'sleep',
+				summary: time ? 'Stop sleep timer' : 'Stop sleep timer now',
+				data,
+				confidence: 'high',
+			};
+		}
+
+		// ── Regular completed sleep entry ──
 		const typeLabel = data.type === 'nap' ? 'Napped' : data.type === 'night' ? 'Night sleep' : 'Slept';
 		const parts: string[] = [typeLabel];
 

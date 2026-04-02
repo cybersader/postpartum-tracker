@@ -983,8 +983,13 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 			notes: (data.notes as string) || '',
 		};
 
+		// Start active timer (no end — will be stopped later)
+		if (data.startTimer) {
+			entry.end = null;
+			// Don't set durationSec — computed live by tick()
+		}
 		// Map explicit end timestamp (from NLP time ranges)
-		if (data.endTimestamp) {
+		else if (data.endTimestamp) {
 			entry.end = data.endTimestamp as string;
 			entry.durationSec = Math.round(
 				(new Date(entry.end).getTime() - new Date(ts).getTime()) / 1000
@@ -1012,6 +1017,24 @@ export class SimpleTrackerModule implements TrackerModule<SimpleTrackerEntry, Si
 		this.entries.push(entry);
 		this.entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 		this.emitEvent?.({ type: 'simple-logged', entry, module: this.id });
+		this.refreshUI();
+		this.save?.();
+	}
+
+	/**
+	 * Stop the active timer at a given time. Used by NLP "stopped sleeping", "woke up".
+	 */
+	stopActiveTimer(data: Record<string, unknown>): void {
+		const active = this.entries.find(e => e.end === null);
+		if (!active) return;
+
+		const stopTime = (data.timestamp as string) || new Date().toISOString();
+		active.end = stopTime;
+		active.durationSec = Math.round(
+			(new Date(stopTime).getTime() - new Date(active.timestamp).getTime()) / 1000
+		);
+
+		this.emitEvent?.({ type: 'simple-logged', entry: active, module: this.id });
 		this.refreshUI();
 		this.save?.();
 	}

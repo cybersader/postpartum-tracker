@@ -180,6 +180,27 @@ export class QuickEntrySection {
 			return;
 		}
 
+		// Start/stop timer actions
+		if (d.startTimer) {
+			addField('Action', 'Start sleep timer');
+			if (d.type) addField('Type', String(d.type));
+			if (d.timestamp) {
+				addField('Start at', formatTime(d.timestamp as string, this.settings.timeFormat));
+			} else {
+				addField('Start at', 'Now');
+			}
+			return;
+		}
+		if (d.stopTimer) {
+			addField('Action', 'Stop sleep timer');
+			if (d.timestamp) {
+				addField('Stop at', formatTime(d.timestamp as string, this.settings.timeFormat));
+			} else {
+				addField('Stop at', 'Now');
+			}
+			return;
+		}
+
 		switch (parsed.moduleId) {
 			case 'feeding': {
 				if (d.type) addField('Type', String(d.type));
@@ -258,7 +279,9 @@ export class QuickEntrySection {
 		const module = this.registry.get(parsed.moduleId);
 		if (!module) return;
 
-		if (parsed.data.action === 'subtract' && module.subtractEntry) {
+		if (parsed.data.stopTimer && module.stopActiveTimer) {
+			module.stopActiveTimer(parsed.data);
+		} else if (parsed.data.action === 'subtract' && module.subtractEntry) {
 			module.subtractEntry(parsed.data);
 		} else if (module.addEntry) {
 			module.addEntry(parsed.data);
