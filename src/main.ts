@@ -114,13 +114,11 @@ export default class PostpartumTrackerPlugin extends Plugin {
 			}
 		);
 
-		// Watch for external tracker file changes (synced from other devices)
-		this.registerEvent(
-			this.app.vault.on('modify', (file) => {
-				if (file instanceof TFile && /\.tracker\.[a-f0-9]{8}\.json$/.test(file.path)) {
-					this.onTrackerFileChanged(file);
-				}
-			})
+		// Poll for external tracker file changes (synced from other devices).
+		// vault.on('modify') only fires for files Obsidian tracks (not .json).
+		// Instead, poll every 10s using adapter.stat() to detect external changes.
+		this.registerInterval(
+			window.setInterval(() => this.pollForExternalChanges(), 10000)
 		);
 
 		// Command: insert a new postpartum tracker code block
@@ -910,21 +908,46 @@ export default class PostpartumTrackerPlugin extends Plugin {
 
 	// ── File watcher for multi-device sync ──
 
-	private refreshDebounce: ReturnType<typeof setTimeout> | null = null;
+	/** Track last-known modification times for external change detection. */
+	private lastKnownMtimes = new Map<string, number>();
 
-	/** Called when a .tracker.{deviceId}.json file is modified (possibly by sync). */
-	private onTrackerFileChanged(file: TFile): void {
-		// Skip our own saves to prevent reload loops
-		if (this.store.isOwnRecentSave(file.path)) return;
+	/** Poll for external changes to .tracker.*.json files. */
+	private async pollForExternalChanges(): Promise<void> {
+		if (this.activeWidgets.size === 0) return;
 
-		// Debounce: multiple files may sync at once
-		if (this.refreshDebounce) clearTimeout(this.refreshDebounce);
-		this.refreshDebounce = setTimeout(() => {
-			this.refreshDebounce = null;
-			for (const widget of this.activeWidgets) {
-				widget.reloadData();
-			}
-		}, 1000);
+		// Find tracker directories from active widgets' source paths
+		for (const widget of this.activeWidgets) {
+			try {
+				const sourcePath = (widget as any).ctx?.sourcePath;
+				if (!sourcePath) continue;
+
+				const dir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+				const listing = await this.app.vault.adapter.list(dir || '/');
+				const trackerFiles = listing.files.filter(f =>
+					/\.tracker\.[a-f0-9]{8}\.json$/.test(f)
+				);
+
+				let changed = false;
+				for (const filePath of trackerFiles) {
+					// Skip our own recent saves
+					if (this.store.isOwnRecentSave(filePath)) continue;
+
+					try {
+						const stat = await this.app.vault.adapter.stat(filePath);
+						if (!stat) continue;
+						const lastKnown = this.lastKnownMtimes.get(filePath) || 0;
+						if (stat.mtime > lastKnown) {
+							this.lastKnownMtimes.set(filePath, stat.mtime);
+							if (lastKnown > 0) changed = true; // Skip first read (initialization)
+						}
+					} catch { /* file may not exist yet */ }
+				}
+
+				if (changed) {
+					widget.reloadData();
+				}
+			} catch { /* ignore errors in polling */ }
+		}
 	}
 
 	/** Let user pick a backup and restore it as the active data. */

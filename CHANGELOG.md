@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.4] - 2026-04-04
+
+### Fixed
+
+- **External sync detection now works**: Replaced `vault.on('modify')` (only fires for Obsidian-tracked files like .md) with polling via `adapter.stat()` every 10 seconds. JSON files aren't tracked by Obsidian's vault, so the modify event never fired for `.tracker.*.json` files. The poller checks modification times and triggers `widget.reloadData()` when any device file changes externally.
+
 ## [0.28.3] - 2026-04-04
 
 ### Added
