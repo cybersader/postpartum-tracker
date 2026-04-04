@@ -40,8 +40,11 @@ export class QuickEntryParser {
 	// ── Feeding ──
 
 	private tryFeeding(tokens: string[], lower: string, _raw: string): ParsedEntry | null {
-		const keywords = ['fed', 'feed', 'nurse', 'nursed', 'breastfed', 'breastfeed',
-			'bottle', 'formula', 'boob', 'breast', 'nipple', 'latch', 'latched'];
+		const keywords = ['fed', 'feed', 'feeding', 'nurse', 'nursed', 'nursing',
+			'breastfed', 'breastfeed', 'breastfeeding',
+			'bottle', 'formula',
+			'boob', 'breast', 'nipple', 'latch', 'latched', 'latching',
+			'eating', 'ate', 'eat', 'suckle', 'suckling'];
 		if (!keywords.some(k => tokens.includes(k))) return null;
 		if (!this.enabledModuleIds.has('feeding')) return null;
 
@@ -62,6 +65,46 @@ export class QuickEntryParser {
 		} else {
 			data.type = 'breast';
 			parts.unshift('Fed');
+		}
+
+		// ── Start timer: "started feeding 10 min ago", "started eating right side"
+		const startPatterns = [
+			/started?\s+(?:feeding|eating|nursing|breastfeeding|suckling)/,
+			/began?\s+(?:feeding|eating|nursing)/,
+			/put\s+(?:her|him|baby)\s+on\s+(?:the\s+)?(?:boob|breast)/,
+		];
+		if (startPatterns.some(p => p.test(lower))) {
+			data.startTimer = true;
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
+
+			const sideLabel = data.side ? ` ${data.side}` : '';
+			return {
+				moduleId: 'feeding',
+				summary: time ? `Start feeding${sideLabel}` : `Start feeding${sideLabel} now`,
+				data,
+				confidence: 'high',
+			};
+		}
+
+		// ── Stop timer: "stopped feeding", "done eating", "finished nursing"
+		const stopPatterns = [
+			/stopped?\s+(?:feeding|eating|nursing|breastfeeding|suckling)/,
+			/done\s+(?:feeding|eating|nursing)/,
+			/finished?\s+(?:feeding|eating|nursing)/,
+			/no\s+longer\s+(?:feeding|eating|nursing)/,
+		];
+		if (stopPatterns.some(p => p.test(lower))) {
+			data.stopTimer = true;
+			const time = extractTimeModifier(tokens, lower);
+			if (time) data.timestamp = time;
+
+			return {
+				moduleId: 'feeding',
+				summary: time ? 'Stop feeding' : 'Stop feeding now',
+				data,
+				confidence: 'high',
+			};
 		}
 
 		// Try time range first: "fed from 2pm to 2:30pm"

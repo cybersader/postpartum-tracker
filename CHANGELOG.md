@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.3] - 2026-04-04
+
+### Added
+
+- **NLP feeding timer control**: "started feeding 10 min ago right side" starts a live feeding timer backdated 10 minutes. "stopped feeding" / "done eating" / "finished nursing" stops the active timer. Handles all time formats.
+- **Expanded feeding keywords**: Added "eating", "ate", "eat", "suckle", "suckling", "feeding", "nursing", "breastfeeding", "latching" as trigger words. All work with start/stop patterns.
+- **NLP start/stop preview**: Preview now shows module name in action label ("Start feeding timer" vs "Start sleep timer"), plus side if specified.
+
 ## [0.28.2] - 2026-04-02
 
 ### Added

@@ -696,6 +696,31 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 	}
 
 	addEntry(data: Record<string, unknown>): void {
+		// Start timer: create entry with end=null (live timer)
+		if (data.startTimer) {
+			const start = (data.timestamp as string) || new Date().toISOString();
+			// Stop any existing active feeding first
+			const active = this.entries.find(e => e.end === null);
+			if (active) {
+				active.end = new Date().toISOString();
+				active.durationSec = Math.round(
+					(new Date(active.end).getTime() - new Date(active.start).getTime()) / 1000
+				);
+			}
+			const entry: FeedingEntry = {
+				id: generateId(),
+				start,
+				end: null,
+				side: (data.side as 'left' | 'right' | 'both') || undefined,
+				type: (data.type as 'breast' | 'bottle') || 'breast',
+				notes: '',
+			};
+			this.entries.push(entry);
+			this.refreshUI();
+			this.save?.();
+			return;
+		}
+
 		const start = (data.timestamp as string) || new Date().toISOString();
 		// Use explicit endTimestamp (from NLP range) or compute from duration
 		const end = data.endTimestamp
@@ -726,6 +751,21 @@ export class FeedingTracker implements TrackerModule<FeedingEntry, FeedingStats>
 		this.entries.push(entry);
 		this.entries.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 		this.emitEvent?.({ type: 'feeding-logged', entry });
+		this.refreshUI();
+		this.save?.();
+	}
+
+	/** Stop the active feeding timer (from NLP "stopped feeding"). */
+	stopActiveTimer(data: Record<string, unknown>): void {
+		const active = this.entries.find(e => e.end === null);
+		if (!active) return;
+
+		const endTime = (data.timestamp as string) || new Date().toISOString();
+		active.end = endTime;
+		active.durationSec = Math.round(
+			(new Date(endTime).getTime() - new Date(active.start).getTime()) / 1000
+		);
+		this.emitEvent?.({ type: 'feeding-logged', entry: active });
 		this.refreshUI();
 		this.save?.();
 	}

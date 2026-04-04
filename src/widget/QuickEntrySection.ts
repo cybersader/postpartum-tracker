@@ -180,9 +180,12 @@ export class QuickEntrySection {
 			return;
 		}
 
-		// Start/stop timer actions
+		// Start/stop timer actions (feeding + sleep)
 		if (d.startTimer) {
-			addField('Action', 'Start sleep timer');
+			const module = this.registry.get(parsed.moduleId);
+			const label = module?.displayName || parsed.moduleId;
+			addField('Action', `Start ${label.toLowerCase()} timer`);
+			if (d.side) addField('Side', String(d.side));
 			if (d.type) addField('Type', String(d.type));
 			if (d.timestamp) {
 				addField('Start at', formatTime(d.timestamp as string, this.settings.timeFormat));
@@ -192,7 +195,9 @@ export class QuickEntrySection {
 			return;
 		}
 		if (d.stopTimer) {
-			addField('Action', 'Stop sleep timer');
+			const module = this.registry.get(parsed.moduleId);
+			const label = module?.displayName || parsed.moduleId;
+			addField('Action', `Stop ${label.toLowerCase()} timer`);
 			if (d.timestamp) {
 				addField('Stop at', formatTime(d.timestamp as string, this.settings.timeFormat));
 			} else {
