@@ -135,11 +135,19 @@ export class QuickEntrySection {
 		const parsed = parser.parse(text);
 
 		if (!parsed) {
-			this.hidePreview();
+			// No NLP match — hide preview but keep Clear button visible
+			this.currentParsed = null;
+			this.previewEl?.addClass('pt-hidden');
+			this.previewEl?.empty();
+			// Show buttons row with just Clear (Log entry won't work without parsed data)
+			const btnRow = this.container.querySelector('.pt-quick-entry-buttons');
+			btnRow?.removeClass('pt-hidden');
+			if (this.confirmBtn) this.confirmBtn.addClass('pt-hidden');
 			return;
 		}
 
 		this.currentParsed = parsed;
+		if (this.confirmBtn) this.confirmBtn.removeClass('pt-hidden');
 		this.showPreview(parsed);
 	}
 
