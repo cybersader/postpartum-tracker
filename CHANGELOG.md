@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.6] - 2026-04-05
+
+### Fixed
+
+- **Auto-save after sync merge**: When the poller detects new data from another device and reloads, the merged result is now immediately saved back to this device's file. This makes all device files converge within one polling cycle (~10s) instead of waiting for the user to tap a button.
+
 ## [0.28.5] - 2026-04-05
 
 ### Added

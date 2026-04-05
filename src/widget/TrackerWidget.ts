@@ -132,6 +132,18 @@ export class TrackerWidget extends MarkdownRenderChild {
 		this.updateAlerts();
 		this.updateEventHistory();
 		this.updateFullHistory();
+
+		// Auto-save merged data to this device's file so all devices converge.
+		// Collect serialized entries from modules (they now have merged data).
+		for (const module of this.registry.getAll()) {
+			this.data.trackers[module.id] = module.serializeEntries();
+		}
+		try {
+			await this.store.save(
+				this.ctx, this.containerEl, this.data,
+				this.settings.storageMode ?? 'external'
+			);
+		} catch { /* best effort — don't break reload if save fails */ }
 	}
 
 	refresh(): void {
