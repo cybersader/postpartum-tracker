@@ -20,6 +20,7 @@ export class QuickEntrySection {
 	private inputEl: HTMLInputElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private confirmBtn: HTMLButtonElement | null = null;
+	private clearXBtn: HTMLButtonElement | null = null;
 	private currentParsed: ParsedEntry | null = null;
 	private debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -43,6 +44,25 @@ export class QuickEntrySection {
 
 	private build(): void {
 		const inputRow = this.container.createDiv({ cls: 'pt-quick-entry-input-row' });
+
+		// Clear button (× on the left)
+		this.clearXBtn = inputRow.createEl('button', {
+			cls: 'pt-quick-entry-clear-x pt-hidden',
+			text: '×',
+		});
+		const clearBtn = this.clearXBtn;
+		clearBtn.addEventListener('pointerdown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+		});
+		clearBtn.addEventListener('pointerup', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			e.stopImmediatePropagation();
+			this.clear();
+			if (this.inputEl) this.inputEl.focus();
+		});
 
 		this.inputEl = inputRow.createEl('input', {
 			cls: 'pt-quick-entry-input',
@@ -84,15 +104,21 @@ export class QuickEntrySection {
 		this.confirmBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
 		this.confirmBtn.addEventListener('click', () => this.confirm());
 
-		const clearBtn = btnRow.createEl('button', {
+		const clearBtnRow = btnRow.createEl('button', {
 			cls: 'pt-quick-entry-clear',
 			text: 'Clear',
 		});
-		clearBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-		clearBtn.addEventListener('click', () => this.clear());
+		clearBtnRow.addEventListener('pointerdown', (e) => e.stopPropagation());
+		clearBtnRow.addEventListener('click', () => this.clear());
 	}
 
 	private onInput(): void {
+		// Show/hide × clear button
+		const hasText = !!(this.inputEl?.value);
+		if (this.clearXBtn) {
+			if (hasText) this.clearXBtn.removeClass('pt-hidden');
+			else this.clearXBtn.addClass('pt-hidden');
+		}
 		if (this.debounceTimer) clearTimeout(this.debounceTimer);
 		this.debounceTimer = setTimeout(() => this.parseAndPreview(), 150);
 	}
@@ -298,6 +324,7 @@ export class QuickEntrySection {
 
 	private clear(): void {
 		if (this.inputEl) this.inputEl.value = '';
+		if (this.clearXBtn) this.clearXBtn.addClass('pt-hidden');
 		this.hidePreview();
 	}
 }

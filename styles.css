@@ -1945,6 +1945,29 @@
 }
 .pt-quick-entry-input-row {
 	display: flex;
+	align-items: center;
+	gap: 0;
+}
+.pt-quick-entry-clear-x {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	margin-right: 4px;
+	border: none;
+	border-radius: 50%;
+	background: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: 1.1rem;
+	line-height: 1;
+	cursor: pointer;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.pt-quick-entry-clear-x:hover {
+	background: var(--background-modifier-border);
+	color: var(--text-normal);
 }
 .pt-quick-entry-input {
 	flex: 1;

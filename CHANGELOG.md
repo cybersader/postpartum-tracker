@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.5] - 2026-04-05
+
+### Added
+
+- **× clear button on NLP input**: Circular × button appears to the left of the text input when text is present. Tap to clear the input and dismiss the preview. Hides when input is empty.
+
 ## [0.28.4] - 2026-04-04
 
 ### Fixed
