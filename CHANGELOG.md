@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.9] - 2026-04-05
+
+### Added
+
+- **Word numbers in NLP**: "seven", "twenty", "fifteen", "thirty five", "forty-five" etc. now work in all NLP inputs. Converts word numbers (zero through ninety-nine) to digits before parsing. Also handles "a minute", "an hour", "half hour", "half an hour".
+
 ## [0.28.8] - 2026-04-05
 
 ### Fixed

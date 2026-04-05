@@ -23,7 +23,7 @@ export class QuickEntryParser {
 		const text = input.trim();
 		if (!text) return null;
 
-		const lower = text.toLowerCase();
+		const lower = normalizeWordNumbers(text.toLowerCase());
 		const tokens = lower.split(/\s+/);
 
 		return (
@@ -858,4 +858,48 @@ function extractVolume(_tokens: string[], lower: string): VolumeResult | null {
 
 function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Replace English word numbers with digits so regex-based parsers work.
+ * Handles: zero–twenty, thirty–ninety, hundred, and compounds like "twenty five".
+ */
+function normalizeWordNumbers(text: string): string {
+	const ones: Record<string, number> = {
+		zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+		seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+		thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+		eighteen: 18, nineteen: 19,
+	};
+	const tens: Record<string, number> = {
+		twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+		seventy: 70, eighty: 80, ninety: 90,
+	};
+
+	// Handle "twenty five", "thirty two", etc. (compound tens + ones)
+	let result = text.replace(
+		/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[\s-]+(one|two|three|four|five|six|seven|eight|nine)\b/gi,
+		(_, t, o) => String((tens[t.toLowerCase()] || 0) + (ones[o.toLowerCase()] || 0))
+	);
+
+	// Handle standalone tens: "twenty", "thirty", etc.
+	result = result.replace(
+		/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/gi,
+		(_, w) => String(tens[w.toLowerCase()] || 0)
+	);
+
+	// Handle ones and teens: "one" through "nineteen"
+	result = result.replace(
+		/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)\b/gi,
+		(_, w) => String(ones[w.toLowerCase()] ?? w)
+	);
+
+	// Handle "a" as 1 in duration context: "a minute", "an hour", "a half hour"
+	result = result.replace(/\ba\s+(minute|hour|min|hr)\b/gi, '1 $1');
+	result = result.replace(/\ban\s+(hour|hr)\b/gi, '1 $1');
+
+	// Handle "half hour" → "30 min", "half an hour" → "30 min"
+	result = result.replace(/\bhalf\s+(?:an?\s+)?hour\b/gi, '30 min');
+
+	return result;
 }
