@@ -222,7 +222,10 @@ export class QuickEntrySection {
 			if (d.side) addField('Side', String(d.side));
 			if (d.type) addField('Type', String(d.type));
 			if (d.timestamp) {
-				addField('Start at', formatTime(d.timestamp as string, this.settings.timeFormat));
+				const timeStr = formatTime(d.timestamp as string, this.settings.timeFormat);
+				const agoMin = Math.round((Date.now() - new Date(d.timestamp as string).getTime()) / 60000);
+				const agoStr = agoMin > 0 ? ` (${agoMin}m ago)` : '';
+				addField('Start at', timeStr + agoStr);
 			} else {
 				addField('Start at', 'Now');
 			}
@@ -233,7 +236,10 @@ export class QuickEntrySection {
 			const label = module?.displayName || parsed.moduleId;
 			addField('Action', `Stop ${label.toLowerCase()} timer`);
 			if (d.timestamp) {
-				addField('Stop at', formatTime(d.timestamp as string, this.settings.timeFormat));
+				const timeStr = formatTime(d.timestamp as string, this.settings.timeFormat);
+				const agoMin = Math.round((Date.now() - new Date(d.timestamp as string).getTime()) / 60000);
+				const agoStr = agoMin > 0 ? ` (${agoMin}m ago)` : '';
+				addField('Stop at', timeStr + agoStr);
 			} else {
 				addField('Stop at', 'Now');
 			}

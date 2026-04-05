@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.8] - 2026-04-05
+
+### Fixed
+
+- **Start/stop timer preview shows relative time**: "started sleeping 10 minutes ago" now shows "Start at 5:25 PM (10m ago)" instead of just the clock time. Makes it clear how far back the timer is being set.
+
 ## [0.28.7] - 2026-04-05
 
 ### Fixed
