@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.28.7] - 2026-04-05
+
+### Fixed
+
+- **Clear button always visible with text**: The Clear button now shows whenever text is in the NLP input, even if the text doesn't match any NLP pattern. Log entry button hides when there's no match.
+
 ## [0.28.6] - 2026-04-05
 
 ### Fixed
